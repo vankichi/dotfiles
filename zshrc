@@ -1,4 +1,4 @@
-#!/user/bin/zsh
+
 
 if type tmux >/dev/nul 2>&1; then
     if [ -z $TMUX ]; then
@@ -42,7 +42,7 @@ colors
 # option
 # --------------------
 # set no beep
-setopt no_beep
+# setopt no_beep
 # set correct spell
 setopt correct
 
