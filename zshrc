@@ -1,4 +1,4 @@
-#!/user/bin/zsh
+#!/usr/bin/zsh
 
 if type tmux >/dev/null 2>&1; then
     if [ -z $TMUX ]; then
@@ -249,7 +249,9 @@ if [ -z $ZSH_LOADED]; then
     zstyle ':vcs_info:git:*' check-for-changes true
     zstyle ':vcs_info:git:*' stagedstr "%F{magenta}!"
     zstyle ':vcs_info:git:*' unstagedstr "%F{yellow}+"
-    precmd() { vcs_info }
+    precmd() {
+        vcs_info
+    }
     PROMPT='%F{green}%n%f in %F{cyan}%/ $ %f'
     RPROMPT='${vcs_info_msg_0_}'
 
@@ -262,7 +264,7 @@ if [ -z $ZSH_LOADED]; then
     export LSCOLORS=CxGxcxdxCxegedabagacad
     alias ls='ls -G -la'
     if [ "$HOST" = 'docker-desktop' ]; then
-      eval "$(starship init zsh)"
+        eval "$(starship init zsh)"
     fi
 
     # --------------------
