@@ -62,9 +62,9 @@ if [ -z $DOTENV_LOADED ]; then
 
     # export TERM="tmux-256color"
     export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:/usr/local/share/npm/bin:/usr/local/go/bin:/opt/local/bin:$GOBIN:/root/.cargo/bin:$GCLOUD_PATH/bin:$PATH"
-    
+
     export ZPLUG_HOME=$HOME/.zplug
-    
+
     if [ -e $ZPLUG_HOME/repos/zsh-users/zsh-completions ]; then
         fpath=($ZPLUG_HOME/repos/zsh-users/zsh-completions/src $fpath)
     fi
@@ -104,22 +104,22 @@ if [ -z $ZSH_LOADED]; then
         source "$HOME/.zplug/init.zsh"
 
         zplug "junegunn/fzf", as:command, use:bin/fzf-tmux
-        zplug "junegunn/fzf-bin", as:command, from:gh-r, rename-to:fzf
+        zplug "junegunn/fzf-bin", as:command, from:gh-r, rename-to:fzf-z-search
         zplug "zchee/go-zsh-completions"
-    zplug "zsh-users/zsh-autosuggestions"
-    zplug "zsh-users/zsh-completions", as:plugin, use:"src"
-    zplug "zsh-users/zsh-history-substring-search"
-    zplug "zsh-users/zsh-syntax-highlighting", defer:2
-    zplug "superbrothers/zsh-kubectl-prompt", as:plugin, from:github, use:"kubectl.zsh"
-    zplug "greymd/tmux-xpanes"
-    zplug "felixr/docker-zsh-completion"
+        zplug "zsh-users/zsh-autosuggestions"
+        zplug "zsh-users/zsh-completions", as:plugin, use:"src"
+        zplug "zsh-users/zsh-history-substring-search"
+        zplug "zsh-users/zsh-syntax-highlighting", defer:2
+        zplug "superbrothers/zsh-kubectl-prompt", as:plugin, from:github, use:"kubectl.zsh"
+        zplug "greymd/tmux-xpanes"
+        zplug "felixr/docker-zsh-completion"
 
-    if ! zplug check --verbose; then
+        if ! zplug check --verbose; then
             zplug install
         fi
 
-        zplug load
-  else
+        zplug gdbm_load
+    else
         rm -rf $ZPLUG_HOME
         git clone https://github.com/zplug/zplug $ZPLUG_HOME
         source "$HOME/.zshrc"
@@ -129,7 +129,7 @@ if [ -z $ZSH_LOADED]; then
     # use colors
     autoload -Uz colors
     colors
-    
+
     # --------------------
     # option
     # --------------------
@@ -153,7 +153,7 @@ if [ -z $ZSH_LOADED]; then
     setopt print_eight_bit   # 日本語ファイル名を表示可能にする
     setopt prompt_subst      # プロンプト定義内で変数置換やコマンド置換を扱う
     setopt pushd_ignore_dups # 重複したディレクトリを追加しない
-    
+
     # --------------------
     # history setting
     # --------------------
@@ -172,7 +172,7 @@ if [ -z $ZSH_LOADED]; then
     setopt append_history
     # prompt command
     export PROMPT_COMMAND='hcmd=$(history 1); hcmd="${hcmd# *[0-9]*  }"; if [[ ${hcmd%% *} == "cd" ]]; then pwd=$OLDPWD; else pwd=$PWD; fi; hcmd=$(echo -e "cd $pwd && $hcmd"); history -s "$hcmd"'
-    
+
     # --------------------
     # word chars
     # --------------------
@@ -182,19 +182,19 @@ if [ -z $ZSH_LOADED]; then
     # set delimiter
     zstyle ':zle:*' word-chars " /=;@:{},|" # remove dir via ^W
     zstyle ':zle:*' word-style unspecified
-    
+
     # --------------------
     # completion
     # --------------------
     LISTMAX=1000
     WORDCHARS="$WORDCHARS|:"
-    
+
     # use completion
     autoload -Uz compinit -C && compinit -C
     if [ -e /usr/local/share/zsh-completions ]; then
       fpath=(/usr/local/share/zsh-completions $fpath)
     fi
-    
+
     zstyle ':completion:*' format '%B%d%b'
     zstyle ':completion:*' group-name ''
     zstyle ':completion:*' ignore-parents parent pwd ..
@@ -237,7 +237,7 @@ if [ -z $ZSH_LOADED]; then
     zstyle ':zsh-kubectl-prompt:' preprompt 'ctx: '
     zstyle ':zsh-kubectl-prompt:' postprompt ''
     setopt list_packed
-    
+
     # --------------------
     # prompt
     # --------------------
@@ -252,25 +252,24 @@ if [ -z $ZSH_LOADED]; then
     precmd() { vcs_info }
     PROMPT='%F{green}%n%f in %F{cyan}%/ $ %f'
     RPROMPT='${vcs_info_msg_0_}'
-    
+
     _update_vcs_info_msg() {
         LANG=en_US.UTF-8
         RPROMPT="%F{green}${vcs_info_msg_0_} %F{033}($ZSH_KUBECTL_PROMPT)%f"
     }
     add-zsh-hook precmd _update_vcs_info_msg
-    
+
     export LSCOLORS=CxGxcxdxCxegedabagacad
     alias ls='ls -G -la'
     if [ "$HOST" = 'docker-desktop' ]; then
       eval "$(starship init zsh)"
     fi
-    
-    
+
     # --------------------
     # alias
     # --------------------
     alias q="tmux kill-session"
-    
+
     # chmod
     alias 600='chmod -R 600'
     alias 644='chmod -R 644'
@@ -279,8 +278,8 @@ if [ -z $ZSH_LOADED]; then
     alias 777='chmod -R 777'
 
     bindkey -e
-  select-history() {
-      BUFFER=$(history -n -r 1 \
+    select-history() {
+        BUFFER=$(history -n -r 1 \
           | awk 'length($0) > 2' \
           | rg -v "^...$" \
           | rg -v "^....$" \
@@ -289,22 +288,22 @@ if [ -z $ZSH_LOADED]; then
           | rg -v "^exit$" \
           | uniq -u \
           | fzf-tmux --no-sort +m --query "$LBUFFER" --prompt="History > ")
-      CURSOR=$#BUFFER
-  }
-  zle -N select-history
-  bindkey '^r' select-history
+        CURSOR=$#BUFFER
+    }
+    zle -N select-history
+    bindkey '^r' select-history
 
-  fzf-z-search() {
-      local res=$(history -n 1 | tail -f | fzf)
-      if [ -n "$res" ]; then
-          BUFFER+="$res"
-          zle accept-line
-      else
-          return 0
-      fi
-  }
-  zle -N fzf-z-search
-  bindkey '^s' fzf-z-search
+    fzf-z-search() {
+        local res=$(history -n 1 | tail -f | fzf)
+        if [ -n "$res" ]; then
+            BUFFER+="$res"
+            zle accept-line
+        else
+            return 0
+        fi
+    }
+    zle -N fzf-z-search
+    bindkey '^s' fzf-z-search
 
     export ZSHLOADED=1
 fi
