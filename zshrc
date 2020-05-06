@@ -20,18 +20,18 @@ if type tmux >/dev/null 2>&1; then
 fi
 
 if [ -z $DOTENV_LOADED ]; then
-	if type neofetch >/dev/null 2&>1; then
-		neofetch
-  fi
+    if type neofetch >/dev/null 2>&1; then
+        neofetch
+    fi
 
-	stty stop undef
-	stty start undef
+    stty stop undef
+    stty start undef
 
-	setopt no_global_rcs
-	if [ -x /usr/libexec/path_helper ]; then
-		PATH=""
-		eval "$(/usr/libexec/path_helper -s)"
-	fi
+    setopt no_global_rcs
+    if [ -x /usr/libexec/path_helper ]; then
+        PATH=""
+        eval "$(/usr/libexec/path_helper -s)"
+    fi
 
 	# environment var
 	export LANG=en_US.UTF-8
@@ -41,7 +41,7 @@ if [ -z $DOTENV_LOADED ]; then
 	[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
 	export SHELL=$(which zsh)
-  export USER=$(whoami)
+    export USER=$(whoami)
 
 	export CPUCORES="$(getconf _NPROCESSORS_ONLN)"
 
