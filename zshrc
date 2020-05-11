@@ -49,6 +49,7 @@ if [ -z $DOTENV_LOADED ]; then
         export TERMCMD="urxvtc -e $SHELL"
     fi
 
+    # programming language environment
     export XDG_CONFIG_HOME=$HOME/.config
 
     # --------------------
@@ -59,6 +60,59 @@ if [ -z $DOTENV_LOADED ]; then
     else
         export GOPATH=$HOME/go
     fi
+
+    if type go >/dev/null 2>&1; then
+        export GOROOT="$(go env GOROOT)"
+        export GOOS="$(go env GOOS)"
+        export GOARCH="$(go env GOARCH)"
+        export CGO_ENABLED=1
+        export GO111MODULE=on
+        export GOBIN=$GOPATH/bin
+        export GO15VENDOREXPERIMENT=1
+        export GOPRIVATE="*.yahoo.co.jp"
+        export NVIM_GO_LOG_FILE=$XDG_DATA_HOME/go
+        export CGO_CFLAGS="-g -Ofast -march=native"
+        export CGO_CPPFLAGS="-g -Ofast -march=native"
+        export CGO_CXXFLAGS="-g -Ofast -march=native"
+        export CGO_FFLAGS="-g -Ofast -march=native"
+        export CGO_LDFLAGS="-g -Ofast -march=native"
+    fi
+
+    # export GCLOUD_PATH="/google-cloud-sdk"
+
+    # export PYTHON_CONFIGURE_OPTS="--enable-shared"
+
+    # --------------------
+    # nvim(NeoVim)
+    # --------------------
+    if type nvim >/dev/null 2>&1; then
+        export VIM=$(which nvim)
+        export VIMRUNTIME=/usr/share/nvim/runtime
+        export NVIM_HOME=$XDG_CONFIG_HOME/nvim
+        export XDG_DATA_HOME=$NVIM_HOME/log
+        export NVIM_LOG_FILE_PATH=$XDG_DATA_HOME
+        export NVIM_TUI_ENABLE_TRUE_COLOR=1
+        export NVIM_PYTHON_LOG_LEVEL=WARNING;
+        export NVIM_PYTHON_LOG_FILE=$NVIM_LOG_FILE_PATH/nvim.log;
+        export NVIM_LISTEN_ADDRESS="127.0.0.1:7650";
+    elif type vim >/dev/null 2>&1; then
+        export VIM=$(which vim)
+        export VIMRUNTIME=/usr/share/vim/vim*
+    else
+        export VIM=$(which vi)
+    fi
+
+    export EDITOR=$VIM
+    export VISUAL=$VIM
+    export PAGER=$(which less)
+    export SUDO_EDITOR=$EDITOR
+
+    # --------------------
+    # ReactNative
+    # --------------------
+    export REACT_EDITOR=$EDITOR;
+
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib64
 
     # export TERM="tmux-256color"
     export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:/usr/local/share/npm/bin:/usr/local/go/bin:/opt/local/bin:$GOBIN:/root/.cargo/bin:$GCLOUD_PATH/bin:$PATH"
@@ -279,6 +333,7 @@ if [ -z $ZSH_LOADED]; then
     alias 755='chmod -R 755'
     alias 777='chmod -R 777'
 
+    # allow * as wildecard for searching
     bindkey -e
     select-history() {
         BUFFER=$(history -n -r 1 \
@@ -306,6 +361,37 @@ if [ -z $ZSH_LOADED]; then
     }
     zle -N fzf-z-search
     bindkey '^s' fzf-z-search
+
+    # nvim
+    if type nvim >/dev/null 2>&1; then
+        alias nvup="nvim +UpdateRemotePlugins +PlugInstall +PlugUpdate +PlugUpgrade +PlugClean +CocInstall +CocUpdate +qall"
+        nvim-init() {
+            rm -rf "$HOME/.config/gocode"
+            rm -rf "$HOME/.config/nvim/autoload"
+            rm -rf "$HOME/.config/nvim/ftplugin"
+            rm -rf "$HOME/.config/nvim/log"
+            rm -rf "$HOME/.config/nvim/plugged"
+            nvup
+            rm "$HOME/.nvimlog"
+            rm "$HOME/.viminfo"
+        }
+        alias vedit="$EDITOR $HOME/.config/nvim/init.vim"
+        alias nvinit="nvim-init"
+        alias vback="cp $HOME/.config/nvim/init.vim $HOME/.config/nvim/init.vim.back"
+        alias vake="$EDITOR Makefile"
+        alias vocker="$EDITOR Dockerfile"
+    else
+        alias vedit="$EDITOR $HOME/.vimrc"
+    fi
+
+    alias vi="$EDITOR"
+    alias vim="$EDITOR"
+    alias bim="$EDITOR"
+    alias cim="$EDITOR"
+    alias v="$EDITOR"
+    alias vspdchk="rm -rf /tmp/starup.log && $EDITOR --startuptime /tmp/startup.log +q && less /tmp/startup.log"
+    alias xedit="$EDITOR $HOME/.Xdefaults"
+    alias wedit="$EDITOR $HOME/.config/sway/config"
 
     export ZSHLOADED=1
 fi
