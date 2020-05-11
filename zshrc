@@ -393,5 +393,15 @@ if [ -z $ZSH_LOADED]; then
     alias xedit="$EDITOR $HOME/.Xdefaults"
     alias wedit="$EDITOR $HOME/.config/sway/config"
 
+    # docker
+    if type docker >/dev/null 2>&1; then
+        export DOCKER_BUILDKIT=1
+        export DOCKER_CLI_EXPERIMENTAL="enabled"
+        alias dls='docker ps'
+        alias dsh='docker run -it '
+        [ -f $HOME/.aliases ] && source $HOME/.aliases
+    fi
+
+
     export ZSHLOADED=1
 fi
