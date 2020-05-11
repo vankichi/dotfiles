@@ -1,0 +1,67 @@
+{
+  "suggest.noselect": false,
+  "suggest.preferCompleteThanJumpPlaceholder": true,
+  "languageserver": {
+    "golang": {
+      "command": "gopls",
+      "initializationOptions": {
+        "completeUnimported": true,
+        "usePlaceholders": true,
+        "staticcheck": false,
+        "lintTool": "golangci-lint",
+        "formatTool": "goimports"
+      },
+      "rootPatterns": [
+        "go.mod",
+        ".vim/",
+        ".git/",
+        ".hg/"
+      ],
+      "filetypes": [
+        "go"
+      ]
+    },
+   "dockerfile": {
+      "command": "docker-langserver",
+      "filetypes": [
+        "dockerfile"
+      ],
+      "args": [
+        "--stdio"
+      ]
+    },
+    "bash": {
+      "command": "bash-language-server",
+      "args": [
+        "start"
+      ],
+      "filetypes": [
+        "sh",
+        "zsh",
+        "bash"
+      ],
+      "ignoredRootPaths": [
+        "~"
+      ]
+    },
+    "python": {
+      "command": "pyls",
+      "filetypes": [
+        "python"
+      ],
+      "args": []
+    },
+    "efm": {
+      "command": "efm-langserver",
+      "args": [
+        "-c",
+        "$HOME/.config/nvim/efm-lsp-conf.yaml"
+      ],
+      "filetypes": [
+        "vim",
+        "eruby",
+        "markdown"
+      ]
+    }
+  }
+}
