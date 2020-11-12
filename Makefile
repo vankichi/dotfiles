@@ -55,6 +55,9 @@ build:
 docker_build:
 	docker build --squash -t ${IMAGE_NAME}:latest -f ${DOCKERFILE} .
 
+hoge:
+	docker build --squash --network=host -t ${IMAGE_NAME}:latest -f ${DOCKERFILE} .
+
 docker_push:
 	docker push ${IMAGE_NAME}:latest
 
@@ -130,7 +133,6 @@ build_all: \
 	build_dart \
 	build_docker \
 	build_gcloud \
-	build_glibc \
 	build_go \
 	build_k8s \
 	build_nim \
@@ -143,7 +145,6 @@ push_all: \
 	push_env \
 	push_dart \
 	push_docker \
-	push_gcloud \
 	push_glibc \
 	push_go \
 	push_k8s \

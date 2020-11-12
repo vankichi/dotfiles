@@ -10,6 +10,9 @@
   "runtimes": {
     "runsc": {
       "path": "/usr/local/bin/runsc"
+    },
+    "runu": {
+      "path": "/usr/local/bin/runu"
     }
   },
   "log-driver": "json-file",

@@ -2,7 +2,7 @@ FROM vankichi/go:latest AS go
 
 FROM vankichi/rust:latest AS rust
 
-FROM vankichi/nim:latest AS nim
+# FROM vankichi/nim:latest AS nim
 
 FROM vankichi/dart:latest AS dart
 
@@ -11,7 +11,7 @@ FROM vankichi/docker:latest AS docker
 # FROM node:11-alpine AS node
 
 # RUN npm config set user  root \
-#     && npm install -g neovim resume-cli
+    # && npm install -g neovim resume-cli
 
 # FROM python:3.7-alpine AS python3
 
@@ -34,8 +34,6 @@ FROM vankichi/docker:latest AS docker
 FROM vankichi/kube:latest AS kube
 
 FROM vankichi/gcloud:latest AS gcloud
-
-FROM vankichi/glibc:latest AS glibc
 
 FROM vankichi/env:latest AS env
 
@@ -72,39 +70,44 @@ ENV ZPLUG_HOME $HOME/.zplug;
 # COPY --from=ruby /usr/local/lib/libruby* /usr/lib/
 # COPY --from=ruby /usr/local/bundle /usr/bundle
 
-# etc lib sbin bin
-# COPY --from=glibc /usr/glibc-compat /usr/glibc-compat
+COPY --from=docker /usr/bin/dind /usr/bin/dind
+COPY --from=docker /usr/bin/dive /usr/bin/dive
+COPY --from=docker /usr/bin/dlayer /usr/bin/dlayer
+COPY --from=docker /usr/bin/docker /usr/bin/docker
+COPY --from=docker /usr/bin/docker-containerd /usr/bin/docker-containerd
+COPY --from=docker /usr/bin/docker-containerd-ctr /usr/bin/docker-containerd-ctr
+COPY --from=docker /usr/bin/docker-containerd-shim /usr/bin/docker-containerd-shim
+COPY --from=docker /usr/bin/docker-entrypoint /usr/bin/docker-entrypoint
+COPY --from=docker /usr/bin/docker-init /usr/bin/docker-init
+COPY --from=docker /usr/bin/docker-proxy /usr/bin/docker-proxy
+COPY --from=docker /usr/bin/docker-runc /usr/bin/docker-runc
+COPY --from=docker /usr/bin/docker-slim /usr/bin/docker-slim
+COPY --from=docker /usr/bin/docker-slim-sensor /usr/bin/docker-slim-sensor
+COPY --from=docker /usr/bin/dockerd /usr/bin/dockerd
+COPY --from=docker /usr/bin/dockerd-entrypoint /usr/bin/dockerd-entrypoint
+COPY --from=docker /usr/bin/dockfmt /usr/bin/dockfmt
+COPY --from=docker /usr/bin/dockle /usr/bin/dockle
+COPY --from=docker /usr/bin/container-diff /usr/bin/container-diff
+COPY --from=docker /usr/bin/modprobe /usr/bin/modprobe
+COPY --from=docker /usr/bin/trivy /usr/bin/trivy
+COPY --from=docker /usr/lib/docker/cli-plugins/docker-buildx /usr/lib/docker/cli-plugins/docker-buildx
 
-COPY --from=docker /usr/local/bin/containerd /usr/bin/docker-containerd
-COPY --from=docker /usr/local/bin/containerd-shim /usr/bin/docker-containerd-shim
-COPY --from=docker /usr/local/bin/ctr /usr/bin/docker-containerd-ctr
-COPY --from=docker /usr/local/bin/dind /usr/bin/dind
-COPY --from=docker /usr/local/bin/dive /usr/bin/dive
-COPY --from=docker /usr/local/bin/dlayer /usr/bin/dlayer
-COPY --from=docker /usr/local/bin/docker /usr/bin/docker
-COPY --from=docker /usr/local/bin/docker-entrypoint.sh /usr/bin/docker-entrypoint
-COPY --from=docker /usr/local/bin/docker-init /usr/bin/docker-init
-COPY --from=docker /usr/local/bin/docker-proxy /usr/bin/docker-proxy
-COPY --from=docker /usr/local/bin/docker-slim /usr/bin/docker-slim
-COPY --from=docker /usr/local/bin/docker-slim-sensor /usr/bin/docker-slim-sensor
-COPY --from=docker /usr/local/bin/dockerd /usr/bin/dockerd
-COPY --from=docker /usr/local/bin/dockle /usr/bin/dockle
-COPY --from=docker /usr/local/bin/modprobe /usr/bin/modprobe
-COPY --from=docker /usr/local/bin/runc /usr/bin/docker-runc
-COPY --from=docker /usr/local/bin/trivy /usr/bin/trivy
+COPY --from=kube /usr/k8s/bin/ /usr/bin/
+COPY --from=kube /usr/k8s/lib/ /usr/lib/
 
-COPY --from=kube /usr/local/bin/kubectl /usr/bin/kubectl
-COPY --from=kube /usr/local/bin/kubectx /usr/bin/kubectx
-COPY --from=kube /usr/local/bin/kubens /usr/bin/kubens
-COPY --from=kube /usr/local/bin/kubebox /usr/bin/kubebox
-COPY --from=kube /usr/local/bin/kubebuilder /usr/bin/kubebuilder
-COPY --from=kube /usr/local/bin/stern /usr/bin/stern
-COPY --from=kube /usr/local/bin/helm /usr/bin/helm
-COPY --from=kube /usr/local/bin/kind /usr/bin/kind
-COPY --from=kube /usr/local/bin/linkerd /usr/bin/linkerd
-COPY --from=kube /root/.krew/bin /usr/bin/
+# COPY --from=kube /usr/local/bin/kubectl /usr/bin/kubectl
+# COPY --from=kube /usr/local/bin/kubectx /usr/bin/kubectx
+# COPY --from=kube /usr/local/bin/kubens /usr/bin/kubens
+# COPY --from=kube /usr/local/bin/kubebox /usr/bin/kubebox
+# COPY --from=kube /usr/local/bin/kubebuilder /usr/bin/kubebuilder
+# COPY --from=kube /usr/local/bin/stern /usr/bin/stern
+# COPY --from=kube /usr/local/bin/helm /usr/bin/helm
+# COPY --from=kube /usr/local/bin/kind /usr/bin/kind
+# COPY --from=kube /usr/local/bin/linkerd /usr/bin/linkerd
+# COPY --from=kube /root/.krew/bin /usr/bin/
 
 COPY --from=gcloud /google-cloud-sdk /google-cloud-sdk
+COPY --from=gcloud /usr/lib/google-cloud-sdk/lib /usr/lib
 COPY --from=gcloud /root/.config/gcloud /root/.config/gcloud
 
 # COPY --from=nim /bin/nim /usr/local/bin/nim
@@ -115,8 +118,8 @@ COPY --from=gcloud /root/.config/gcloud /root/.config/gcloud
 # COPY --from=nim /nim /nim
 
 COPY --from=dart /usr/lib/dart/bin /usr/lib/dart/bin
-# COPY --from=dart /usr/lib/dart/lib /usr/lib/dart/lib
-# COPY --from=dart /usr/lib/dart/include /usr/lib/dart/include
+COPY --from=dart /usr/lib/dart/lib /usr/lib/dart/lib
+COPY --from=dart /usr/lib/dart/include /usr/lib/dart/include
 
 COPY --from=go /usr/local/go/bin $GOROOT/bin
 COPY --from=go /usr/local/go/src $GOROOT/src
@@ -124,7 +127,6 @@ COPY --from=go /usr/local/go/lib $GOROOT/lib
 COPY --from=go /usr/local/go/pkg $GOROOT/pkg
 COPY --from=go /usr/local/go/misc $GOROOT/misc
 COPY --from=go /go/bin $GOPATH/bin
-# COPY --from=go /go/src/github.com/nsf/gocode/vim $GOROOT/misc/vim
 
 # COPY --from=rust /home/rust/.cargo/bin /root/.cargo/bin
 COPY --from=rust /root/.cargo /root/.cargo
@@ -143,14 +145,16 @@ COPY tmux.conf $HOME/.tmux.conf
 COPY vintrc.yaml $HOME/.vintrc.yaml
 COPY zshrc $HOME/.zshrc
 
-ENV SHELL /bin/zsh
+ENV SHELL /usr/bin/zsh
 
 WORKDIR $VIM_PLUG_HOME
 
 RUN rm -rf $VIM_PLUG_HOME/autoload \
     && git clone https://github.com/junegunn/vim-plug.git $VIM_PLUG_HOME/autoload
 # RUN nvim +PlugInstall +PlugUpdate +PlugUpgrade +PlugClean +UpdateRemotePlugins +qall
-RUN yarn global add https://github.com/neoclide/coc.nvim --prefix /usr/local
+RUN npm uninstall yarn -g \
+    && npm install yarn -g \
+    &&yarn global add https://github.com/neoclide/coc.nvim --prefix /usr/local
 # RUN nvim +CocInstall coc-rls coc-json coc-yaml coc-snippets coc-java coc-dictionary coc-tag coc-word coc-omni +qall
 RUN git clone https://github.com/zplug/zplug $ZPLUG_HOME \
     && rm -rf $HOME/.cache \
@@ -162,4 +166,4 @@ RUN git clone https://github.com/zplug/zplug $ZPLUG_HOME \
 WORKDIR /go/src
 
 ENTRYPOINT ["docker-entrypoint"]
-CMD ["zsh"]
+CMD ["/usr/bin/zsh"]

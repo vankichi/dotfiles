@@ -2,92 +2,102 @@ FROM vankichi/dev-base:latest AS env
 
 ENV NGT_VERSION 1.8.1
 ENV HUB_VERSION 2.13.0
-ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/lib:/usr/local/lib:/lib:/lib64:/var/lib:/usr/x86_64-alpine-linux-musl/lib:/google-cloud-sdk/lib:/usr/local/go/lib:/usr/lib/dart/lib:/usr/lib/node_modules/lib
+ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/lib:/usr/local/lib:/lib:/lib64:/var/lib:/google-cloud-sdk/lib:/usr/local/go/lib:/usr/lib/dart/lib:/usr/lib/node_modules/lib
 
-RUN mkdir "/etc/ld.so.conf.d" \
-    && echo $'/lib\n\
+WORKDIR /tmp
+RUN echo $'/lib\n\
 /lib64\n\
 /var/lib\n\
 /usr/lib\n\
 /usr/local/lib\n\
-/usr/x86_64-alpine-linux-musl/lib\n\
 /usr/local/go/lib\n\
+/usr/local/clang/lib\n\
 /usr/lib/dart/lib\n\
 /usr/lib/node_modules/lib\n\
 /google-cloud-sdk/lib' > /etc/ld.so.conf.d/usr-local-lib.conf \
-    && echo $(ldconfig) \
-    && echo "http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories \
-    && apk update \
-    && apk upgrade \
-    && apk --update add --no-cache --allow-untrusted --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing \
+    && echo $(ldconfig)
+
+RUN apt-get update -y \
+    && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends --fix-missing \
     bash \
-    clang \
-    cmake \
-    ctags \
-    curl \
     diffutils \
-    g++ \
+    exuberant-ctags \
     gawk \
-    gcc \
-    git \
+    gnupg \
     graphviz \
-    hdf5 \
-    hdf5-dev \
     jq \
     less \
-    linux-headers \
+    libhdf5-serial-dev \
+    libomp-dev \
+    libprotobuf-dev \
+    libprotoc-dev \
     luajit \
-    make \
-    musl-dev \
-    ncurses \
+    mariadb-client \
+    mtr \
+    ncurses-term \
     neovim \
     nodejs \
-    npm \
-    openssh \
-    openssl \
-    openssl-dev \
+    openssh-client \
     perl \
-    protobuf \
-    py-pip \
-    py3-pip \
-    python-dev \
+    protobuf-compiler \
     python3-dev \
+    python3-pip \
+    python3-setuptools \
+    python3-venv \
     ruby-dev \
+    sed \
+    tar \
     tig \
     tmux \
-    tzdata \
     xclip \
-    yarn \
-    zsh \
-    zsh-vcs \
-    && rm -rf /var/cache/apk/* \
-    && pip2 install --upgrade pip neovim python-language-server vim-vint \
-    && pip3 install --upgrade pip neovim ranger-fm thefuck httpie python-language-server vim-vint grpcio-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+
+RUN pip3 install --upgrade pip neovim ranger-fm thefuck httpie python-language-server vim-vint grpcio-tools \
     && gem install neovim -N \
+    && curl https://www.npmjs.com/install.sh | sh \
     && npm config set user root \
     && npm install -g \
-        neovim \
-        resume-cli \
-        markdownlint-cli \
+        bash-language-server \
         dockerfile-language-server-nodejs \
+        markdownlint-cli \
+        n \
+        neovim \
+        npm \
+        prettier \
+        resume-cli \
         typescript \
         typescript-language-server \
-        bash-language-server \
-    && cd /tmp \
+        yarn \
+    && n stable \
+    && apt purge -y nodejs npm \
     && git clone https://github.com/soimort/translate-shell \
     && cd /tmp/translate-shell/ \
     && make TARGET=zsh -j -C /tmp/translate-shell \
     && make install -C /tmp/translate-shell \
     && cd /tmp \
-    && rm -rf /tmp/translate-shell/ \
-    && curl -Lo ngt.tar.gz https://github.com/yahoojapan/NGT/archive/v${NGT_VERSION}.tar.gz \
-    && tar zxf ngt.tar.gz -C /tmp \
-    && rm -rf ngt.tar.gz \
-    && cd /tmp/NGT-${NGT_VERSION} \
-    && cmake . \
-    && make -j -C /tmp/NGT-${NGT_VERSION} \
-    && make install -C /tmp/NGT-${NGT_VERSION} \
+    && rm -rf /tmp/translate-shell/
+
+WORKDIR /tmp
+ENV NGT_VERSION 1.12.1
+ENV CFLAGS "-mno-avx512f -mno-avx512dq -mno-avx512cd -mno-avx512bw -mno-avx512vl"
+ENV CXXFLAGS ${CFLAGS}
+# ENV LDFLAGS="-L/usr/local/opt/llvm/lib"
+# ENV CPPFLAGS="-I/usr/local/opt/llvm/include"
+RUN curl -LO "https://github.com/yahoojapan/NGT/archive/v${NGT_VERSION}.tar.gz" \
+    && tar zxf "v${NGT_VERSION}.tar.gz" -C /tmp \
+    && cd "/tmp/NGT-${NGT_VERSION}" \
+    && cmake -DNGT_LARGE_DATASET=ON . \
+    && make -j -C "/tmp/NGT-${NGT_VERSION}" \
+    && make install -C "/tmp/NGT-${NGT_VERSION}" \
     && cd /tmp \
-    && rm -rf /tmp/NGT-${NGT_VERSION} \
-    && curl -fsSLo hub.tar.gz "https://github.com/github/hub/releases/download/v${HUB_VERSION}/hub-linux-amd64-${HUB_VERSION}.tgz" \
-    && tar zxf hub.tar.gz -C /tmp \
+    && rm -rf /tmp/*
+
+WORKDIR /tmp
+ENV TENSORFLOW_C_VERSION 2.3.0
+RUN curl -LO https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-${TENSORFLOW_C_VERSION}.tar.gz \
+    && tar -C /usr/local -xzf libtensorflow-cpu-linux-x86_64-${TENSORFLOW_C_VERSION}.tar.gz \
+    && rm -f libtensorflow-cpu-linux-x86_64-${TENSORFLOW_C_VERSION}.tar.gz \
+    && ldconfig \
+    && rm -rf /tmp/* /var/cache
