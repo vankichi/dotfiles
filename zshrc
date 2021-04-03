@@ -1,17 +1,19 @@
-#!/usr/bin/zsh
+#!/usr/local/bin/zsh
+USER=$(whoami)
+HOST=$(hostname)
 
 if type tmux >/dev/null 2>&1; then
     if [ -z $TMUX ]; then
-        USER=$(whoami)
-        HOST=$(hostname)
         if [ "$USER" = 'root' ]; then
             pkill tmux
             tmux -2 new-session -n$USER -s$USER@$HOST
+            tmux unbind C-b
+            tmux set -g prefix C-w
         else
             # get the id of a deattached session
-            ID="$(tmux ls | grep -vm1 attached | cut -d: -f1)"
+            ID="$(tmux ls | grep -vm1 attached | cut -d: -f1)" # get the id of a deattached session
             if [[ -z $ID ]]; then # if not available create a new one
-                tmux -2 new-session -n$USER -s$USER@$HOST \; source-file ~/.tmux.new-session
+                tmux -2 new-session -n$USER -s$USER@$HOST
             else
                 tmux -2 attach-session -t "$ID" # if available attach to it
             fi
@@ -19,124 +21,80 @@ if type tmux >/dev/null 2>&1; then
     fi
 fi
 
-if [ -z $DOTENV_LOADED ]; then
-    if type neofetch >/dev/null 2>&1; then
-        neofetch
-    fi
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
-    stty stop undef
-    stty start undef
+# programming language environment
+export XDG_CONFIG_HOME=$HOME/.config
 
-    setopt no_global_rcs
-    if [ -x /usr/libexec/path_helper ]; then
-        PATH=""
-        eval "$(/usr/libexec/path_helper -s)"
-    fi
-
-    # environment var
-    export LANG=en_US.UTF-8
-    export MANLANG=ja_JP.UTF-8
-    export LC_TIME=en_US.UTF-8
-
-    [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-
-    export SHELL=$(which zsh)
-    export USER=$(whoami)
-
-    export CPUCORES="$(getconf _NPROCESSORS_ONLN)"
-
-    if type urxvtc >/dev/null 2>&1; then
-        export TERMCMD="urxvtc -e $SHELL"
-    fi
-
-    # programming language environment
-    export XDG_CONFIG_HOME=$HOME/.config
-
-    # --------------------
-    # golang
-    # --------------------
-    if [ "$USER" == 'root' ]; then
-        export GOPATH=/go
-    else
-        export GOPATH=$HOME/go
-    fi
-
-    if type go >/dev/null 2>&1; then
-        export GOROOT="$(go env GOROOT)"
-        export GOOS="$(go env GOOS)"
-        export GOARCH="$(go env GOARCH)"
-        export CGO_ENABLED=1
-        export GO111MODULE=on
-        export GOBIN=$GOPATH/bin
-        export GO15VENDOREXPERIMENT=1
-        export GOPRIVATE="*.yahoo.co.jp"
-        export NVIM_GO_LOG_FILE=$XDG_DATA_HOME/go
-        export CGO_CFLAGS="-g -Ofast -march=native"
-        export CGO_CPPFLAGS="-g -Ofast -march=native"
-        export CGO_CXXFLAGS="-g -Ofast -march=native"
-        export CGO_FFLAGS="-g -Ofast -march=native"
-        export CGO_LDFLAGS="-g -Ofast -march=native"
-    fi
-
-    # export GCLOUD_PATH="/google-cloud-sdk"
-
-    # export PYTHON_CONFIGURE_OPTS="--enable-shared"
-
-    # --------------------
-    # nvim(NeoVim)
-    # --------------------
-    if type nvim >/dev/null 2>&1; then
-        export VIM=$(which nvim)
-        export VIMRUNTIME=/usr/share/nvim/runtime
-        export NVIM_HOME=$XDG_CONFIG_HOME/nvim
-        export XDG_DATA_HOME=$NVIM_HOME/log
-        export NVIM_LOG_FILE_PATH=$XDG_DATA_HOME
-        export NVIM_TUI_ENABLE_TRUE_COLOR=1
-        export NVIM_PYTHON_LOG_LEVEL=WARNING;
-        export NVIM_PYTHON_LOG_FILE=$NVIM_LOG_FILE_PATH/nvim.log;
-        export NVIM_LISTEN_ADDRESS="127.0.0.1:7650";
-    elif type vim >/dev/null 2>&1; then
-        export VIM=$(which vim)
-        export VIMRUNTIME=/usr/share/vim/vim*
-    else
-        export VIM=$(which vi)
-    fi
-
-    export EDITOR=$VIM
-    export VISUAL=$VIM
-    export PAGER=$(which less)
-    export SUDO_EDITOR=$EDITOR
-
-    # --------------------
-    # ReactNative
-    # --------------------
-    export REACT_EDITOR=$EDITOR;
-
-    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib64
-
-    # export TERM="tmux-256color"
-    export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:/usr/local/share/npm/bin:/usr/local/go/bin:/opt/local/bin:$GOBIN:/root/.cargo/bin:$GCLOUD_PATH/bin:$PATH"
-
-    export ZPLUG_HOME=$HOME/.zplug
-
-    if [ -e $ZPLUG_HOME/repos/zsh-users/zsh-completions ]; then
-        fpath=($ZPLUG_HOME/repos/zsh-users/zsh-completions/src $fpath)
-    fi
-
-    export DOTENV_LODED=1
+# --------------------
+# golang
+# --------------------
+if [ "$USER" = 'root' ]; then
+    export GOPATH=/go
+    export GOBIN=/root/go/bin
+else
+    export GOPATH=$HOME/go
+    export GOBIN=$GOPATH/bin
+fi
+if type go >/dev/null 2>&1; then
+    export GOROOT="$(go env GOROOT)"
+    export GOOS="$(go env GOOS)"
+    export GOARCH="$(go env GOARCH)"
+    # export GOBIN=$GOPATH/bin
+    export CGO_ENABLED=1
+    export GO111MODULE=on
+    # export GOBIN=$GOPATH/bin
+    export GO15VENDOREXPERIMENT=1
+    export GOPRIVATE="*.yahoo.co.jp"
+    export NVIM_GO_LOG_FILE=$XDG_DATA_HOME/go
 fi
 
+# nvm
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# --------------------
+# nvim(NeoVim)
+# --------------------
+if type nvim >/dev/null 2>&1; then
+    export VIM=$(which nvim)
+    if [ $(uname) = 'Darwin' ]; then
+        export VIMRUNTIME=/usr/local/share/nvim/runtime
+    else
+        export VIMRUNTIME=/usr/share/nvim/runtime
+    fi
+    export NVIM_HOME=$XDG_CONFIG_HOME/nvim
+    export XDG_DATA_HOME=$NVIM_HOME/log
+    export NVIM_LOG_FILE_PATH=$XDG_DATA_HOME
+    export NVIM_TUI_ENABLE_TRUE_COLOR=1
+    export NVIM_PYTHON_LOG_LEVEL=WARNING;
+    export NVIM_PYTHON_LOG_FILE=$NVIM_LOG_FILE_PATH/nvim.log;
+    export NVIM_LISTEN_ADDRESS="127.0.0.1:7650";
+elif type vim >/dev/null 2>&1; then
+    export VIM=$(which vim)
+    export VIMRUNTIME=/usr/share/vim/vim*
+else
+    export VIM=$(which vi)
+fi
+
+export EDITOR=$VIM
+export VISUAL=$VIM
+export PAGER=$(which less)
+export SUDO_EDITOR=$EDITOR
+
+# --------------------
+# bpctl
+# --------------------
+export BPCTL_V2_DEFAULT=true
+
+export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:/usr/local/share/npm/bin:/usr/local/go/bin:/opt/local/bin:$GOBIN:/root/.cargo/bin:/GCLOUD_PATH/bin:$PATH"
+
+export ZPLUG_HOME=$HOME/.zplug
 if type zplug >/dev/null 2>&1; then
     if zplug check junegunn/fzf; then
         export FZF_DEFAULT_COMMAND='rg --files --hidden --follow --glob "!.git/*"'
         export FZF_DEFAULT_OPTS='--height 40% --reverse --border'
-    fi
-
-    if zplug check b4b4r07/enhancd; then
-        export ENHANCD_FILTER=fzf-tmux
-        export ENHANCD_COMMAND=ccd
-        export ENHANCD_FILTER=fzf:peco:gof
-        export ENHANCD_DOT_SHOW_FULLPATH=1
     fi
 fi
 
@@ -149,8 +107,9 @@ if [ ! -f "$HOME/.zcompdump.zwc" -o "$HOME/.zcompdump" -nt "$HOME/.zcompdump.zwc
 fi
 
 [ -f $HOME/.aliases ] && source $HOME/.aliases
+[ -f $HOME/.zcpaliases ] && source $HOME/.zcpaliases
 
-if [ -z $ZSH_LOADED]; then
+if [ -z $ZSH_LOADED ]; then
     # --------------------
     # zplug
     # --------------------
@@ -158,7 +117,7 @@ if [ -z $ZSH_LOADED]; then
         source "$HOME/.zplug/init.zsh"
 
         zplug "junegunn/fzf", as:command, use:bin/fzf-tmux
-        zplug "junegunn/fzf-bin", as:command, from:gh-r, rename-to:fzf-z-search
+        zplug "junegunn/fzf-bin", as:command, from:gh-r, rename-to:fzf
         zplug "zchee/go-zsh-completions"
         zplug "zsh-users/zsh-autosuggestions"
         zplug "zsh-users/zsh-completions", as:plugin, use:"src"
@@ -167,12 +126,10 @@ if [ -z $ZSH_LOADED]; then
         zplug "superbrothers/zsh-kubectl-prompt", as:plugin, from:github, use:"kubectl.zsh"
         zplug "greymd/tmux-xpanes"
         zplug "felixr/docker-zsh-completion"
-
         if ! zplug check --verbose; then
             zplug install
         fi
-
-        zplug gdbm_load
+        zplug load
     else
         rm -rf $ZPLUG_HOME
         git clone https://github.com/zplug/zplug $ZPLUG_HOME
@@ -187,8 +144,8 @@ if [ -z $ZSH_LOADED]; then
     # --------------------
     # option
     # --------------------
-    setopt no_beep # no beep
-    setopt correct # correct spell
+    setopt no_beep
+    setopt correct
     setopt auto_cd         # ディレクトリ名だけでcdする
     setopt auto_list       # 補完候補を一覧表示
     setopt auto_menu       # 補完候補が複数あるときに自動的に一覧表示する
@@ -253,7 +210,7 @@ if [ -z $ZSH_LOADED]; then
     zstyle ':completion:*' group-name ''
     zstyle ':completion:*' ignore-parents parent pwd ..
     zstyle ':completion:*' keep-prefix
-    zstyle ':completion:*' list-colors ${LS_COLORS}
+    zstyle ':comletion:*' list-colors ${LS_COLORS}
     zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
     zstyle ':completion:*' menu select
     zstyle ':completion:*' squeeze-slashes true
@@ -306,7 +263,7 @@ if [ -z $ZSH_LOADED]; then
     precmd() {
         vcs_info
     }
-    PROMPT='%F{green}%n%f in %F{cyan}%/ $ %f'
+    PROMPT='%F{green}%n%f:%F{cyan}%/ $ %f'
     RPROMPT='${vcs_info_msg_0_}'
 
     _update_vcs_info_msg() {
@@ -316,9 +273,39 @@ if [ -z $ZSH_LOADED]; then
     add-zsh-hook precmd _update_vcs_info_msg
 
     export LSCOLORS=CxGxcxdxCxegedabagacad
-    alias ls='ls -G -la'
-    if [ "$HOST" = 'docker-desktop' ]; then
-        eval "$(starship init zsh)"
+
+    mkcd() {
+        if [[ -d $1 ]]; then
+            \cd $1
+        else
+            printf "Confirm to Make Directory? $1 [y/N]: "
+            if read -q; then
+                echo
+                \mkdir -p $1 && \cd $1
+            fi
+        fi
+    }
+
+    if type fzf >/dev/null 2>&1; then
+        if type fzf-tmux >/dev/null 2>&1; then
+            if type fd >/dev/null 2>&1; then
+                alias s='mkcd $(fd -a -H -t d . | fzf-tmux +m)'
+                alias vf='vim $(fd -a -H -t f . | fzf-tmux +m)'
+            fi
+#            if type rg >/dev/null 2>&1; then
+#                fbr() {
+#                    git branch --all | rg -v HEAD | fzf-tmux +m | sed -e "s/.* //" -e "s#remotes/[^/]*/##" | xargs git checkout
+#                }
+#                alias fbr=fbr
+#                sshf() {
+#                    ssh $(rg "Host " $HOME/.ssh/config | awk '{print $2}' | rg -v "\*" | fzf-tmux +m)
+#                }
+#                alias sshf=sshf
+#            fi
+            if type ghq >/dev/null 2>&1; then
+                alias g='mkcd $(ghq root)/$(ghq list | fzf-tmux +m)'
+            fi
+        fi
     fi
 
     # --------------------
@@ -364,7 +351,7 @@ if [ -z $ZSH_LOADED]; then
 
     # nvim
     if type nvim >/dev/null 2>&1; then
-        alias nvup="nvim +UpdateRemotePlugins +PlugInstall +PlugUpdate +PlugUpgrade +PlugClean +CocInstall +CocUpdate +qall"
+        alias nvup="nvim +UpdateRemotePlugins +PlugInstall +PlugUpdate +PlugUpgrade +PlugClean '+CocInstall' '+CocUpdate' +qall"
         nvim-init() {
             rm -rf "$HOME/.config/gocode"
             rm -rf "$HOME/.config/nvim/autoload"
@@ -386,22 +373,10 @@ if [ -z $ZSH_LOADED]; then
 
     alias vi="$EDITOR"
     alias vim="$EDITOR"
-    alias bim="$EDITOR"
-    alias cim="$EDITOR"
     alias v="$EDITOR"
     alias vspdchk="rm -rf /tmp/starup.log && $EDITOR --startuptime /tmp/startup.log +q && less /tmp/startup.log"
     alias xedit="$EDITOR $HOME/.Xdefaults"
     alias wedit="$EDITOR $HOME/.config/sway/config"
 
-    # docker
-    if type docker >/dev/null 2>&1; then
-        export DOCKER_BUILDKIT=1
-        export DOCKER_CLI_EXPERIMENTAL="enabled"
-        alias dls='docker ps'
-        alias dsh='docker run -it '
-        [ -f $HOME/.aliases ] && source $HOME/.aliases
-    fi
-
-
-    export ZSHLOADED=1
+    export ZSH_LOADED=true
 fi

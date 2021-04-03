@@ -1,67 +1,162 @@
 {
-  "suggest.noselect": false,
-  "suggest.preferCompleteThanJumpPlaceholder": true,
+  "coc": {
+    "preferences": {
+      "formatOnType": true,
+      "formatOnSaveFileTypes": [
+        "go",
+        "nix",
+        "typescript",
+        "dockerfile",
+        "json",
+        "sh",
+        "zsh",
+        "bash",
+        "vim",
+        "eruby",
+        "markdown",
+        "python"
+      ]
+    },
+    "source": {
+      "around.enable": false,
+      "neco.enable": false
+    }
+  },
+  "signature": {
+    "preferShownAbove": false,
+    "target": "float"
+  },
+  "session.directory": "~/.cache/vim/sessions",
+  "diagnostic": {
+    "messageTarget": "echo",
+    "refreshOnInsertMode": true
+  },
+  "suggest": {
+    "noselect": true,
+    "preferCompleteThanJumpPlaceholder": true,
+    "detailField": "abbr",
+    "enablePreview": true,
+    "enablePreselect": false,
+    "floatEnable": true,
+    "snippetIndicator": "",
+    "triggerAfterInsertEnter": true,
+    "echodocSupport": true,
+    "timeout": 5000
+  },
   "languageserver": {
     "golang": {
       "command": "gopls",
-      "initializationOptions": {
-        "completeUnimported": true,
-        "usePlaceholders": true,
-        "staticcheck": false,
-        "lintTool": "golangci-lint",
-        "formatTool": "goimports"
-      },
       "rootPatterns": [
         "go.mod",
+        "go.sum",
         ".vim/",
         ".git/",
         ".hg/"
       ],
       "filetypes": [
         "go"
-      ]
-    },
-   "dockerfile": {
-      "command": "docker-langserver",
-      "filetypes": [
-        "dockerfile"
       ],
-      "args": [
-        "--stdio"
-      ]
-    },
-    "bash": {
-      "command": "bash-language-server",
-      "args": [
-        "start"
-      ],
-      "filetypes": [
-        "sh",
-        "zsh",
-        "bash"
-      ],
-      "ignoredRootPaths": [
-        "~"
-      ]
-    },
-    "python": {
-      "command": "pyls",
-      "filetypes": [
-        "python"
-      ],
-      "args": []
-    },
-    "efm": {
-      "command": "efm-langserver",
-      "args": [
-        "-c",
-        "$HOME/.config/nvim/efm-lsp-conf.yaml"
-      ],
-      "filetypes": [
-        "vim",
-        "eruby",
-        "markdown"
-      ]
+      "initializationOptions": {
+        "deepCompletion": true,
+        "experimentalWorkspaceModule": true,
+        "hoverKind": "FullDocumentation",
+        "staticcheck": true,
+        "usePlaceholders": true,
+        "env": {
+          "CGO_CFLAGS": "-g -O=fast -march=native",
+          "CGO_CPPFLAGS": "-g -O=fast -march=native",
+          "CGO_CXXFLAGS": "-g -O=fast -march=native",
+          "CGO_FFLAGS": "-g -O=fast -march=native",
+          "CGO_LDFLAGS": "-g -O=fast -march=native"
+        },
+        "analyses": {
+          "nonewvars": true,
+          "fieldalignment": true,
+          "unreachable": true,
+          "unusedparams": true
+        }
+      }
     }
+  },
+  "go.goplsOptions": {
+    "completeUnimported": true,
+    "deepCompletion": true,
+    "gofumpt": true,
+    "staticcheck": true,
+    "completionDocumentation": true,
+    "experimentalWorkspaceModule": true,
+    "hoverKind": "FullDocumentation",
+    "linkTarget": "pkg.go.dev",
+    "usePlaceholders": true,
+    "env": {
+      "CGO_CFLAGS": "-g -O=fast -march=native",
+      "CGO_CPPFLAGS": "-g -O=fast -march=native",
+      "CGO_CXXFLAGS": "-g -O=fast -march=native",
+      "CGO_FFLAGS": "-g -O=fast -march=native",
+      "CGO_LDFLAGS": "-g -O=fast -march=native"
+    },
+    "analyses": {
+      "nonewvars": true,
+      "fieldalignment": true,
+      "unreachable": true,
+      "unusedparams": true
+    }
+  },
+  "cSpell": {
+    "fixSpellingWithRenameProvider": true,
+    "enabledLanguageIds": [
+      "asciidoc",
+      "c",
+      "cpp",
+      "csharp",
+      "css",
+      "git-commit",
+      "gitcommit",
+      "go",
+      "handlebars",
+      "haskell",
+      "html",
+      "jade",
+      "java",
+      "javascript",
+      "javascriptreact",
+      "json",
+      "jsonc",
+      "latex",
+      "less",
+      "markdown",
+      "nvim",
+      "php",
+      "plaintext",
+      "pug",
+      "python",
+      "restructuredtext",
+      "rust",
+      "scala",
+      "scss",
+      "text",
+      "typescript",
+      "typescriptreact",
+      "vim",
+      "yaml",
+      "yml"
+    ],
+    "ignoreRegExpList": [
+      ".{1}dur",
+      ".{1}len",
+      ".{2}dur",
+      ".{2}ech",
+      ".{2}err",
+      ".{2}len",
+      ".{4}ch"
+    ],
+    "userWords": [
+      "nvim",
+      "cSpell",
+      "Debugf",
+      "vald",
+      "vdaas",
+      "vec"
+    ]
   }
 }
