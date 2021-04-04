@@ -1,5 +1,5 @@
 #!/usr/local/bin/zsh
-rcpath="$HOME/go/src/github.com/vankichi/newdotfiles"
+rcpath="$HOME/go/src/github.com/vankichi/dotfiles"
 zpath="/usr/bin/zsh"
 container_name="dev"
 image_name="vankichi/dev:latest"
@@ -35,7 +35,7 @@ function devrun {
         Darwin)
             echo 'Docker on macOS start'
             docker run \
-                --cap-add=ALL
+                --cap-add=ALL \
                 --name $container_name \
                 --restart always \
                 --privileged=$privileged \
@@ -51,16 +51,14 @@ function devrun {
                 -v $docker_config:/etc/docker/config.json \
                 -v $docker_daemon:/etc/docker/daemon.json \
                 -v $font_dir:/usr/share/fonts:ro \
-                -v $rcpath/.bp:$container_root/.bp \
-                -v $rcpath/.config/nvim/coc-settings.json:$container_root/.config/nvim/coc-settings.json \
-                -v $rcpath/.editorconfig:$container_root/.editorconfig \
-                -v $rcpath/.gitconfig:$container_root/.gitconfig \
-                -v $rcpath/.gitignore:$container_root/.gitignore \
-                -v $rcpath/.config/nvim/init.vim:$container_root/.config/nvim/init.vim \
-                -v $rcpath/.config/nvim/colors/monokai.vim:$container_root/.config/nvim/colors/monokai.vim \
-                -v $rcpath/.config/nvim/colors/molokai.vim:$container_root/.config/nvim/colors/molokai.vim \
-                -v $rcpath/.tmux.conf:$container_root/.tmux.conf \
-                -v $rcpath/.zshrc:$container_root/.zshrc \
+                -v $rcpath/coc-settings.json:$container_root/.config/nvim/coc-settings.json \
+                -v $rcpath/editorconfig:$container_root/.editorconfig \
+                -v $rcpath/gitconfig:$container_root/.gitconfig \
+                -v $rcpath/gitignore:$container_root/.gitignore \
+                -v $rcpath/init.vim:$container_root/.config/nvim/init.vim \
+                -v $rcpath/monokai.vim:$container_root/.config/nvim/colors/monokai.vim \
+                -v $rcpath/tmux.conf:$container_root/.tmux.conf \
+                -v $rcpath/zshrc:$container_root/.zshrc \
                 -v $tz_path:/etc/localtime:ro \
                 -v $docker_sock:$docker_sock \
                 -dit $image_name
