@@ -3,15 +3,18 @@ FROM vankichi/dev-base:latest AS kube-base
 ENV ARCH amd64
 ENV OS linux
 ENV GITHUB https://github.com
+ENV RAWGITHUB https://raw.githubusercontent.com
 ENV GOOGLE https://storage.googleapis.com
 ENV RELEASE_DL releases/download
 ENV RELEASE_LATEST releases/latest
 ENV LOCAL /usr/local
 ENV BIN_PATH ${LOCAL}/bin
-ENV TELEPRESENCE_VERSION 0.105
+ENV TELEPRESENCE_VERSION 0.108
+
+RUN apt-get update
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.8 \
+    python3.9 \
     python3-setuptools \
     python3-pip \
     python3-venv \
@@ -26,7 +29,11 @@ RUN set -x; cd "$(mktemp -d)" \
 
 FROM kube-base AS helm
 RUN set -x; cd "$(mktemp -d)" \
-    && curl "https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3" | bash
+    && curl "${RAWGITHUB}/helm/helm/master/scripts/get-helm-3" | bash \
+    && BIN_NAME="helm" \
+    && chmod a+x "${BIN_PATH}/${BIN_NAME}" \
+    && upx -9 "${BIN_PATH}/${BIN_NAME}"
+
 
 FROM kube-base AS helmfile
 RUN set -x; cd "$(mktemp -d)" \
@@ -58,10 +65,15 @@ RUN set -x; cd "$(mktemp -d)" \
 
 FROM kube-base AS kubebuilder
 RUN set -x; cd "$(mktemp -d)" \
-    && KUBEBUILDER_VERSION="$(curl --silent ${GITHUB}/kubernetes-sigs/kubebuilder/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#' | sed 's/v//g')" \
-    && curl -fsSLO "${GITHUB}/kubernetes-sigs/kubebuilder/${RELEASE_DL}/v${KUBEBUILDER_VERSION}/kubebuilder_${KUBEBUILDER_VERSION}_${OS}_${ARCH}.tar.gz" \
-    && tar -zxvf kubebuilder_${KUBEBUILDER_VERSION}_${OS}_${ARCH}.tar.gz \
-    && mv kubebuilder_${KUBEBUILDER_VERSION}_${OS}_${ARCH}/bin/* ${BIN_PATH}/
+    && BIN_NAME="kubebuilder" \
+    && REPO="kubernetes-sigs/${BIN_NAME}" \
+    && VERSION="$(curl --silent ${GITHUB}/${REPO}/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#' | sed 's/v//g')" \
+    && FILE_NAME="${BIN_NAME}_${OS}_${ARCH}" \
+    && curl -fsSLO "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${FILE_NAME}" \
+    && mv "${FILE_NAME}" "${BIN_PATH}/${BIN_NAME}" \
+    && chmod a+x "${BIN_PATH}/${BIN_NAME}" \
+    && upx -9 "${BIN_PATH}/${BIN_NAME}"
+
 
 FROM kube-base AS kind
 RUN set -x; cd "$(mktemp -d)" \
@@ -116,9 +128,12 @@ RUN set -x; cd "$(mktemp -d)" \
 
 FROM kube-base AS skaffold
 RUN set -x; cd "$(mktemp -d)" \
-    && SKAFFOLD_VERSION="$(curl --silent ${GITHUB}/GoogleContainerTools/skaffold/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#' | sed 's/v//g')" \
-    && curl -fsSL -o ${BIN_PATH}/skaffold "${GOOGLE}/skaffold/releases/v${SKAFFOLD_VERSION}/skaffold-${OS}-${ARCH}" \
-    && chmod +x ${BIN_PATH}/skaffold
+    && BIN_NAME="skaffold" \
+    && REPO="GoogleContainerTools/${BIN_NAME}" \
+    && VERSION="$(curl --silent ${GITHUB}/${REPO}/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#' | sed 's/v//g')" \
+    && curl -fsSLo "${BIN_PATH}/${BIN_NAME}" "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${BIN_NAME}-${OS}-${ARCH}" \
+    && chmod a+x "${BIN_PATH}/${BIN_NAME}" \
+    && upx -9 "${BIN_PATH}/${BIN_NAME}"
 
 FROM kube-base AS kubeval
 RUN set -x; cd "$(mktemp -d)" \
@@ -136,7 +151,7 @@ RUN set -x; cd "$(mktemp -d)" \
 
 FROM kube-base AS istio
 RUN set -x; cd "$(mktemp -d)" \
-    & curl -L https://istio.io/downloadIstio | sh - \
+    && curl -L https://istio.io/downloadIstio | sh - \
     && mv "$(ls | grep istio)/bin/istioctl" ${BIN_PATH}/istioctl
 
 FROM kube-base AS kpt
@@ -155,7 +170,10 @@ RUN set -x; cd "$(mktemp -d)" \
 FROM scratch AS kube
 
 ENV BIN_PATH /usr/local/bin
+ENV LIB_PATH /usr/local/libexec
 ENV K8S_PATH /usr/k8s/bin
+ENV K8S_LIB_PATH /usr/k8s/lib
+
 COPY --from=helm ${BIN_PATH}/helm ${K8S_PATH}/helm
 COPY --from=helm-docs ${BIN_PATH}/helm-docs ${K8S_PATH}/helm-docs
 COPY --from=helmfile ${BIN_PATH}/helmfile ${K8S_PATH}/helmfile
@@ -180,3 +198,4 @@ COPY --from=octant ${BIN_PATH}/octant ${K8S_PATH}/octant
 COPY --from=skaffold ${BIN_PATH}/skaffold ${K8S_PATH}/skaffold
 COPY --from=stern ${BIN_PATH}/stern ${K8S_PATH}/stern
 COPY --from=telepresence ${BIN_PATH}/telepresence ${K8S_PATH}/telepresence
+COPY --from=telepresence ${LIB_PATH}/sshuttle-telepresence ${K8S_LIB_PATH}/sshuttle-telepresence

@@ -144,7 +144,7 @@ push_all: \
 	push_env \
 	push_dart \
 	push_docker \
-	push_glibc \
+	push_gcloud \
 	push_go \
 	push_k8s \
 	push_nim \

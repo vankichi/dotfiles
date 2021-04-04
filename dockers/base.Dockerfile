@@ -14,21 +14,35 @@ ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:${CLANG_PATH}/lib
 RUN apt-get update -y \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends --fix-missing \
-        clang \
         axel \
+        bash \
         build-essential \
         ca-certificates \
+        clang \
         cmake \
         curl \
+        diffutils \
+        gawk \
         git \
+        gnupg \
+        jq \
+        less \
         libtinfo5 \
         locales \
+        mtr \
+        ncurses-term \
+        openssh-client \
+        sed \
+        tar \
+        tig \
+        tmux \
+        tzdata \
         unzip \
         upx \
         wget \
-        xz-utils \
+        # xclip \
+        # xz-utils \
         zsh \
-        tzdata \
     && update-alternatives --set cc $(which clang) \
     && update-alternatives --set c++ $(which clang++) \
     && apt-get clean \
@@ -39,4 +53,3 @@ RUN echo "${LANG} UTF-8" > /etc/locale.gen \
     && locale-gen \
     && rm /etc/localtime \
     && dpkg-reconfigure -f noninteractive tzdata
-

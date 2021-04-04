@@ -1,7 +1,5 @@
 FROM vankichi/dev-base:latest AS env
 
-ENV NGT_VERSION 1.8.1
-ENV HUB_VERSION 2.13.0
 ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/lib:/usr/local/lib:/lib:/lib64:/var/lib:/google-cloud-sdk/lib:/usr/local/go/lib:/usr/lib/dart/lib:/usr/lib/node_modules/lib
 
 WORKDIR /tmp
@@ -20,25 +18,15 @@ RUN echo $'/lib\n\
 RUN apt-get update -y \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends --fix-missing \
-    bash \
-    diffutils \
-    exuberant-ctags \
-    gawk \
-    gnupg \
-    graphviz \
-    jq \
-    less \
+    # graphviz \
     libhdf5-serial-dev \
     libomp-dev \
     libprotobuf-dev \
     libprotoc-dev \
-    luajit \
+    # luajit \
     mariadb-client \
-    mtr \
-    ncurses-term \
     neovim \
     nodejs \
-    openssh-client \
     perl \
     protobuf-compiler \
     python3-dev \
@@ -46,19 +34,14 @@ RUN apt-get update -y \
     python3-setuptools \
     python3-venv \
     ruby-dev \
-    sed \
-    tar \
-    tig \
-    tmux \
-    xclip \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-
-RUN pip3 install --upgrade pip neovim ranger-fm thefuck httpie python-language-server vim-vint grpcio-tools \
+RUN pip3 install --upgrade pip neovim ranger-fm httpie python-language-server vim-vint grpcio-tools \
     && gem install neovim -N \
     && curl https://www.npmjs.com/install.sh | sh \
     && npm config set user root \
-    && npm install -g \
+    && npm install --unsafe-perms -g \
         bash-language-server \
         dockerfile-language-server-nodejs \
         markdownlint-cli \
@@ -70,14 +53,13 @@ RUN pip3 install --upgrade pip neovim ranger-fm thefuck httpie python-language-s
         typescript \
         typescript-language-server \
         yarn \
-    && n stable \
+    && n lts \
     && apt purge -y nodejs npm \
-    && git clone https://github.com/soimort/translate-shell \
-    && cd /tmp/translate-shell/ \
-    && make TARGET=zsh -j -C /tmp/translate-shell \
-    && make install -C /tmp/translate-shell \
-    && cd /tmp \
-    && rm -rf /tmp/translate-shell/
+    # && git clone https://github.com/soimort/translate-shell \
+    # && cd translate-shell \
+    # && make TARGET=zsh -j -C /tmp/translate-shell \
+    # && make install -C /tmp/translate-shell \
+    && rm -rf /tmp/*
 
 WORKDIR /tmp
 ENV NGT_VERSION 1.12.1

@@ -43,7 +43,7 @@ LABEL maintainer="vankichi <kyukawa315@gmail.com>"
 
 ENV TZ Asia/Tokyo
 ENV HOME /root
-ENV GOPATH /go
+ENV GOPATH $HOME/go
 ENV GOROOT /usr/local/go
 ENV GCLOUD_PATH /google-cloud-sdk
 ENV CARGO_PATH /root/.cargo
@@ -106,7 +106,7 @@ COPY --from=kube /usr/k8s/lib/ /usr/lib/
 # COPY --from=kube /usr/local/bin/linkerd /usr/bin/linkerd
 # COPY --from=kube /root/.krew/bin /usr/bin/
 
-COPY --from=gcloud /google-cloud-sdk /google-cloud-sdk
+COPY --from=gcloud /usr/lib/google-cloud-sdk /usr/lib/google-cloud-sdk
 COPY --from=gcloud /usr/lib/google-cloud-sdk/lib /usr/lib
 COPY --from=gcloud /root/.config/gcloud /root/.config/gcloud
 
@@ -121,11 +121,11 @@ COPY --from=dart /usr/lib/dart/bin /usr/lib/dart/bin
 COPY --from=dart /usr/lib/dart/lib /usr/lib/dart/lib
 COPY --from=dart /usr/lib/dart/include /usr/lib/dart/include
 
-COPY --from=go /usr/local/go/bin $GOROOT/bin
-COPY --from=go /usr/local/go/src $GOROOT/src
-COPY --from=go /usr/local/go/lib $GOROOT/lib
-COPY --from=go /usr/local/go/pkg $GOROOT/pkg
-COPY --from=go /usr/local/go/misc $GOROOT/misc
+COPY --from=go /opt/go/bin $GOROOT/bin
+COPY --from=go /opt/go/src $GOROOT/src
+COPY --from=go /opt/go/lib $GOROOT/lib
+COPY --from=go /opt/go/pkg $GOROOT/pkg
+COPY --from=go /opt/go/misc $GOROOT/misc
 COPY --from=go /go/bin $GOPATH/bin
 
 # COPY --from=rust /home/rust/.cargo/bin /root/.cargo/bin
