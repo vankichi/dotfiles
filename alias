@@ -48,8 +48,8 @@ function devrun {
                 -v $HOME/Documents:$container_root/Documents \
                 -v $HOME/Downloads:$container_root/Downloads \
                 -v $HOME/go/src:/go/src:cached \
-                -v $docker_config:/etc/docker/config.json \
-                -v $docker_daemon:/etc/docker/daemon.json \
+                -v $docker_config:/etc/docker/config.json:ro,cached \
+                -v $docker_daemon:/etc/docker/daemon.json:ro,cached \
                 -v $font_dir:/usr/share/fonts:ro \
                 -v $rcpath/coc-settings.json:$container_root/.config/nvim/coc-settings.json \
                 -v $rcpath/editorconfig:$container_root/.editorconfig \
@@ -71,7 +71,35 @@ function devrun {
             font_dir="/usr/share/fonts"
             tz_path="/etc/timezone"
             docker_daemon="/etc/docker/daemon.json"
-            #docker_config="/etc/docker/config.json"
+            docker_config="/etc/docker/config.json"
+	    docker run \
+                --cap-add=ALL \
+                --name $container_name \
+                --restart always \
+                --privileged=$privileged \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                -p $port_range:$port_range \
+                -v $HOME/.docker:$container_root/.docker \
+                -v $HOME/.kube:$container_root/.kube \
+                -v $HOME/.netrc:$container_root/.netrc \
+                -v $HOME/.ssh:$container_root/.ssh \
+                -v $HOME/Documents:$container_root/Documents \
+                -v $HOME/Downloads:$container_root/Downloads \
+                -v $HOME/go/src:/go/src:cached \
+                -v $docker_config:/etc/docker/config.json \
+                -v $docker_daemon:/etc/docker/daemon.json \
+                -v $font_dir:/usr/share/fonts:ro \
+                -v $rcpath/coc-settings.json:$container_root/.config/nvim/coc-settings.json \
+                -v $rcpath/editorconfig:$container_root/.editorconfig \
+                -v $rcpath/gitconfig:$container_root/.gitconfig \
+                -v $rcpath/gitignore:$container_root/.gitignore \
+                -v $rcpath/init.vim:$container_root/.config/nvim/init.vim \
+                -v $rcpath/monokai.vim:$container_root/.config/nvim/colors/monokai.vim \
+                -v $rcpath/tmux.conf:$container_root/.tmux.conf \
+                -v $rcpath/zshrc:$container_root/.zshrc \
+                -v $tz_path:/etc/localtime:ro \
+                -v $docker_sock:$docker_sock \
+                -dit $image_name
             ;;
 
         CYGWIN*|MINGW32*|MSYS*)
