@@ -7,6 +7,7 @@ if type tmux >/dev/null 2>&1; then
         if [ "$USER" = 'root' ]; then
             pkill tmux
             tmux -2 new-session -n$USER -s$USER@$HOST
+            tmux source-file /root/.tmux.conf
             tmux unbind C-b
             tmux set -g prefix C-w
         else
@@ -377,6 +378,10 @@ if [ -z $ZSH_LOADED ]; then
     alias vspdchk="rm -rf /tmp/starup.log && $EDITOR --startuptime /tmp/startup.log +q && less /tmp/startup.log"
     alias xedit="$EDITOR $HOME/.Xdefaults"
     alias wedit="$EDITOR $HOME/.config/sway/config"
+
+    if type bat >/dev/null 2>&1; then
+        alias cat="bat"
+    fi
 
     export ZSH_LOADED=true
 fi
