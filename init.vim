@@ -399,3 +399,6 @@ autocmd BufWritePre *.go :silent call CocAction('runCommand', 'editor.action.org
 " ---- Enable Filetype
 filetype plugin indent on
 filetype on
+autocmd FileType js          setlocal sw=2 sts=2 ts=2 et
+autocmd FileType javascript  setlocal sw=2 sts=2 ts=2 et
+autocmd FileType ts          setlocal sw=2 sts=2 ts=2 et
