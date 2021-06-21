@@ -59,6 +59,7 @@ function devrun {
                 -v $rcpath/monokai.vim:$container_root/.config/nvim/colors/monokai.vim \
                 -v $rcpath/tmux.conf:$container_root/.tmux.conf \
                 -v $rcpath/zshrc:$container_root/.zshrc \
+                -v $HOME/.zsh_history:$container_root/.zsh_history \
                 -v $tz_path:/etc/localtime:ro \
                 -v $docker_sock:$docker_sock \
                 -dit $image_name
@@ -77,8 +78,8 @@ function devrun {
                 --name $container_name \
                 --restart always \
                 --privileged=$privileged \
+                -p 1313:1313 \
                 -v /var/run/docker.sock:/var/run/docker.sock \
-                -p $port_range:$port_range \
                 -v $HOME/.docker:$container_root/.docker \
                 -v $HOME/.kube:$container_root/.kube \
                 -v $HOME/.netrc:$container_root/.netrc \
@@ -97,6 +98,7 @@ function devrun {
                 -v $rcpath/monokai.vim:$container_root/.config/nvim/colors/monokai.vim \
                 -v $rcpath/tmux.conf:$container_root/.tmux.conf \
                 -v $rcpath/zshrc:$container_root/.zshrc \
+                -v $HOME/.zsh_history:$container_root/.zsh_history \
                 -v $tz_path:/etc/localtime:ro \
                 -v $docker_sock:$docker_sock \
                 -dit $image_name
