@@ -138,7 +138,7 @@ RUN set -x; cd "$(mktemp -d)" \
 FROM kube-base AS kubeval
 RUN set -x; cd "$(mktemp -d)" \
     && KUBEVAL_VERSION="$(curl --silent ${GITHUB}/instrumenta/kubeval/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#' | sed 's/v//g')" \
-    && curl -fsSLO ${GITHUB}/instrumenta/kubeval/${RELEASE_DL}/${KUBEVAL_VERSION}/kubeval-${OS}-${ARCH}.tar.gz \
+    && curl -fsSLO ${GITHUB}/instrumenta/kubeval/${RELEASE_DL}/v${KUBEVAL_VERSION}/kubeval-${OS}-${ARCH}.tar.gz \
     && tar -zxvf kubeval-${OS}-${ARCH}.tar.gz \
     && mv kubeval ${BIN_PATH}/kubeval
 

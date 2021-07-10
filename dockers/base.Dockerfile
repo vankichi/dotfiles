@@ -36,6 +36,7 @@ RUN apt-get update -y \
         tar \
         tig \
         tmux \
+        tree \
         tzdata \
         unzip \
         upx \

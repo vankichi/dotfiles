@@ -2,7 +2,7 @@ FROM vankichi/dev-base:latest AS docker-base
 FROM aquasec/trivy:latest AS trivy
 FROM goodwithtech/dockle:latest AS dockle-base
 FROM docker-base AS dockle
-COPY --from=dockle-base /usr/local/bin/dockle /usr/local/bin/dockle
+COPY --from=dockle-base /usr/bin/dockle /usr/local/bin/dockle
 RUN upx -9 \
         /usr/local/bin/dockle
 

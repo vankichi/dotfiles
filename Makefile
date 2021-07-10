@@ -129,12 +129,10 @@ push_glibc:
 build_all: \
 	build_base \
 	build_env \
-	build_dart \
 	build_docker \
 	build_gcloud \
 	build_go \
 	build_k8s \
-	build_nim \
 	build_rust \
 	prod_build
 	echo "done"
@@ -142,12 +140,10 @@ build_all: \
 push_all: \
 	push_base \
 	push_env \
-	push_dart \
 	push_docker \
 	push_gcloud \
 	push_go \
 	push_k8s \
-	push_nim \
 	push_rust \
 	prod_push
 	echo "done"
