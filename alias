@@ -45,6 +45,7 @@ function devrun {
                 -v $HOME/.kube:$container_root/.kube \
                 -v $HOME/.netrc:$container_root/.netrc \
                 -v $HOME/.ssh:$container_root/.ssh \
+                -v $HOME/.gnupg:$container_root/.gnupg \
                 -v $HOME/Documents:$container_root/Documents \
                 -v $HOME/Downloads:$container_root/Downloads \
                 -v $HOME/go/src:/go/src:cached \
@@ -86,6 +87,7 @@ function devrun {
                 -v $HOME/.ssh:$container_root/.ssh \
                 -v $HOME/Documents:$container_root/Documents \
                 -v $HOME/Downloads:$container_root/Downloads \
+                -v $HOME/.gnupg:$container_root/.gnupg \
                 -v $HOME/go/src:/go/src:cached \
                 -v $docker_config:/etc/docker/config.json \
                 -v $docker_daemon:/etc/docker/daemon.json \
