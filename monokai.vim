@@ -33,7 +33,7 @@ if has('gui_running')
   let s:lncolumn   = '#2F312B'
   let s:darkcolumn = '#211F1C'
   let s:selection  = '#575b61'
-  let s:comment    = '#75715E'
+  let s:comment    = '#D7FFFF' " #75715E
   let s:error      = '#5f0000'
   let s:zentree    = '#8f8f8f'
 
@@ -60,7 +60,7 @@ else
   let s:lncolumn   = '235'
   let s:darkcolumn = '233'
   let s:selection  = '237'
-  let s:comment    = '59'
+  let s:comment    = '195' " 59
   let s:error      = '52'
   let s:zentree    = '242'
 

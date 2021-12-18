@@ -204,11 +204,12 @@ call plug#begin(expand('$NVIM_HOME') . '/plugged')
     Plug 'cohama/lexima.vim' " auto close bracket
     Plug 'airblade/vim-gitgutter' " show gitdiff
     Plug 'itchyny/lightline.vim' " vim status line
-    Plug 'janko-m/vim-test', {'for': ['go','rust','elixir','python','ruby','javascript','sh','lua','php','perl','java']} " test runner
+    Plug 'janko-m/vim-test', {'for': ['go','rust','elixir','python','ruby','javascript','sh','lua','php','perl','java', 'typescript', 'typescriptreact']} " test runner
     Plug 'sbdchd/neoformat' " formting
     Plug 'vim-scripts/sudo.vim' " save w/sudo by :e sudo:%
     Plug 'editorconfig/editorconfig-vim' " for using editorconfig
     Plug 'tyru/caw.vim' " comment out
+    Plug 'leafgarland/typescript-vim' " typescript-vim
 call plug#end()
 
 " --------------------------------------------------
@@ -309,6 +310,10 @@ let g:coc_global_extensions = [
     \ 'https://github.com/xabikos/vscode-react'
     \]
 " -------------------------
+" ---- Coc-Explorer ----
+" -------------------------
+nnoremap <silent> <C-e> :CocCommand explorer<CR>
+" -------------------------
 " ---- Denite settings ----
 " -------------------------
 nnoremap <silent> <C-k><C-f> :<C-u>Denite file_rec<CR>
@@ -385,6 +390,7 @@ nmap <silent><Leader>i :<C-u>IndentLinesToggle<CR>
 " AutocmdFT coffee,javascript,javascript.jsx,jsx,json setlocal sw=2 sts=2 ts=2 expandtab completeopt=menu,preview omnifunc=nodejscomplete#CompleteJS omnifunc=lsp#complete
 " AutocmdFT go setlocal noexpandtab sw=4 ts=4 completeopt=menu,preview omnifunc=lspcomplete
 AutocmdFT go setlocal noexpandtab sw=4 ts=4 completeopt=menu,menuone,preview,noselect,noinsert
+AutocmdFT js,jsx,ts,tsx,typescript,typescriptreact setlocal noexpandtab sw=2 ts=2 completeopt=menu,menuone,preview,noselect,noinsert
 AutocmdFT html,xhtml setlocal smartindent expandtab ts=2 sw=2 sts=2 completeopt=menu,preview
 " AutocmdFT python setlocal smartindent expandtab sw=4 ts=8 sts=4 colorcolumn=79 completeopt=menu,preview formatoptions+=croq cinwords=if,elif,else,for,while,try,except,finally,def,class,with omnifunc=lsp#complete
 " AutocmdFT rust setlocal smartindent expandtab ts=4 sw=4 sts=4 completeopt=menu,preview omnifunc=lsp#complete
@@ -399,6 +405,9 @@ autocmd BufWritePre *.go :silent call CocAction('runCommand', 'editor.action.org
 " ---- Enable Filetype
 filetype plugin indent on
 filetype on
-autocmd FileType js          setlocal sw=2 sts=2 ts=2 et
-autocmd FileType javascript  setlocal sw=2 sts=2 ts=2 et
-autocmd FileType ts          setlocal sw=2 sts=2 ts=2 et
+autocmd FileType js                 setlocal sw=2 sts=2 ts=2 et
+autocmd FileType javascript         setlocal sw=2 sts=2 ts=2 et
+autocmd FileType ts                 setlocal sw=2 sts=2 ts=2 et
+autocmd FileType tsx                setlocal sw=2 sts=2 ts=2 et
+autocmd FileType typescriptreact    setlocal sw=2 sts=2 ts=2 et
+autocmd FileType typescript         setlocal sw=2 sts=2 ts=2 et

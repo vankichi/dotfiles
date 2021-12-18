@@ -56,6 +56,11 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 # --------------------
+# deno
+# --------------------
+export DENO_INSTALL="$HOME/.deno"
+
+# --------------------
 # nvim(NeoVim)
 # --------------------
 if type nvim >/dev/null 2>&1; then
@@ -89,7 +94,15 @@ export SUDO_EDITOR=$EDITOR
 # --------------------
 export BPCTL_V2_DEFAULT=true
 
-export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:/usr/local/share/npm/bin:/usr/local/go/bin:/opt/local/bin:$GOBIN:/root/.cargo/bin:/GCLOUD_PATH/bin:$PATH"
+# --------------------
+# k9s
+# --------------------
+export K9S="$HOME/.local/bin"
+
+# --------------------
+# PATH
+# --------------------
+export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:/usr/local/share/npm/bin:/usr/local/go/bin:/opt/local/bin:$GOBIN:/root/.cargo/bin:/GCLOUD_PATH/bin:$DENO_INSTALL/bin:$K9S:$PATH"
 
 export ZPLUG_HOME=$HOME/.zplug
 if type zplug >/dev/null 2>&1; then
@@ -293,16 +306,16 @@ if [ -z $ZSH_LOADED ]; then
                 alias s='mkcd $(fd -a -H -t d . | fzf-tmux +m)'
                 alias vf='vim $(fd -a -H -t f . | fzf-tmux +m)'
             fi
-#            if type rg >/dev/null 2>&1; then
-#                fbr() {
-#                    git branch --all | rg -v HEAD | fzf-tmux +m | sed -e "s/.* //" -e "s#remotes/[^/]*/##" | xargs git checkout
-#                }
-#                alias fbr=fbr
-#                sshf() {
-#                    ssh $(rg "Host " $HOME/.ssh/config | awk '{print $2}' | rg -v "\*" | fzf-tmux +m)
-#                }
-#                alias sshf=sshf
-#            fi
+            # if type rg >/dev/null 2>&1; then
+            #     fbr() {
+            #         git branch --all | rg -v HEAD | fzf-tmux +m | sed -e "s/.* //" -e "s#remotes/[^/]*/##" | xargs git checkout
+            #     }
+            #     alias fbr=fbr
+            #     sshf() {
+            #         ssh $(rg "Host " $HOME/.ssh/config | awk '{print $2}' | rg -v "\*" | fzf-tmux +m)
+            #     }
+            #     alias sshf=sshf
+            # fi
             if type ghq >/dev/null 2>&1; then
                 alias g='mkcd $(ghq root)/$(ghq list | fzf-tmux +m)'
             fi
@@ -352,7 +365,7 @@ if [ -z $ZSH_LOADED ]; then
 
     # nvim
     if type nvim >/dev/null 2>&1; then
-        alias nvup="nvim +UpdateRemotePlugins +PlugInstall +PlugUpdate +PlugUpgrade +PlugClean '+CocInstall' '+CocUpdate' +qall"
+        alias nvup="nvim +UpdateRemotePlugins +PlugInstall +PlugUpdate +PlugUpgrade +PlugClean +CocInstall +CocUpdate +qall"
         nvim-init() {
             rm -rf "$HOME/.config/gocode"
             rm -rf "$HOME/.config/nvim/autoload"
@@ -385,3 +398,8 @@ if [ -z $ZSH_LOADED ]; then
 
     export ZSH_LOADED=true
 fi
+
+# Generated for envman. Do not edit.
+[ -s "$HOME/.config/envman/load.sh" ] && source "$HOME/.config/envman/load.sh"
+
+export GPG_TTY=$TTY

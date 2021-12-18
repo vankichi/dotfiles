@@ -133,3 +133,9 @@ function devkill {
 alias devkill="devkill"
 
 alias devres="devkill && devrun"
+
+function fup {
+  sudo systemctl reload dbus.service
+  sudo systemctl restart fwupd.service
+  sudo lsusb
+}

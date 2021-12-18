@@ -49,7 +49,7 @@ indent_style = space
 trim_trailing_whitespace = true
 insert_final_newline = true
 
-[{*.js,*.jsx,*.vue,*.ts}]
+[{*.js,*.jsx,*.vue,*.ts,*.tsx}]
 charset = utf-8
 indent_size = 2
 indent_style = space

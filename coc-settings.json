@@ -6,6 +6,7 @@
         "go",
         "nix",
         "typescript",
+        "typescriptreact",
         "dockerfile",
         "json",
         "sh",
@@ -102,6 +103,14 @@
       "unusedparams": true
     }
   },
+  "tsserver": {
+    "enable": true,
+    "tsdk": ".yarn/sdks/typescript/lib"
+  },
+  "eslint": {
+    "packageManager": "yarn",
+    "nodePath": ".yarn/sdks"
+  },
   "cSpell": {
     "fixSpellingWithRenameProvider": true,
     "enabledLanguageIds": [
@@ -156,7 +165,9 @@
       "Debugf",
       "vald",
       "vdaas",
-      "vec"
+      "vec",
+      "kubernetes",
+      "Kubernetes"
     ]
   }
 }
