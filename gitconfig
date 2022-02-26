@@ -85,9 +85,9 @@
     email = "kyukawa315@gmail.com"
     signingkey = 4FFF395E80C47180
 [ghq]
-    root = /go/src
+    root = ~/go/src
 [credential]
-	helper = store --file .git/credential
+    helper = store --file .git/credential
 
 [commit]
-	gpgsign = true
+    gpgsign = true

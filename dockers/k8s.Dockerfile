@@ -6,6 +6,7 @@ ENV GITHUB https://github.com
 ENV RAWGITHUB https://raw.githubusercontent.com
 ENV GOOGLE https://storage.googleapis.com
 ENV RELEASE_DL releases/download
+ENV ARCHIVE_DL archive/refs/tags
 ENV RELEASE_LATEST releases/latest
 ENV LOCAL /usr/local
 ENV BIN_PATH ${LOCAL}/bin
@@ -49,9 +50,10 @@ RUN set -x; cd "$(mktemp -d)" \
 
 FROM kube-base AS krew
 RUN set -x; cd "$(mktemp -d)" \
-    && curl -fsSLO "${GITHUB}/kubernetes-sigs/krew/${RELEASE_DL}/$(curl --silent ${GITHUB}/kubernetes-sigs/krew/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#')/krew.{tar.gz,yaml}" \
-    && tar zxvf krew.tar.gz \
-    && ./krew-"${OS}_${ARCH}" install --manifest=krew.yaml --archive=krew.tar.gz
+    && curl -fsSLO "${GITHUB}/kubernetes-sigs/krew/${RELEASE_DL}/$(curl --silent ${GITHUB}/kubernetes-sigs/krew/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#')/krew-${OS}_${ARCH}.tar.gz" \
+    && curl -fsSLO "${GITHUB}/kubernetes-sigs/krew/${RELEASE_DL}/$(curl --silent ${GITHUB}/kubernetes-sigs/krew/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#')/krew.yaml" \
+    && tar zxvf krew-${OS}_${ARCH}.tar.gz \
+    && ./krew-"${OS}_${ARCH}" install --manifest=krew.yaml --archive=krew-${OS}_${ARCH}.tar.gz
 
 FROM kube-base AS kubebox
 RUN set -x; cd "$(mktemp -d)" \
@@ -73,7 +75,6 @@ RUN set -x; cd "$(mktemp -d)" \
     && mv "${FILE_NAME}" "${BIN_PATH}/${BIN_NAME}" \
     && chmod a+x "${BIN_PATH}/${BIN_NAME}" \
     && upx -9 "${BIN_PATH}/${BIN_NAME}"
-
 
 FROM kube-base AS kind
 RUN set -x; cd "$(mktemp -d)" \
@@ -159,13 +160,12 @@ RUN set -x; cd "$(mktemp -d)" \
     && curl -fsSLo ${BIN_PATH}/kpt ${GOOGLE}/kpt-dev/latest/${OS}_${ARCH}/kpt \
     && chmod a+x ${BIN_PATH}/kpt
 
-
 FROM kube-base AS kustomize
 RUN set -x; cd "$(mktemp -d)" \
     && KUSTOMIZE_VERSION="$(curl --silent ${GITHUB}/kubernetes-sigs/kustomize/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#' | sed 's/kustomize\/v//g')" \
-    && curl -fsSLO ${GITHUB}/kubernetes-sigs/kustomize/${RELEASE_DL}/kustomize/v${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_${OS}_${ARCH}.tar.gz \
-    && tar -zxvf kustomize_v${KUSTOMIZE_VERSION}_${OS}_${ARCH}.tar.gz \
-    && mv kustomize ${BIN_PATH}/kustomize
+    && curl -fsSLO ${GITHUB}/kubernetes-sigs/kustomize/${ARCHIVE_DL}/${KUSTOMIZE_VERSION}.tar.gz \
+    && tar -zxvf "$(echo ${KUSTOMIZE_VERSION} | sed -e 's/.*\/v/v/g')".tar.gz \
+    && mv kustomize-"$(echo ${KUSTOMIZE_VERSION} | sed -e 's/\//-/g')" ${BIN_PATH}/kustomize
 
 FROM scratch AS kube
 

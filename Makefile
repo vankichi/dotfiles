@@ -53,6 +53,8 @@ build:
 
 docker_build:
 	docker build --squash -t ${IMAGE_NAME}:latest -f ${DOCKERFILE} .
+	# TODO: use buildx
+	# docker buildx build --squash -t ${IMAGE_NAME}:latest -f ${DOCKERFILE} .
 
 hoge:
 	docker build --squash --network=host -t ${IMAGE_NAME}:latest -f ${DOCKERFILE} .
@@ -141,7 +143,6 @@ push_all: \
 	push_base \
 	push_env \
 	push_docker \
-	push_gcloud \
 	push_go \
 	push_k8s \
 	push_rust \

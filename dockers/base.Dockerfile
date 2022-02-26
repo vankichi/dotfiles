@@ -1,8 +1,9 @@
-FROM ubuntu:devel AS base
+FROM ubuntu:latest AS base
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV INITRD No
 ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
 ENV TZ Asia/Tokyo
 ENV CC clang
@@ -33,6 +34,7 @@ RUN apt-get update -y \
         ncurses-term \
         openssh-client \
         sed \
+        sudo \
         tar \
         tig \
         tmux \
@@ -41,16 +43,14 @@ RUN apt-get update -y \
         unzip \
         upx \
         wget \
-        # xclip \
-        # xz-utils \
+        xclip \
         zsh \
     && update-alternatives --set cc $(which clang) \
     && update-alternatives --set c++ $(which clang++) \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN echo "${LANG} UTF-8" > /etc/locale.gen \
+    && rm -rf /var/lib/apt/lists/* \
     && ln -fs /usr/share/zoneinfo/Asia/Tokyo /etc/localtime \
-    && locale-gen \
+    && locale-gen ${LANG} \
     && rm /etc/localtime \
-    && dpkg-reconfigure -f noninteractive tzdata
+    && dpkg-reconfigure -f noninteractive tzdata \
+    && apt autoremove
