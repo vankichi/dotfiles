@@ -48,8 +48,8 @@
     "golang": {
       "command": "gopls",
       "rootPatterns": [
-        "go.mod",
-        "go.sum",
+        "**/go.mod",
+        "**/go.sum",
         ".vim/",
         ".git/",
         ".hg/"
@@ -167,7 +167,9 @@
       "vdaas",
       "vec",
       "kubernetes",
-      "Kubernetes"
+      "Kubernetes",
+      "upsert",
+      "Upsert"
     ]
   }
 }

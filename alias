@@ -29,8 +29,9 @@ function devrun {
     docker_daemon="$HOME/Library/Containers/com.docker.helper/Data/.docker/daemon.json"
     docker_config="$HOME/Library/Containers/com.docker.helper/Data/.docker/config.json"
     docker_sock="/var/run/docker.sock"
+    container_home="/home/vankichi"
     container_root="/root"
-    container_goroot="$container_root/go"
+    container_goroot="$container_home/go"
     case "$(uname -s)" in
         Darwin)
             echo 'Docker on macOS start'
@@ -68,8 +69,6 @@ function devrun {
 
         Linux)
             echo 'Docker on Linux start'
-            # privileged=false
-            # privileged=false
             font_dir="/usr/share/fonts"
             tz_path="/etc/timezone"
             docker_daemon="/etc/docker/daemon.json"
@@ -80,29 +79,35 @@ function devrun {
                 --restart always \
                 --privileged=$privileged \
                 -p 1313:1313 \
-                -v /var/run/docker.sock:/var/run/docker.sock \
+                -u "$(id -u $USER):$(id -g $USER)" \
+                -v $HOME/.docker:$container_home/.docker \
                 -v $HOME/.docker:$container_root/.docker \
-                -v $HOME/.kube:$container_root/.kube \
-                -v $HOME/.netrc:$container_root/.netrc \
-                -v $HOME/.ssh:$container_root/.ssh \
-                -v $HOME/Documents:$container_root/Documents \
-                -v $HOME/Downloads:$container_root/Downloads \
+                -v $HOME/.gnupg:$container_home/.gnupg \
                 -v $HOME/.gnupg:$container_root/.gnupg \
-                -v $HOME/go/src:/go/src:cached \
-                -v $docker_config:/etc/docker/config.json \
-                -v $docker_daemon:/etc/docker/daemon.json \
-                -v $font_dir:/usr/share/fonts:ro \
-                -v $rcpath/coc-settings.json:$container_root/.config/nvim/coc-settings.json \
-                -v $rcpath/editorconfig:$container_root/.editorconfig \
-                -v $rcpath/gitconfig:$container_root/.gitconfig \
-                -v $rcpath/gitignore:$container_root/.gitignore \
-                -v $rcpath/init.vim:$container_root/.config/nvim/init.vim \
-                -v $rcpath/monokai.vim:$container_root/.config/nvim/colors/monokai.vim \
-                -v $rcpath/tmux.conf:$container_root/.tmux.conf \
-                -v $rcpath/zshrc:$container_root/.zshrc \
-                -v $HOME/.zsh_history:$container_root/.zsh_history \
-                -v $tz_path:/etc/localtime:ro \
+                -v $HOME/.kube:$container_home/.kube \
+                -v $HOME/.netrc:$container_home/.netrc:ro \
+                -v $HOME/.ssh:$container_home/.ssh \
+                -v $HOME/.zsh_history:$container_home/.zsh_history:cached \
+                -v $HOME/Documents:$container_home/Documents \
+                -v $HOME/Downloads:$container_home/Downloads \
+                -v $HOME/go/src:$container_goroot/src:cached \
+                -v $docker_config:$docker_config:ro,cached \
+                -v $docker_daemon:$docker_daemon:ro,cached \
                 -v $docker_sock:$docker_sock \
+                -v $font_dir:$font_dir \
+                -v $rcpath/coc-settings.json:$container_home/.config/nvim/coc-settings.json \
+                -v $rcpath/editorconfig:$container_home/.editorconfig \
+                -v $rcpath/efm-lsp-conf.yaml:$container_home/.config/nvim/efm-lsp-conf.yaml \
+                -v $rcpath/gitattributes:$container_home/.gitattributes \
+                -v $rcpath/gitconfig:$container_home/.gitconfig \
+                -v $rcpath/gitignore:$container_home/.gitignore \
+                -v $rcpath/init.vim:$container_home/.config/nvim/init.vim \
+                -v $rcpath/monokai.vim:$container_home/.config/nvim/colors/monokai.vim \
+                -v $rcpath/tmux-kube:$container_home/.tmux-kube \
+                -v $rcpath/tmux.conf:$container_home/.tmux.conf \
+                -v $rcpath/vintrc.yaml:$container_home/.vintrc.yaml \
+                -v $rcpath/zshrc:$container_home/.zshrc:ro,cached \
+                -v $tz_path:/etc/localtime:ro,cached \
                 -dit $image_name
             ;;
 
@@ -114,12 +119,13 @@ function devrun {
             echo 'other OS'
             ;;
     esac
-
-    docker exec -d $container_name $zpath nvup
+    # docker exec -d $container_name $zpath nvup
 }
 
 alias devrun="devrun"
 
+# alias devin="docker exec -it $container_name $zpath -c \"tmux source-file /home/vankichi/.tmux.conf && tmux -S /tmp/tmux.sock -q has-session && exec tmux -S /tmp/tmux.sock -2 attach-session -d || exec tmux -S /tmp/tmux.sock -2 new-session -n$USER -s$USER@$HOST\""
+# alias devin="docker exec -it $container_name $zsh_path -c \"tmux -S /tmp/tmux.sock -q has-session && exec tmux -S /tmp/tmux.sock -2 attach-session -d || exec tmux -S /tmp/tmux.sock -2 new-session -n$USER -s$USER@$HOST\""
 alias devin="docker exec -it $container_name $zpath"
 
 function devkill {

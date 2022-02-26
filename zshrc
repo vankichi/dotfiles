@@ -4,13 +4,7 @@ HOST=$(hostname)
 
 if type tmux >/dev/null 2>&1; then
     if [ -z $TMUX ]; then
-        if [ "$USER" = 'root' ]; then
-            pkill tmux
-            tmux -2 new-session -n$USER -s$USER@$HOST
-            tmux source-file /root/.tmux.conf
-            tmux unbind C-b
-            tmux set -g prefix C-w
-        else
+        if [ "$HOST" = "$USER" ]; then
             # get the id of a deattached session
             ID="$(tmux ls | grep -vm1 attached | cut -d: -f1)" # get the id of a deattached session
             if [[ -z $ID ]]; then # if not available create a new one
@@ -18,6 +12,13 @@ if type tmux >/dev/null 2>&1; then
             else
                 tmux -2 attach-session -t "$ID" # if available attach to it
             fi
+        else
+            tmux source-file /home/${USER}/.tmux.conf
+            pkill tmux
+            tmux -2 new-session -n$USER -s$USER@$HOST
+            tmux source-file /home/${USER}/.tmux.conf
+            tmux unbind C-b
+            tmux set -g prefix C-w
         fi
     fi
 fi
@@ -102,7 +103,7 @@ export K9S="$HOME/.local/bin"
 # --------------------
 # PATH
 # --------------------
-export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:/usr/local/share/npm/bin:/usr/local/go/bin:/opt/local/bin:$GOBIN:/root/.cargo/bin:/GCLOUD_PATH/bin:$DENO_INSTALL/bin:$K9S:$PATH"
+export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:/usr/local/share/npm/bin:/usr/local/go/bin:/opt/local/bin:$GOBIN:$HOME/.cargo/bin:/root/.cargo/bin:/GCLOUD_PATH/bin:$DENO_INSTALL/bin:$K9S:$PATH"
 
 export ZPLUG_HOME=$HOME/.zplug
 if type zplug >/dev/null 2>&1; then
@@ -129,9 +130,8 @@ if [ -z $ZSH_LOADED ]; then
     # --------------------
     if [[ -f ~/.zplug/init.zsh ]]; then
         source "$HOME/.zplug/init.zsh"
-
+        zplug "junegunn/fzf", as:command, hook-build:"make install", use:bin/fzf
         zplug "junegunn/fzf", as:command, use:bin/fzf-tmux
-        zplug "junegunn/fzf-bin", as:command, from:gh-r, rename-to:fzf
         zplug "zchee/go-zsh-completions"
         zplug "zsh-users/zsh-autosuggestions"
         zplug "zsh-users/zsh-completions", as:plugin, use:"src"
