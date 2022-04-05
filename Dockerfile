@@ -41,8 +41,8 @@ COPY --from=go /opt/go/pkg $GOROOT/pkg
 COPY --from=go /opt/go/misc $GOROOT/misc
 COPY --from=go /go/bin $GOPATH/bin
 
-COPY --from=rust /root/.cargo ${CARGO_PATH}
-COPY --from=rust /root/.cargo/bin/rustup ${HOME}/.rustup
+COPY --from=rust /root/.cargo $CARGO_PATH
+COPY --from=rust /root/.cargo/bin/rustup $HOME/.rustup
 
 COPY coc-settings.json $NVIM_HOME/coc-settings.json
 COPY efm-lsp-conf.yaml $NVIM_HOME/efm-lsp-conf.yaml

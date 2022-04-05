@@ -1,6 +1,6 @@
 FROM vankichi/dev-base:latest AS go-base
 
-ENV GO_VERSION 1.17
+ENV GO_VERSION 1.18
 ENV GO111MODULE on
 ENV DEBIAN_FRONTEND noninteractive
 ENV INITRD No
@@ -18,57 +18,65 @@ RUN curl -sSL -O "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz" \
     && mkdir -p ${GOBIN}
 
 FROM go-base AS gotests
-RUN GO111MODULE=on go get -u  \
+RUN GO111MODULE=on go install \
     --ldflags "-s -w" --trimpath \
-    github.com/cweill/gotests/gotests \
+    github.com/cweill/gotests/gotests@latest \
+    && chmod a+x ${GOBIN}/gotests \
     && upx -9 ${GOBIN}/gotests
 
 FROM go-base AS ghq
-RUN GO111MODULE=on go get -u  \
+RUN GO111MODULE=on go install \
     --ldflags "-s -w" --trimpath \
-    github.com/x-motemen/ghq \
+    github.com/x-motemen/ghq@latest \
+    && chmod a+x ${GOBIN}/ghq \
     && upx -9 ${GOBIN}/ghq
 
 FROM go-base AS efm
-RUN GO111MODULE=on go get -u  \
+RUN GO111MODULE=on go install  \
     --ldflags "-s -w" --trimpath \
-    github.com/mattn/efm-langserver \
+    github.com/mattn/efm-langserver@latest \
+    && chmod a+x ${GOBIN}/efm-langserver \
     && upx -9 ${GOBIN}/efm-langserver
 
 FROM go-base AS golint
-RUN GO111MODULE=on go get -u  \
+RUN GO111MODULE=on go install  \
     --ldflags "-s -w" --trimpath \
     golang.org/x/lint/golint@latest \
+    && chmod a+x ${GOBIN}/golint \
     && upx -9 ${GOBIN}/golint
 
 FROM golangci/golangci-lint:latest AS golangci-lint-base
 FROM go-base AS golangci-lint
 COPY --from=golangci-lint-base /usr/bin/golangci-lint $GOBIN/golangci-lint
+RUN chmod a+x ${GOBIN}/golangci-lint
 RUN upx -9 ${GOBIN}/golangci-lint
 
 FROM go-base AS gofumpt
-RUN GO111MODULE=on go get -u  \
+RUN GO111MODULE=on go install  \
     --ldflags "-s -w" --trimpath \
-    mvdan.cc/gofumpt \
+    mvdan.cc/gofumpt@latest \
+    && chmod a+x ${GOBIN}/gofumpt \
     && upx -9 ${GOBIN}/gofumpt
 
 FROM go-base AS goimports
-RUN GO111MODULE=on go get -u  \
+RUN GO111MODULE=on go install  \
     --ldflags "-s -w" --trimpath \
-    golang.org/x/tools/cmd/goimports \
+    golang.org/x/tools/cmd/goimports@latest \
+    && chmod a+x ${GOBIN}/goimports \
     && upx -9 ${GOBIN}/goimports
 
 FROM go-base AS goimports-update-ignore
-RUN GO111MODULE=on go get -u  \
+RUN GO111MODULE=on go install  \
     --ldflags "-s -w" --trimpath \
-    github.com/pwaller/goimports-update-ignore \
+    github.com/pwaller/goimports-update-ignore@latest \
+    && chmod a+x ${GOBIN}/goimports-update-ignore \
     && upx -9 ${GOBIN}/goimports-update-ignore
 
 FROM go-base AS gopls
-RUN GO111MODULE=on go get \
+RUN GO111MODULE=on go install \
     --ldflags "-s -w" --trimpath \
     golang.org/x/tools/gopls@latest \
-    golang.org/x/tools@master \
+    && chmod a+x ${GOBIN}/gopls \
     && upx -9 ${GOBIN}/gopls
 
 FROM go-base AS hugo
@@ -76,12 +84,14 @@ RUN git clone https://github.com/gohugoio/hugo --depth 1 \
     && cd hugo \
     && go install \
     --ldflags "-s -w" --trimpath \
+    && chmod a+x ${GOBIN}/hugo \
     && upx -9 ${GOBIN}/hugo
 
 FROM go-base AS prototool
-RUN GO111MODULE=on go get -u \
+RUN GO111MODULE=on go install \
     --ldflags "-s -w" --trimpath \
     github.com/uber/prototool/cmd/prototool@dev \
+    && chmod a+x ${GOBIN}/prototool \
     && upx -9 ${GOBIN}/prototool
 
 

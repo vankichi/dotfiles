@@ -23,7 +23,8 @@ RUN rustup install stable \
        clippy \
        --toolchain nightly
 
-RUN cargo install --force --no-default-features --git https://github.com/mozilla/sccache
+RUN cargo install --force --no-default-features \
+    --git https://github.com/mozilla/sccache sccache
 
 FROM rust-base AS cargo-bloat
 RUN  cargo install --force --no-default-features \
@@ -34,7 +35,9 @@ RUN cargo install --force --no-default-features \
     --git https://github.com/sharkdp/fd
 
 FROM rust-base AS exa
-RUN cargo +nightly install --force \
+RUN rustup update stable \
+    && rustup default stable \
+    && cargo install --force --no-default-features \
     exa
 
 FROM rust-base AS rg
@@ -57,9 +60,9 @@ FROM rust-base AS sd
 RUN cargo +nightly install --force --no-default-features \
     sd
 
-FROM rust-base AS gping
-RUN cargo +nightly install --force --no-default-features \
-    gping
+# FROM rust-base AS gping
+# RUN cargo +nightly install --force --no-default-features \
+#     gping
 
 FROM rust-base AS delta
 RUN cargo +nightly install --force --no-default-features \
@@ -84,7 +87,7 @@ COPY --from=bottom /root/.cargo/bin/btm /root/.cargo/bin/btm
 COPY --from=delta /root/.cargo/bin/delta /root/.cargo/bin/delta
 COPY --from=exa /root/.cargo/bin/exa /root/.cargo/bin/exa
 COPY --from=fd /root/.cargo/bin/fd /root/.cargo/bin/fd
-COPY --from=gping /root/.cargo/bin/gping /root/.cargo/bin/gping
+# COPY --from=gping /root/.cargo/bin/gping /root/.cargo/bin/gping
 COPY --from=procs /root/.cargo/bin/procs /root/.cargo/bin/procs
 COPY --from=rg /root/.cargo/bin/rg /root/.cargo/bin/rg
 COPY --from=sd /root/.cargo/bin/sd /root/.cargo/bin/sd
