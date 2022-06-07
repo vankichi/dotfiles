@@ -303,8 +303,8 @@ if [ -z $ZSH_LOADED ]; then
     if type fzf >/dev/null 2>&1; then
         if type fzf-tmux >/dev/null 2>&1; then
             if type fd >/dev/null 2>&1; then
-                alias s='mkcd $(fd -a -H -t d . | fzf-tmux +m)'
-                alias vf='vim $(fd -a -H -t f . | fzf-tmux +m)'
+                alias s='mkcd $(fd -a -H -t d . | fzf-tmux)'
+                alias vf='vim $(fd -a -H -t f . | fzf-tmux)'
             fi
             # if type rg >/dev/null 2>&1; then
             #     fbr() {
@@ -317,7 +317,7 @@ if [ -z $ZSH_LOADED ]; then
             #     alias sshf=sshf
             # fi
             if type ghq >/dev/null 2>&1; then
-                alias g='mkcd $(ghq root)/$(ghq list | fzf-tmux +m)'
+                alias g='mkcd $(ghq root)/$(ghq list | fzf-tmux)'
             fi
         fi
     fi

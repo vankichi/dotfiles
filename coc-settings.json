@@ -47,16 +47,8 @@
   "languageserver": {
     "golang": {
       "command": "gopls",
-      "rootPatterns": [
-        "**/go.mod",
-        "**/go.sum",
-        ".vim/",
-        ".git/",
-        ".hg/"
-      ],
-      "filetypes": [
-        "go"
-      ],
+      "rootPatterns": ["**/go.mod", "**/go.sum", ".vim/", ".git/", ".hg/"],
+      "filetypes": ["go"],
       "initializationOptions": {
         "deepCompletion": true,
         "experimentalWorkspaceModule": true,
@@ -89,6 +81,9 @@
     "hoverKind": "FullDocumentation",
     "linkTarget": "pkg.go.dev",
     "usePlaceholders": true,
+    "buildFlags": [
+      "-tags=e2e"
+    ],
     "env": {
       "CGO_CFLAGS": "-g -O=fast -march=native",
       "CGO_CPPFLAGS": "-g -O=fast -march=native",
