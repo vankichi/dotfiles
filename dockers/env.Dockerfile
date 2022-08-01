@@ -4,6 +4,7 @@ ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/lib:/usr/local/lib:/lib:/lib64:/var/li
 
 ARG USER_ID=1000
 ARG GROUP_ID=1000
+ARG DOCKER_GROUP_ID=961
 ARG GROUP_IDS=${GROUP_ID}
 ARG WHOAMI=vankichi
 
@@ -14,7 +15,7 @@ ENV SHELL /usr/bin/zsh
 ENV GROUP sudo,root,users,docker,wheel
 ENV UID ${USER_ID}
 
-RUN groupadd --non-unique --gid ${GROUP_ID} docker \
+RUN groupadd --non-unique --gid ${DOCKER_GROUP_ID} docker \
     && groupadd --non-unique --gid ${GROUP_ID} wheel \
     && groupmod --non-unique --gid ${GROUP_ID} users \
     && useradd --uid ${USER_ID} \
@@ -96,7 +97,7 @@ RUN n latest \
     && apt -y autoremove
 
 WORKDIR /tmp
-ENV NGT_VERSION 1.14.3
+ENV NGT_VERSION 1.14.7
 ENV CFLAGS "-mno-avx512f -mno-avx512dq -mno-avx512cd -mno-avx512bw -mno-avx512vl"
 ENV CXXFLAGS ${CFLAGS}
 RUN curl -LO "https://github.com/yahoojapan/NGT/archive/v${NGT_VERSION}.tar.gz" \
@@ -109,7 +110,7 @@ RUN curl -LO "https://github.com/yahoojapan/NGT/archive/v${NGT_VERSION}.tar.gz" 
     && rm -rf /tmp/*
 
 WORKDIR /tmp
-ENV TENSORFLOW_C_VERSION 2.3.0
+ENV TENSORFLOW_C_VERSION 2.9.1
 RUN curl -LO https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-${TENSORFLOW_C_VERSION}.tar.gz \
     && tar -C /usr/local -xzf libtensorflow-cpu-linux-x86_64-${TENSORFLOW_C_VERSION}.tar.gz \
     && rm -f libtensorflow-cpu-linux-x86_64-${TENSORFLOW_C_VERSION}.tar.gz \

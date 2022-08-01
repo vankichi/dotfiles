@@ -4,13 +4,14 @@ ENV ARCH amd64
 ENV OS linux
 ENV GITHUB https://github.com
 ENV RAWGITHUB https://raw.githubusercontent.com
+ENV API_GITHUB https://api.github.com/repos
 ENV GOOGLE https://storage.googleapis.com
 ENV RELEASE_DL releases/download
 ENV ARCHIVE_DL archive/refs/tags
 ENV RELEASE_LATEST releases/latest
 ENV LOCAL /usr/local
 ENV BIN_PATH ${LOCAL}/bin
-ENV TELEPRESENCE_VERSION 0.108
+ENV TELEPRESENCE_VERSION 2.6.8
 
 RUN apt-get update
 
@@ -38,8 +39,11 @@ RUN set -x; cd "$(mktemp -d)" \
 
 FROM kube-base AS helmfile
 RUN set -x; cd "$(mktemp -d)" \
-    && HELMFILE_VERSION="$(curl --silent ${GITHUB}/roboll/helmfile/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#' | sed 's/v//g')" \
-    && curl -fsSLo ${BIN_PATH}/helmfile "${GITHUB}/roboll/helmfile/${RELEASE_DL}/v${HELMFILE_VERSION}/helmfile_${OS}_${ARCH}" \
+    && ORG="roboll" \
+    && NAME="helmfile" \
+    && REPO="${ORG}/${NAME}" \
+    && HELMFILE_VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
+    && curl -fsSLo ${BIN_PATH}/helmfile "${GITHUB}/${REPO}/${RELEASE_DL}/v${HELMFILE_VERSION}/helmfile_${OS}_${ARCH}" \
     && chmod a+x ${BIN_PATH}/helmfile
 
 FROM kube-base AS kubectx
@@ -50,26 +54,39 @@ RUN set -x; cd "$(mktemp -d)" \
 
 FROM kube-base AS krew
 RUN set -x; cd "$(mktemp -d)" \
-    && curl -fsSLO "${GITHUB}/kubernetes-sigs/krew/${RELEASE_DL}/$(curl --silent ${GITHUB}/kubernetes-sigs/krew/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#')/krew-${OS}_${ARCH}.tar.gz" \
-    && curl -fsSLO "${GITHUB}/kubernetes-sigs/krew/${RELEASE_DL}/$(curl --silent ${GITHUB}/kubernetes-sigs/krew/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#')/krew.yaml" \
+    && ORG="kubernetes-sigs" \
+    && NAME="krew" \
+    && REPO="${ORG}/${NAME}" \
+    && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
+    && curl -fsSLO "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${NAME}-${OS}_${ARCH}.tar.gz" \
+    && curl -fsSLO "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/krew.yaml" \
     && tar zxvf krew-${OS}_${ARCH}.tar.gz \
     && ./krew-"${OS}_${ARCH}" install --manifest=krew.yaml --archive=krew-${OS}_${ARCH}.tar.gz
 
 FROM kube-base AS kubebox
 RUN set -x; cd "$(mktemp -d)" \
-    && curl -fsSLo ${BIN_PATH}/kubebox "${GITHUB}/astefanutti/kubebox/${RELEASE_DL}/$(curl --silent ${GITHUB}/astefanutti/kubebox/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#')/kubebox-${OS}" \
-    && chmod a+x ${BIN_PATH}/kubebox
+    && ORG="astefanutti" \
+    && NAME="kubebox" \
+    && REPO="${ORG}/${NAME}" \
+    && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
+    && curl -fsSLo ${BIN_PATH}/${NAME} "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${NAME}-${OS}" \
+    && chmod a+x ${BIN_PATH}/${NAME}
 
 FROM kube-base AS stern
 RUN set -x; cd "$(mktemp -d)" \
-    && curl -fsSLo ${BIN_PATH}/stern "${GITHUB}/wercker/stern/${RELEASE_DL}/$(curl --silent ${GITHUB}/wercker/stern/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#')/stern_${OS}_${ARCH}" \
+    && ORG="wercker" \
+    && NAME="stern" \
+    && REPO="${ORG}/${NAME}" \
+    && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
+    && curl -fsSLo ${BIN_PATH}/stern "${GITHUB}/${REPO}/${RELEASE_DL}/${VERSION}/${NAME}_${OS}_${ARCH}" \
     && chmod a+x ${BIN_PATH}/stern
 
 FROM kube-base AS kubebuilder
 RUN set -x; cd "$(mktemp -d)" \
+    && ORG="kubernetes-sigs" \
     && BIN_NAME="kubebuilder" \
-    && REPO="kubernetes-sigs/${BIN_NAME}" \
-    && VERSION="$(curl --silent ${GITHUB}/${REPO}/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#' | sed 's/v//g')" \
+    && REPO="${ORG}/${BIN_NAME}" \
+    && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
     && FILE_NAME="${BIN_NAME}_${OS}_${ARCH}" \
     && curl -fsSLO "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${FILE_NAME}" \
     && mv "${FILE_NAME}" "${BIN_PATH}/${BIN_NAME}" \
@@ -78,42 +95,59 @@ RUN set -x; cd "$(mktemp -d)" \
 
 FROM kube-base AS kind
 RUN set -x; cd "$(mktemp -d)" \
-    && curl -fsSLo ${BIN_PATH}/kind "${GITHUB}/kubernetes-sigs/kind/${RELEASE_DL}/$(curl --silent ${GITHUB}/kubernetes-sigs/kind/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#')/kind-${OS}-${ARCH}" \
+    && ORG="kubernetes-sigs" \
+    && BIN_NAME="kind" \
+    && REPO="${ORG}/${BIN_NAME}" \
+    && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
+    && curl -fsSLo ${BIN_PATH}/${BIN_NAME} "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${BIN_NAME}-${OS}-${ARCH}" \
     && chmod a+x ${BIN_PATH}/kind
 
 FROM kube-base AS kubectl-fzf
 RUN set -x; cd "$(mktemp -d)" \
-    && curl -fsSLO "${GITHUB}/bonnefoa/kubectl-fzf/${RELEASE_DL}/$(curl --silent ${GITHUB}/bonnefoa/kubectl-fzf/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#')/kubectl-fzf_${OS}_${ARCH}.tar.gz" \
-    && tar -zxvf kubectl-fzf_${OS}_${ARCH}.tar.gz \
+    && ORG="bonnefoa" \
+    && BIN_NAME="kubectl-fzf" \
+    && REPO="${ORG}/${BIN_NAME}" \
+    && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
+    && curl -fsSLO "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${BIN_NAME}_${OS}_${ARCH}.tar.gz" \
+    && tar -zxvf ${BIN_NAME}_${OS}_${ARCH}.tar.gz \
     && mv cache_builder ${BIN_PATH}/cache_builder
 
 FROM kube-base AS k9s
 RUN set -x; cd "$(mktemp -d)" \
-    && K9S_VERSION="$(curl --silent ${GITHUB}/derailed/k9s/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#' | sed 's/v//g')" \
-    && curl -fsSLO "${GITHUB}/derailed/k9s/${RELEASE_DL}/v${K9S_VERSION}/k9s_Linux_x86_64.tar.gz" \
-    && tar -zxvf k9s_Linux_x86_64.tar.gz \
+    && ORG="derailed" \
+    && BIN_NAME="k9s" \
+    && REPO="${ORG}/${BIN_NAME}" \
+    && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
+    && curl -fsSLO "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${BIN_NAME}_Linux_x86_64.tar.gz" \
+    && tar -zxvf ${BIN_NAME}_Linux_x86_64.tar.gz \
     && mv k9s ${BIN_PATH}/k9s
 
 FROM kube-base AS telepresence
 RUN set -x; cd "$(mktemp -d)" \
-    && curl -fsSLO "${GITHUB}/telepresenceio/telepresence/archive/${TELEPRESENCE_VERSION}.tar.gz" \
-    && tar -zxvf ${TELEPRESENCE_VERSION}.tar.gz \
-    && env PREFIX=${LOCAL} telepresence-${TELEPRESENCE_VERSION}/install.sh
+    && BIN_NAME="telepresence" \
+    && curl -fL https://app.getambassador.io/download/tel2/linux/amd64/latest/telepresence -o ${BIN_PATH}/${BIN_NAME} \
+    && chmod a+x ${BIN_PATH}/${BIN_NAME}
 
 FROM kube-base AS kube-profefe
 RUN set -x; cd "$(mktemp -d)" \
-    && KUBE_PROFEFE_VERSION="$(curl --silent ${GITHUB}/profefe/kube-profefe/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#' | sed 's/v//g')" \
-    && curl -fsSLO "${GITHUB}/profefe/kube-profefe/${RELEASE_DL}/v${KUBE_PROFEFE_VERSION}/kube-profefe_v${KUBE_PROFEFE_VERSION}_Linux_x86_64.tar.gz" \
-    && tar -zxvf "kube-profefe_v${KUBE_PROFEFE_VERSION}_Linux_x86_64.tar.gz" \
+    && ORG="profefe" \
+    && BIN_NAME="kube-profefe" \
+    && REPO="${ORG}/${BIN_NAME}" \
+    && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
+    && curl -fsSLO "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${BIN_NAME}_v${VERSION}_Linux_x86_64.tar.gz" \
+    && tar -zxvf "${BIN_NAME}_v${VERSION}_Linux_x86_64.tar.gz" \
     && mv kprofefe ${BIN_PATH}/kprofefe \
     && mv kubectl-profefe ${BIN_PATH}/kubectl-profefe
 
 FROM kube-base AS kube-tree
 RUN set -x; cd "$(mktemp -d)" \
-    && KUBETREE_VERSION="$(curl --silent ${GITHUB}/ahmetb/kubectl-tree/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#' | sed 's/v//g')" \
-    && curl -fsSLO ${GITHUB}/ahmetb/kubectl-tree/${RELEASE_DL}/v${KUBETREE_VERSION}/kubectl-tree_v${KUBETREE_VERSION}_${OS}_${ARCH}.tar.gz \
-    && tar -zxvf "kubectl-tree_v${KUBETREE_VERSION}_${OS}_${ARCH}.tar.gz" \
-    && mv kubectl-tree ${BIN_PATH}/kubectl-tree
+    && ORG="ahmetb" \
+    && BIN_NAME="kubectl-tree" \
+    && REPO="${ORG}/${BIN_NAME}" \
+    && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
+    && curl -fsSLO ${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${BIN_NAME}_v${VERSION}_${OS}_${ARCH}.tar.gz \
+    && tar -zxvf "${BIN_NAME}_v${VERSION}_${OS}_${ARCH}.tar.gz" \
+    && mv ${BIN_NAME} ${BIN_PATH}/${BIN_NAME}
 
 FROM kube-base AS linkerd
 RUN set -x; cd "$(mktemp -d)" \
@@ -122,33 +156,43 @@ RUN set -x; cd "$(mktemp -d)" \
 
 FROM kube-base AS octant
 RUN set -x; cd "$(mktemp -d)" \
-    && OCTANT_VERSION="$(curl --silent ${GITHUB}/vmware-tanzu/octant/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#' | sed 's/v//g')" \
-    && curl -fsSLO "${GITHUB}/vmware-tanzu/octant/${RELEASE_DL}/v${OCTANT_VERSION}/octant_${OCTANT_VERSION}_Linux-64bit.tar.gz" \
-    && tar -zxvf "octant_${OCTANT_VERSION}_Linux-64bit.tar.gz" \
-    && mv octant_${OCTANT_VERSION}_Linux-64bit/octant ${BIN_PATH}/octant
+    && ORG="vmware-tanzu" \
+    && BIN_NAME="octant" \
+    && REPO="${ORG}/${BIN_NAME}" \
+    && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
+    && curl -fsSLO "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${BIN_NAME}_${VERSION}_Linux-64bit.tar.gz" \
+    && tar -zxvf "${BIN_NAME}_${VERSION}_Linux-64bit.tar.gz" \
+    && mv ${BIN_NAME}_${VERSION}_Linux-64bit/${BIN_NAME} ${BIN_PATH}/${BIN_NAME}
 
 FROM kube-base AS skaffold
 RUN set -x; cd "$(mktemp -d)" \
+    && ORG="GoogleContainerTools" \
     && BIN_NAME="skaffold" \
-    && REPO="GoogleContainerTools/${BIN_NAME}" \
-    && VERSION="$(curl --silent ${GITHUB}/${REPO}/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#' | sed 's/v//g')" \
+    && REPO="${ORG}/${BIN_NAME}" \
+    && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
     && curl -fsSLo "${BIN_PATH}/${BIN_NAME}" "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${BIN_NAME}-${OS}-${ARCH}" \
     && chmod a+x "${BIN_PATH}/${BIN_NAME}" \
     && upx -9 "${BIN_PATH}/${BIN_NAME}"
 
 FROM kube-base AS kubeval
 RUN set -x; cd "$(mktemp -d)" \
-    && KUBEVAL_VERSION="$(curl --silent ${GITHUB}/instrumenta/kubeval/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#' | sed 's/v//g')" \
-    && curl -fsSLO ${GITHUB}/instrumenta/kubeval/${RELEASE_DL}/v${KUBEVAL_VERSION}/kubeval-${OS}-${ARCH}.tar.gz \
-    && tar -zxvf kubeval-${OS}-${ARCH}.tar.gz \
-    && mv kubeval ${BIN_PATH}/kubeval
+    && ORG="instrumenta" \
+    && BIN_NAME="kubeval" \
+    && REPO="${ORG}/${BIN_NAME}" \
+    && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
+    && curl -fsSLO ${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${BIN_NAME}-${OS}-${ARCH}.tar.gz \
+    && tar -zxvf ${BIN_NAME}-${OS}-${ARCH}.tar.gz \
+    && mv ${BIN_NAME} ${BIN_PATH}/${BIN_NAME}
 
 FROM kube-base AS helm-docs
 RUN set -x; cd "$(mktemp -d)" \
-    && HELM_DOCS_VERSION="$(curl --silent ${GITHUB}/norwoodj/helm-docs/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#' | sed 's/v//g')" \
-    && curl -fsSLO ${GITHUB}/norwoodj/helm-docs/${RELEASE_DL}/v${HELM_DOCS_VERSION}/helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.tar.gz \
-    && tar -zxvf helm-docs_${HELM_DOCS_VERSION}_Linux_x86_64.tar.gz \
-    && mv helm-docs ${BIN_PATH}/helm-docs
+    && ORG="norwoodj" \
+    && BIN_NAME="helm-docs" \
+    && REPO="${ORG}/${BIN_NAME}" \
+    && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
+    && curl -fsSLO ${GITHUB}/norwoodj/helm-docs/${RELEASE_DL}/v${VERSION}/${BIN_NAME}_${VERSION}_Linux_x86_64.tar.gz \
+    && tar -zxvf ${BIN_NAME}_${VERSION}_Linux_x86_64.tar.gz \
+    && mv ${BIN_NAME} ${BIN_PATH}/${BIN_NAME}
 
 FROM kube-base AS istio
 RUN set -x; cd "$(mktemp -d)" \
@@ -162,10 +206,13 @@ RUN set -x; cd "$(mktemp -d)" \
 
 FROM kube-base AS kustomize
 RUN set -x; cd "$(mktemp -d)" \
-    && KUSTOMIZE_VERSION="$(curl --silent ${GITHUB}/kubernetes-sigs/kustomize/${RELEASE_LATEST} | sed 's#.*tag/\(.*\)\".*#\1#' | sed 's/kustomize\/v//g')" \
-    && curl -fsSLO ${GITHUB}/kubernetes-sigs/kustomize/${ARCHIVE_DL}/${KUSTOMIZE_VERSION}.tar.gz \
-    && tar -zxvf "$(echo ${KUSTOMIZE_VERSION} | sed -e 's/.*\/v/v/g')".tar.gz \
-    && mv kustomize-"$(echo ${KUSTOMIZE_VERSION} | sed -e 's/\//-/g')" ${BIN_PATH}/kustomize
+    && ORG="kubernetes-sigs" \
+    && BIN_NAME="kustomize" \
+    && REPO="${ORG}/${BIN_NAME}" \
+    && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')" \
+    && curl -fsSLO ${GITHUB}/${REPO}/${ARCHIVE_DL}/${VERSION}.tar.gz \
+    && tar -zxvf "$(echo ${VERSION} | sed -e 's/.*\/v/v/g')".tar.gz \
+    && mv ${BIN_NAME}-"$(echo ${VERSION} | sed -e 's/\//-/g')" ${BIN_PATH}/${BIN_NAME}
 
 FROM scratch AS kube
 
@@ -198,4 +245,3 @@ COPY --from=octant ${BIN_PATH}/octant ${K8S_PATH}/octant
 COPY --from=skaffold ${BIN_PATH}/skaffold ${K8S_PATH}/skaffold
 COPY --from=stern ${BIN_PATH}/stern ${K8S_PATH}/stern
 COPY --from=telepresence ${BIN_PATH}/telepresence ${K8S_PATH}/telepresence
-COPY --from=telepresence ${LIB_PATH}/sshuttle-telepresence ${K8S_LIB_PATH}/sshuttle-telepresence
