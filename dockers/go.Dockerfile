@@ -1,6 +1,6 @@
 FROM vankichi/dev-base:latest AS go-base
 
-ENV GO_VERSION 1.18
+ENV GO_VERSION 1.19
 ENV GO111MODULE on
 ENV DEBIAN_FRONTEND noninteractive
 ENV INITRD No

@@ -4,6 +4,8 @@ FROM vankichi/rust:latest AS rust
 
 FROM vankichi/docker:latest AS docker
 
+FROM vankichi/dart:latest AS dart
+
 FROM vankichi/kube:latest AS kube
 
 FROM vankichi/env:latest AS env
@@ -20,6 +22,7 @@ ENV GROUP sudo,root,users,docker,wheel
 ENV TZ Asia/Tokyo
 ENV HOME /home/${WHOAMI}
 ENV GOPATH $HOME/go
+ENV DART_PATH /usr/local/flutter
 ENV GOROOT /usr/local/go
 ENV CARGO_PATH $HOME/.cargo
 ENV NVIM_HOME $HOME/.config/nvim
@@ -31,6 +34,8 @@ ENV PATH $GOPATH/bin:/usr/local/go/bin:$CARGO_PATH/bin:$DART_PATH/bin:$GCLOUD_PA
 COPY --from=docker /usr/lib/docker/cli-plugins/docker-buildx /usr/lib/docker/cli-plugins/docker-buildx
 COPY --from=docker /usr/lib/docker/cli-plugins/docker-compose /usr/lib/docker/cli-plugins/docker-compose
 COPY --from=docker /usr/docker/bin/ /usr/bin/
+
+COPY --from=dart /usr/local/bin/flutter/ $DART_PATH
 
 COPY --from=kube /usr/k8s/bin/ /usr/bin/
 

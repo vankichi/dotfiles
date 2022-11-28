@@ -49,13 +49,19 @@ RUN echo $'/lib\n\
 RUN apt-get update -y \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends --fix-missing \
+    libgtk-3-dev \
+    liblzma-dev \
     libhdf5-serial-dev \
     libomp-dev \
     libprotobuf-dev \
     libprotoc-dev \
+    libopenblas-dev \
     nodejs \
     npm \
+    vim \
     neovim \
+    ninja-build \
+    pkg-config \
     protobuf-compiler \
     python3-dev \
     python3-pip \
@@ -96,8 +102,10 @@ RUN n latest \
     && rm -rf /var/lib/apt/lists/* \
     && apt -y autoremove
 
+RUN cmake --version
+
 WORKDIR /tmp
-ENV NGT_VERSION 1.14.7
+ENV NGT_VERSION 2.0.5
 ENV CFLAGS "-mno-avx512f -mno-avx512dq -mno-avx512cd -mno-avx512bw -mno-avx512vl"
 ENV CXXFLAGS ${CFLAGS}
 RUN curl -LO "https://github.com/yahoojapan/NGT/archive/v${NGT_VERSION}.tar.gz" \
@@ -110,7 +118,7 @@ RUN curl -LO "https://github.com/yahoojapan/NGT/archive/v${NGT_VERSION}.tar.gz" 
     && rm -rf /tmp/*
 
 WORKDIR /tmp
-ENV TENSORFLOW_C_VERSION 2.9.1
+ENV TENSORFLOW_C_VERSION 2.10.0
 RUN curl -LO https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-${TENSORFLOW_C_VERSION}.tar.gz \
     && tar -C /usr/local -xzf libtensorflow-cpu-linux-x86_64-${TENSORFLOW_C_VERSION}.tar.gz \
     && rm -f libtensorflow-cpu-linux-x86_64-${TENSORFLOW_C_VERSION}.tar.gz \

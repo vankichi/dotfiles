@@ -45,9 +45,7 @@ RUN set -x; cd "$(mktemp -d)" \
     && REPO="${ORG}/${NAME}" \
     && BIN_NAME="${ORG}-credential-pass" \
     && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
-    && curl -fSsLO "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${BIN_NAME}-v${VERSION}-${ARCH}.tar.gz" \
-    && tar -xvf "${BIN_NAME}-v${VERSION}-${ARCH}.tar.gz" \
-    && mv ${BIN_NAME} ${BIN_PATH}/${BIN_NAME} \
+    && curl -fSsLo "${BIN_PATH}/${BIN_NAME}" "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${BIN_NAME}-v${VERSION}.${OS}-${ARCH}" \
     && chmod a+x ${BIN_PATH}/${BIN_NAME} \
     && upx -9 ${BIN_PATH}/${BIN_NAME}
 

@@ -53,4 +53,4 @@ RUN apt-get update -y \
     && locale-gen ${LANG} \
     && rm /etc/localtime \
     && dpkg-reconfigure -f noninteractive tzdata \
-    && apt autoremove
+    && apt-get autoremove

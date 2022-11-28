@@ -132,10 +132,10 @@ build_all: \
 	build_base \
 	build_env \
 	build_docker \
-	build_gcloud \
 	build_go \
 	build_k8s \
 	build_rust \
+	build_dart \
 	prod_build
 	echo "done"
 
@@ -146,6 +146,7 @@ push_all: \
 	push_go \
 	push_k8s \
 	push_rust \
+	push_dart \
 	prod_push
 	echo "done"
 

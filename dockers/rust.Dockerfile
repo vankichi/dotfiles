@@ -23,15 +23,15 @@ RUN rustup install stable \
        clippy \
        --toolchain nightly
 
-RUN cargo install --force --no-default-features \
-    --git https://github.com/mozilla/sccache sccache
+# RUN cargo install --force --no-default-features \
+#     --git https://github.com/mozilla/sccache sccache
 
 FROM rust-base AS cargo-bloat
 RUN  cargo install --force --no-default-features \
     --git https://github.com/RazrFalcon/cargo-bloat
 
 FROM rust-base AS fd
-RUN cargo install --force --no-default-features \
+RUN cargo install --force \
     --git https://github.com/sharkdp/fd
 
 FROM rust-base AS exa
@@ -49,8 +49,10 @@ RUN cargo install --force --no-default-features \
     --git https://github.com/dalance/procs
 
 FROM rust-base AS bat
-RUN cargo install --force --locked \
-    --git https://github.com/sharkdp/bat
+RUN rustup update stable \
+    && rustup default stable \
+    && cargo install --force --locked \
+    bat
 
 FROM rust-base AS dutree
 RUN cargo +nightly install --force --no-default-features \
