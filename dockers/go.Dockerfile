@@ -94,6 +94,14 @@ RUN GO111MODULE=on go install \
     && chmod a+x ${GOBIN}/prototool \
     && upx -9 ${GOBIN}/prototool
 
+FROM go-base AS fzf
+RUN BIN_NAME="fzf" \
+    && REPO="junegunn/${BIN_NAME}" \
+    && GO111MODULE=on go install \
+    --ldflags "-s -w" --trimpath \
+    github.com/${REPO}@latest \
+    && chmod a+x "${GOPATH}/bin/${BIN_NAME}" \
+    && upx -9 "${GOPATH}/bin/${BIN_NAME}"
 
 FROM go-base AS go
 RUN upx -9 ${GOROOT}/bin/*
@@ -101,6 +109,7 @@ RUN upx -9 ${GOROOT}/bin/*
 FROM go-base AS go-bins
 COPY --from=efm $GOBIN/efm-langserver $GOBIN/efm-langserver
 COPY --from=ghq $GOBIN/ghq $GOBIN/ghq
+COPY --from=fzf $GOPATH/bin/fzf $GOPATH/bin/fzf
 COPY --from=gofumpt $GOBIN/gofumpt $GOBIN/gofumpt
 COPY --from=goimports $GOBIN/goimports $GOBIN/goimports
 COPY --from=goimports-update-ignore $GOBIN/goimports-update-ignore $GOBIN/goimports-update-ignore

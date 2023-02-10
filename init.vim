@@ -3,8 +3,8 @@
 " --------------------
 set encoding=utf-8
 set fileencoding=utf-8
-set fileencodings=utf-8,ucs-boms,euc-jp,cp932
-set termencoding=utf-8
+" set fileencodings=utf-8,ucs-boms,euc-jp,cp932
+" set termencoding=utf-8
 set number
 scriptencoding utf-8
 
@@ -216,19 +216,23 @@ call plug#end()
 " ---- Language Server Protocol Client settings ----
 " --------------------------------------------------
 " Tab Completion
-function! s:completion_check_bs()
-    let l:col = col('.') - 1
-    return !l:col || getline('.')[l:col - 1] =~? '\s'
+function! s:check_back_space() abort
+  let col = col('.') - 1
+  return !col || getline('.')[col - 1]  =~ '\s'
 endfunction
 
 inoremap <silent><expr> <TAB>
-      \ pumvisible() ? "\<C-n>" :
-      \ <SID>completion_check_bs() ? "\<TAB>" :
+      \ coc#pum#visible() ? coc#pum#next(1):
+      \ <SID>check_back_space() ? "\<Tab>" :
       \ coc#refresh()
-inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
+inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<C-h>"
+inoremap <expr> <cr> coc#pum#visible() ? coc#pum#confirm() : "\<CR>"
+inoremap <expr> <cr> coc#pum#visible() ? coc#_select_confirm() : "\<C-g>u\<CR>"
+inoremap <silent><expr> <cr> coc#pum#visible() && coc#pum#info()['index'] != -1 ? coc#pum#confirm() : "\<C-g>u\<CR>"
+inoremap <silent><expr> <CR> coc#pum#visible() ? coc#_select_confirm() : "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+
 nmap <silent> [c <Plug>(coc-diagnostic-prev)
 nmap <silent> ]c <Plug>(coc-diagnostic-next)
-
 nmap <silent> gd <Plug>(coc-definition)
 nmap <silent> gy <Plug>(coc-type-definition)
 nmap <silent> gi <Plug>(coc-implementation)

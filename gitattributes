@@ -22,6 +22,8 @@
 *.rb diff=ruby
 *.js diff=javascript
 *.jsx diff=javascript
+*.ts diff=typescript
+*.tsx diff=typescript
 *.csv encoding=utf-8
 *.json diff=json
 *.ex diff=elixir

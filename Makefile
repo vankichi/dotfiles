@@ -53,7 +53,6 @@ build:
 
 docker_build:
 	docker build --squash -t ${IMAGE_NAME}:latest -f ${DOCKERFILE} .
-	# TODO: use buildx
 	# docker buildx build --squash -t ${IMAGE_NAME}:latest -f ${DOCKERFILE} .
 
 hoge:

@@ -121,8 +121,8 @@ RUN set -x; cd "$(mktemp -d)" \
     && BIN_NAME="k9s" \
     && REPO="${ORG}/${BIN_NAME}" \
     && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
-    && curl -fsSLO "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${BIN_NAME}_Linux_x86_64.tar.gz" \
-    && tar -zxvf ${BIN_NAME}_Linux_x86_64.tar.gz \
+    && curl -fsSLO "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${BIN_NAME}_Linux_amd64.tar.gz" \
+    && tar -zxvf ${BIN_NAME}_Linux_amd64.tar.gz \
     && mv k9s ${BIN_PATH}/k9s
 
 FROM kube-base AS telepresence
@@ -156,16 +156,6 @@ FROM kube-base AS linkerd
 RUN set -x; cd "$(mktemp -d)" \
     && curl -sL https://run.linkerd.io/install | sh \
     && mv ${HOME}/.linkerd2/bin/linkerd-* ${BIN_PATH}/linkerd
-
-FROM kube-base AS octant
-RUN set -x; cd "$(mktemp -d)" \
-    && ORG="vmware-tanzu" \
-    && BIN_NAME="octant" \
-    && REPO="${ORG}/${BIN_NAME}" \
-    && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
-    && curl -fsSLO "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${BIN_NAME}_${VERSION}_Linux-64bit.tar.gz" \
-    && tar -zxvf "${BIN_NAME}_${VERSION}_Linux-64bit.tar.gz" \
-    && mv ${BIN_NAME}_${VERSION}_Linux-64bit/${BIN_NAME} ${BIN_PATH}/${BIN_NAME}
 
 FROM kube-base AS skaffold
 RUN set -x; cd "$(mktemp -d)" \
@@ -245,7 +235,6 @@ COPY --from=kubectx ${BIN_PATH}/kubens ${K8S_PATH}/kubens
 COPY --from=kubeval ${BIN_PATH}/kubeval ${K8S_PATH}/kubeval
 COPY --from=kustomize ${BIN_PATH}/kustomize ${K8S_PATH}/kustomize
 COPY --from=linkerd ${BIN_PATH}/linkerd ${K8S_PATH}/linkerd
-COPY --from=octant ${BIN_PATH}/octant ${K8S_PATH}/octant
 COPY --from=skaffold ${BIN_PATH}/skaffold ${K8S_PATH}/skaffold
 COPY --from=stern ${BIN_PATH}/stern ${K8S_PATH}/stern
 COPY --from=telepresence ${BIN_PATH}/telepresence ${K8S_PATH}/telepresence

@@ -14,6 +14,8 @@ ENV HOME ${BASE_DIR}/${USER}
 ENV SHELL /usr/bin/zsh
 ENV GROUP sudo,root,users,docker,wheel
 ENV UID ${USER_ID}
+ENV GITHUB https://github.com
+ENV API_GITHUB https://api.github.com/repos
 
 RUN groupadd --non-unique --gid ${DOCKER_GROUP_ID} docker \
     && groupadd --non-unique --gid ${GROUP_ID} wheel \
@@ -53,8 +55,6 @@ RUN apt-get update -y \
     liblzma-dev \
     libhdf5-serial-dev \
     libomp-dev \
-    libprotobuf-dev \
-    libprotoc-dev \
     libopenblas-dev \
     nodejs \
     npm \
@@ -62,7 +62,6 @@ RUN apt-get update -y \
     neovim \
     ninja-build \
     pkg-config \
-    protobuf-compiler \
     python3-dev \
     python3-pip \
     python3-setuptools \
@@ -79,10 +78,9 @@ RUN apt-get update -y \
     && npm install -g n
 
 RUN n latest \
-    && npm config set user ${USER} \
+    && hash -r \
     && bash -c "chown -R ${USER} $(npm config get prefix)/{lib/node_modules,bin,share}" \
     && bash -c "chmod -R 755 $(npm config get prefix)/{lib/node_modules,bin,share}" \
-    && npm config set user ${USER} \
     && npm install -g \
         diagnostic-languageserver \
         dockerfile-language-server-nodejs \
@@ -103,6 +101,22 @@ RUN n latest \
     && apt -y autoremove
 
 RUN cmake --version
+
+WORKDIR /tmp
+RUN set -x; cd "$(mktemp -d)" \
+    && OS="linux" \
+    && ARCH="x86_64" \
+    && REPO_NAME="protobuf" \
+    && BIN_NAME="protoc" \
+    && RELEASE_LATEST="releases/latest" \
+    && REPO="protocolbuffers/${REPO_NAME}" \
+    && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
+    && ZIP_NAME="${BIN_NAME}-${VERSION}-${OS}-${ARCH}" \
+    && curl -fsSL "${GITHUB}/${REPO}/releases/download/v${VERSION}/${ZIP_NAME}.zip" -o "/tmp/${BIN_NAME}.zip" \
+    && unzip -o "/tmp/${BIN_NAME}.zip" -d /usr/local "bin/${BIN_NAME}" \
+    && unzip -o "/tmp/${BIN_NAME}.zip" -d /usr/local 'include/*' \
+    && rm -f /tmp/protoc.zip \
+    && rm -rf /tmp/*
 
 WORKDIR /tmp
 ENV NGT_VERSION 2.0.5

@@ -27,13 +27,15 @@ RUN upx -9 ${BIN_PATH}/dive
 
 FROM docker-base AS slim
 RUN set -x; cd "$(mktemp -d)" \
-    && BIN_NAME="docker-slim" \
-    && REPO="${BIN_NAME}/${BIN_NAME}" \
+    && ORG="slimtoolkit" \
+    && BIN_NAME="slim" \
+    && REPO="${ORG}/${BIN_NAME}" \
     && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')" \
     && DOCKER_SLIM_RELEASES="https://downloads.dockerslim.com/releases" \
     && curl -fsSLO "${DOCKER_SLIM_RELEASES}/${VERSION}/dist_${OS}.tar.gz" \
     && tar zxvf dist_${OS}.tar.gz \
     && mv dist_${OS}/docker* ${BIN_PATH} \
+    && mv dist_${OS}/${BIN_NAME}* ${BIN_PATH} \
     && upx -9 \
         ${BIN_PATH}/${BIN_NAME} \
         ${BIN_PATH}/${BIN_NAME}-sensor
@@ -111,7 +113,7 @@ FROM docker:rc-dind AS common-base
 
 FROM docker-base AS common
 COPY --from=common-base ${BIN_PATH}/containerd ${BIN_PATH}/containerd
-COPY --from=common-base ${BIN_PATH}/containerd-shim ${BIN_PATH}/containerd-shim
+# COPY --from=common-base ${BIN_PATH}/containerd-shim ${BIN_PATH}/containerd-shim
 COPY --from=common-base ${BIN_PATH}/ctr ${BIN_PATH}/ctr
 COPY --from=common-base ${BIN_PATH}/dind ${BIN_PATH}/dind
 COPY --from=common-base ${BIN_PATH}/docker ${BIN_PATH}/docker
@@ -124,7 +126,7 @@ COPY --from=common-base ${BIN_PATH}/modprobe ${BIN_PATH}/modprobe
 COPY --from=common-base ${BIN_PATH}/runc ${BIN_PATH}/runc
 RUN upx -9 \
         ${BIN_PATH}/containerd \
-        ${BIN_PATH}/containerd-shim \
+        # ${BIN_PATH}/containerd-shim \
         ${BIN_PATH}/docker \
         ${BIN_PATH}/docker-init \
         # ${BIN_PATH}/docker-proxy \
@@ -144,7 +146,7 @@ ENV DOCKER_LIB_PATH /usr/lib/docker
 
 COPY --from=buildx ${DOCKER_LIB_PATH}/cli-plugins/docker-buildx ${DOCKER_LIB_PATH}/cli-plugins/docker-buildx
 COPY --from=common ${BIN_PATH}/containerd ${DOCKER_PATH}/docker-containerd
-COPY --from=common ${BIN_PATH}/containerd-shim ${DOCKER_PATH}/docker-containerd-shim
+# COPY --from=common ${BIN_PATH}/containerd-shim ${DOCKER_PATH}/docker-containerd-shim
 COPY --from=common ${BIN_PATH}/ctr ${DOCKER_PATH}/docker-containerd-ctr
 COPY --from=common ${BIN_PATH}/dind ${DOCKER_PATH}/dind
 COPY --from=common ${BIN_PATH}/docker ${DOCKER_PATH}/docker
@@ -163,5 +165,6 @@ COPY --from=docker-credential-pass ${BIN_PATH}/docker-credential-pass ${DOCKER_P
 COPY --from=dockfmt ${BIN_PATH}/dockfmt ${DOCKER_PATH}/dockfmt
 COPY --from=dockle ${BIN_PATH}/dockle ${DOCKER_PATH}/dockle
 COPY --from=slim ${BIN_PATH}/docker-slim ${DOCKER_PATH}/docker-slim
-COPY --from=slim ${BIN_PATH}/docker-slim-sensor ${DOCKER_PATH}/docker-slim-sensor
+COPY --from=slim ${BIN_PATH}/slim ${DOCKER_PATH}/slim
+COPY --from=slim ${BIN_PATH}/slim-sensor ${DOCKER_PATH}/slim-sensor
 COPY --from=trivy ${BIN_PATH}/trivy ${DOCKER_PATH}/trivy
