@@ -51,7 +51,6 @@
       "filetypes": ["go"],
       "initializationOptions": {
         "deepCompletion": true,
-        "experimentalWorkspaceModule": true,
         "hoverKind": "FullDocumentation",
         "staticcheck": true,
         "usePlaceholders": true,
@@ -77,7 +76,6 @@
     "gofumpt": true,
     "staticcheck": true,
     "completionDocumentation": true,
-    "experimentalWorkspaceModule": true,
     "hoverKind": "FullDocumentation",
     "linkTarget": "pkg.go.dev",
     "usePlaceholders": true,
@@ -166,5 +164,6 @@
       "upsert",
       "Upsert"
     ]
-  }
+  },
+  "snippets.ultisnips.pythonPrompt": false
 }

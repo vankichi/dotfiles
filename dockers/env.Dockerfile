@@ -59,7 +59,6 @@ RUN apt-get update -y \
     nodejs \
     npm \
     vim \
-    neovim \
     ninja-build \
     pkg-config \
     python3-dev \
@@ -67,14 +66,21 @@ RUN apt-get update -y \
     python3-setuptools \
     python3-venv \
     && apt-get clean \
+    && curl -LO "https://github.com/neovim/neovim/releases/download/stable/nvim-linux64.tar.gz" \
+    && tar -zxvf nvim-linux64.tar.gz \
+    && mv ./nvim-linux64/bin/nvim /usr/bin/nvim \
+    && chmod 755 -R /usr/bin/nvim \
+    && mv ./nvim-linux64/share/nvim /usr/share/nvim \
+    && mv ./nvim-linux64/lib/nvim /usr/lib/nvim \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /var/lib/apt/lists/* \
-    && pip3 install --upgrade pip neovim ranger-fm thefuck httpie python-language-server vim-vint grpcio-tools \
+    && pip3 install --upgrade pip ranger-fm thefuck httpie python-language-server vim-vint grpcio-tools \
     && apt -y autoremove \
     && chown -R ${USER}:users ${HOME} \
     && chown -R ${USER}:users ${HOME}/.* \
     && chmod -R 755 ${HOME} \
     && chmod -R 755 ${HOME}/.* \
+    && nvim -v \
     && npm install -g n
 
 RUN n latest \
