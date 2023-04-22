@@ -83,7 +83,7 @@ RUN apt-get update -y \
     && nvim -v \
     && npm install -g n
 
-RUN n latest \
+RUN n lts \
     && hash -r \
     && bash -c "chown -R ${USER} $(npm config get prefix)/{lib/node_modules,bin,share}" \
     && bash -c "chmod -R 755 $(npm config get prefix)/{lib/node_modules,bin,share}" \
@@ -125,7 +125,7 @@ RUN set -x; cd "$(mktemp -d)" \
     && rm -rf /tmp/*
 
 WORKDIR /tmp
-ENV NGT_VERSION 2.0.5
+ENV NGT_VERSION 2.0.9
 ENV CFLAGS "-mno-avx512f -mno-avx512dq -mno-avx512cd -mno-avx512bw -mno-avx512vl"
 ENV CXXFLAGS ${CFLAGS}
 RUN curl -LO "https://github.com/yahoojapan/NGT/archive/v${NGT_VERSION}.tar.gz" \

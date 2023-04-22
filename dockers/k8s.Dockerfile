@@ -189,8 +189,9 @@ RUN set -x; cd "$(mktemp -d)" \
 
 FROM kube-base AS istio
 RUN set -x; cd "$(mktemp -d)" \
+    && BIN_NAME="istioctl" \
     && curl -L https://istio.io/downloadIstio | sh - \
-    && mv "$(ls | grep istio)/bin/istioctl" ${BIN_PATH}/istioctl
+    && mv "$(ls | grep istio)/bin/${BIN_NAME}" ${BIN_PATH}/${BIN_NAME}
 
 FROM kube-base AS kpt
 RUN set -x; cd "$(mktemp -d)" \
