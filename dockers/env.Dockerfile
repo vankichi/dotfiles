@@ -125,7 +125,7 @@ RUN set -x; cd "$(mktemp -d)" \
     && rm -rf /tmp/*
 
 WORKDIR /tmp
-ENV NGT_VERSION 2.0.9
+ENV NGT_VERSION 2.1.6
 ENV CFLAGS "-mno-avx512f -mno-avx512dq -mno-avx512cd -mno-avx512bw -mno-avx512vl"
 ENV CXXFLAGS ${CFLAGS}
 RUN curl -LO "https://github.com/yahoojapan/NGT/archive/v${NGT_VERSION}.tar.gz" \
@@ -138,7 +138,7 @@ RUN curl -LO "https://github.com/yahoojapan/NGT/archive/v${NGT_VERSION}.tar.gz" 
     && rm -rf /tmp/*
 
 WORKDIR /tmp
-ENV TENSORFLOW_C_VERSION 2.10.0
+ENV TENSORFLOW_C_VERSION 2.14.0
 RUN curl -LO https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-${TENSORFLOW_C_VERSION}.tar.gz \
     && tar -C /usr/local -xzf libtensorflow-cpu-linux-x86_64-${TENSORFLOW_C_VERSION}.tar.gz \
     && rm -f libtensorflow-cpu-linux-x86_64-${TENSORFLOW_C_VERSION}.tar.gz \

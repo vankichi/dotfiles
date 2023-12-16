@@ -1,6 +1,6 @@
 FROM vankichi/dev-base:latest AS dart-base
 
-ENV FLUTTER_VERSION 3.7.12
+ENV FLUTTER_VERSION 3.16.0
 ENV LOCAL /usr/local
 ENV BIN_PATH ${LOCAL}/bin
 
