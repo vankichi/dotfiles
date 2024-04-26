@@ -125,7 +125,7 @@ RUN set -x; cd "$(mktemp -d)" \
     && rm -rf /tmp/*
 
 WORKDIR /tmp
-ENV NGT_VERSION 2.1.6
+ARG NGT_VERSION
 ENV CFLAGS "-mno-avx512f -mno-avx512dq -mno-avx512cd -mno-avx512bw -mno-avx512vl"
 ENV CXXFLAGS ${CFLAGS}
 RUN curl -LO "https://github.com/yahoojapan/NGT/archive/v${NGT_VERSION}.tar.gz" \

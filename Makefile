@@ -1,4 +1,8 @@
-.PHONY: all link clean zsh bash build prod_build profile run push pull
+.PHONY: all link clean zsh bash build prod_build profile run push pull update/go update/ngt
+
+include Makefile.d/version.mk
+
+ROOTDIR = $(eval ROOTDIR := $(or $(shell git rev-parse --show-toplevel), $(PWD)))$(ROOTDIR)
 
 all: prod_build login push profile git_push
 
@@ -52,11 +56,8 @@ build:
 	docker build -t vankichi/dev:latest .
 
 docker_build:
-	docker build --squash -t ${IMAGE_NAME}:latest -f ${DOCKERFILE} .
+	docker build ${ARGS} --squash -t ${IMAGE_NAME}:latest -f ${DOCKERFILE} .
 	# docker buildx build --squash -t ${IMAGE_NAME}:latest -f ${DOCKERFILE} .
-
-hoge:
-	docker build --squash --network=host -t ${IMAGE_NAME}:latest -f ${DOCKERFILE} .
 
 docker_push:
 	docker push ${IMAGE_NAME}:latest
@@ -83,7 +84,7 @@ build_base:
 	@make DOCKERFILE="./dockers/base.Dockerfile" IMAGE_NAME="vankichi/dev-base" docker_build
 
 build_env:
-	@make DOCKERFILE="./dockers/env.Dockerfile" IMAGE_NAME="vankichi/env" docker_build
+	@make DOCKERFILE="./dockers/env.Dockerfile" IMAGE_NAME="vankichi/env" ARGS="--build-arg=NGT_VERSION=$(shell cat ./versions/NGT_VERSION)" docker_build
 
 build_gcloud:
 	@make DOCKERFILE="./dockers/gcloud.Dockerfile" IMAGE_NAME="vankichi/gcloud" docker_build
