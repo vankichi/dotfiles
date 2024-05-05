@@ -11,9 +11,6 @@ ENV ARCHIVE_DL archive/refs/tags
 ENV RELEASE_LATEST releases/latest
 ENV LOCAL /usr/local
 ENV BIN_PATH ${LOCAL}/bin
-ENV TELEPRESENCE_VERSION 2.17.0
-
-RUN apt-get update
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3.9 \

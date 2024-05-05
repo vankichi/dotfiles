@@ -66,7 +66,7 @@ prod_build:
 	@make DOCKERFILE="./Dockerfile" IMAGE_NAME="vankichi/dev" docker_build
 
 build_go:
-	@make DOCKERFILE="./dockers/go.Dockerfile" IMAGE_NAME="vankichi/go" docker_build
+	@make DOCKERFILE="./dockers/go.Dockerfile" IMAGE_NAME="vankichi/go" ARGS="--build-arg=GO_VERSION=$(shell cat ./versions/GO_VERSION)" docker_build
 
 build_rust:
 	@make DOCKERFILE="./dockers/rust.Dockerfile" IMAGE_NAME="vankichi/rust" docker_build
@@ -75,7 +75,7 @@ build_nim:
 	@make DOCKERFILE="./dockers/nim.Dockerfile" IMAGE_NAME="vankichi/nim" docker_build
 
 build_dart:
-	@make DOCKERFILE="./dockers/dart.Dockerfile" IMAGE_NAME="vankichi/dart" docker_build
+	@make DOCKERFILE="./dockers/dart.Dockerfile" IMAGE_NAME="vankichi/dart" ARGS="--build-arg=FLUTTER_VERSION=$(shell cat ./versions/FLUTTER_VERSION)" docker_build
 
 build_docker:
 	@make DOCKERFILE="./dockers/docker.Dockerfile" IMAGE_NAME="vankichi/docker" docker_build
@@ -84,7 +84,7 @@ build_base:
 	@make DOCKERFILE="./dockers/base.Dockerfile" IMAGE_NAME="vankichi/dev-base" docker_build
 
 build_env:
-	@make DOCKERFILE="./dockers/env.Dockerfile" IMAGE_NAME="vankichi/env" ARGS="--build-arg=NGT_VERSION=$(shell cat ./versions/NGT_VERSION)" docker_build
+	@make DOCKERFILE="./dockers/env.Dockerfile" IMAGE_NAME="vankichi/env" ARGS="--build-arg=NGT_VERSION=$(shell cat ./versions/NGT_VERSION) --build-arg=TENSORFLOW_C_VERSION=$(shell cat ./versions/TENSORFLOW_C_VERSION)" docker_build
 
 build_gcloud:
 	@make DOCKERFILE="./dockers/gcloud.Dockerfile" IMAGE_NAME="vankichi/gcloud" docker_build
