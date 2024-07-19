@@ -13,7 +13,7 @@ ENV LOCAL /usr/local
 ENV BIN_PATH ${LOCAL}/bin
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.9 \
+    python3-dev \
     python3-setuptools \
     python3-pip \
     python3-venv \

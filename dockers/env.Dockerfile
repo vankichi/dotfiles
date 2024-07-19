@@ -20,6 +20,7 @@ ENV API_GITHUB https://api.github.com/repos
 RUN groupadd --non-unique --gid ${DOCKER_GROUP_ID} docker \
     && groupadd --non-unique --gid ${GROUP_ID} wheel \
     && groupmod --non-unique --gid ${GROUP_ID} users \
+    && userdel -r ubuntu \
     && useradd --uid ${USER_ID} \
         --gid ${GROUP_ID} \
         --non-unique --create-home \
@@ -74,7 +75,7 @@ RUN apt-get update -y \
     && mv ./nvim-linux64/lib/nvim /usr/lib/nvim \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /var/lib/apt/lists/* \
-    && pip3 install --upgrade pip ranger-fm thefuck httpie python-language-server vim-vint grpcio-tools \
+    && pip3 install --upgrade --break-system-packages ranger-fm thefuck httpie python-language-server vim-vint grpcio-tools \
     && apt -y autoremove \
     && chown -R ${USER}:users ${HOME} \
     && chown -R ${USER}:users ${HOME}/.* \
@@ -137,10 +138,10 @@ RUN curl -LO "https://github.com/yahoojapan/NGT/archive/v${NGT_VERSION}.tar.gz" 
     && cd /tmp \
     && rm -rf /tmp/*
 
-WORKDIR /tmp
-ARG TENSORFLOW_C_VERSION
-RUN curl -LO https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-${TENSORFLOW_C_VERSION}.tar.gz \
-    && tar -C /usr/local -xzf libtensorflow-cpu-linux-x86_64-${TENSORFLOW_C_VERSION}.tar.gz \
-    && rm -f libtensorflow-cpu-linux-x86_64-${TENSORFLOW_C_VERSION}.tar.gz \
-    && ldconfig \
-    && rm -rf /tmp/* /var/cache
+# WORKDIR /tmp
+# ARG TENSORFLOW_C_VERSION
+# RUN curl -LO https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow-cpu-linux-x86_64-${TENSORFLOW_C_VERSION}.tar.gz \
+#     && tar -C /usr/local -xzvf libtensorflow-cpu-linux-x86_64-${TENSORFLOW_C_VERSION}.tar.gz \
+#     && rm -f libtensorflow-cpu-linux-x86_64-${TENSORFLOW_C_VERSION}.tar.gz \
+#     && ldconfig \
+#     && rm -rf /tmp/* /var/cache
