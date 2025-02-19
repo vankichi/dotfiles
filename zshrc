@@ -1,3 +1,13 @@
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
 #!/usr/local/bin/zsh
 USER=$(whoami)
 HOST=$(hostname)
@@ -8,15 +18,14 @@ if type tmux >/dev/null 2>&1; then
             # get the id of a deattached session
             ID="$(tmux ls | grep -vm1 attached | cut -d: -f1)" # get the id of a deattached session
             if [[ -z $ID ]]; then # if not available create a new one
-                tmux -2 new-session -n$USER -s$USER@$HOST
+                tmux -f /home/${USER}/.config/tmux/.tmux.conf new-session -n$USER -s$USER@$HOST
             else
-                tmux -2 attach-session -t "$ID" # if available attach to it
+                tmux attach-session -t "$ID" # if available attach to it
             fi
         else
-            tmux source-file /home/${USER}/.tmux.conf
+            tmux source-file /home/${USER}/.config/tmux/.tmux.conf
             pkill tmux
-            tmux -2 new-session -n$USER -s$USER@$HOST
-            tmux source-file /home/${USER}/.tmux.conf
+            tmux -f /home/${USER}/.config/tmux/.tmux.conf new-session -n$USER -s$USER@$HOST
             tmux unbind C-b
             tmux set -g prefix C-w
         fi
@@ -42,30 +51,18 @@ if type go >/dev/null 2>&1; then
     export GOROOT="$(go env GOROOT)"
     export GOOS="$(go env GOOS)"
     export GOARCH="$(go env GOARCH)"
-    # export GOBIN=$GOPATH/bin
     export CGO_ENABLED=1
     export GO111MODULE=on
-    # export GOBIN=$GOPATH/bin
     export GO15VENDOREXPERIMENT=1
     export GOPRIVATE="*.yahoo.co.jp"
     export NVIM_GO_LOG_FILE=$XDG_DATA_HOME/go
 fi
 
-# nvm
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-
-# --------------------
-# deno
-# --------------------
-export DENO_INSTALL="$HOME/.deno"
-
 # --------------------
 # nvim(NeoVim)
 # --------------------
 if type nvim >/dev/null 2>&1; then
-    export VIM=$(which nvim)
+    # export VIM=$(which nvim)
     if [ $(uname) = 'Darwin' ]; then
         export VIMRUNTIME=/usr/local/share/nvim/runtime
     else
@@ -74,7 +71,7 @@ if type nvim >/dev/null 2>&1; then
     export NVIM_HOME=$XDG_CONFIG_HOME/nvim
     export XDG_DATA_HOME=$NVIM_HOME/log
     export NVIM_LOG_FILE_PATH=$XDG_DATA_HOME
-    export NVIM_TUI_ENABLE_TRUE_COLOR=1
+    # export NVIM_TUI_ENABLE_TRUE_COLOR=1
     export NVIM_PYTHON_LOG_LEVEL=WARNING;
     export NVIM_PYTHON_LOG_FILE=$NVIM_LOG_FILE_PATH/nvim.log;
     export NVIM_LISTEN_ADDRESS="127.0.0.1:7650";
@@ -85,15 +82,11 @@ else
     export VIM=$(which vi)
 fi
 
-export EDITOR=$VIM
-export VISUAL=$VIM
+alias vim=$(which nvim)
+export EDITOR=$(which nvim)
+export VISUAL=$(which nvim)
 export PAGER=$(which less)
 export SUDO_EDITOR=$EDITOR
-
-# --------------------
-# bpctl
-# --------------------
-export BPCTL_V2_DEFAULT=true
 
 # --------------------
 # k9s
@@ -101,17 +94,15 @@ export BPCTL_V2_DEFAULT=true
 export K9S="$HOME/.local/bin"
 
 # --------------------
+# node
+# --------------------
+# export NODE_PATH="/usr/local/lib/node_modules"
+
+
+# --------------------
 # PATH
 # --------------------
-export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:/usr/local/share/npm/bin:/usr/local/go/bin:/opt/local/bin:$GOBIN:$HOME/.cargo/bin:/root/.cargo/bin:/GCLOUD_PATH/bin:$DENO_INSTALL/bin:$K9S:$PATH"
-
-export ZPLUG_HOME=$HOME/.zplug
-if type zplug >/dev/null 2>&1; then
-    if zplug check junegunn/fzf; then
-        export FZF_DEFAULT_COMMAND='rg --files --hidden --follow --glob "!.git/*"'
-        export FZF_DEFAULT_OPTS='--height 40% --reverse --border'
-    fi
-fi
+export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:/usr/local/share/npm/bin:/usr/local/go/bin:/usr/local/lib:/opt/local/bin:$GOBIN:$HOME/.cargo/bin:/root/.cargo/bin:/GCLOUD_PATH/bin:$K9S:$PATH"
 
 if [ ! -f "$HOME/.zshrc.zwc" -o "$HOME/.zshrc" -nt "$HOME/.zshrc.zwc" ]; then
     zcompile $HOME/.zshrc
@@ -122,38 +113,10 @@ if [ ! -f "$HOME/.zcompdump.zwc" -o "$HOME/.zcompdump" -nt "$HOME/.zcompdump.zwc
 fi
 
 [ -f $HOME/.aliases ] && source $HOME/.aliases
-[ -f $HOME/.zcpaliases ] && source $HOME/.zcpaliases
-
-if [ -z $ZSH_LOADED ]; then
-    # --------------------
-    # zplug
-    # --------------------
-    if [[ -f ~/.zplug/init.zsh ]]; then
-        source "$HOME/.zplug/init.zsh"
-        zplug "junegunn/fzf", as:command, hook-build:"make install", use:bin/fzf
-        zplug "junegunn/fzf", as:command, use:bin/fzf-tmux
-        zplug "zchee/go-zsh-completions"
-        zplug "zsh-users/zsh-autosuggestions"
-        zplug "zsh-users/zsh-completions", as:plugin, use:"src"
-        zplug "zsh-users/zsh-history-substring-search"
-        zplug "zsh-users/zsh-syntax-highlighting", defer:2
-        zplug "superbrothers/zsh-kubectl-prompt", as:plugin, from:github, use:"kubectl.zsh"
-        zplug "greymd/tmux-xpanes"
-        zplug "felixr/docker-zsh-completion"
-        if ! zplug check --verbose; then
-            zplug install
-        fi
-        zplug load
-    else
-        rm -rf $ZPLUG_HOME
-        git clone https://github.com/zplug/zplug $ZPLUG_HOME
-        source "$HOME/.zshrc"
-        return 0
-    fi
 
     # use colors
-    autoload -Uz colors
-    colors
+    # autoload -Uz colors
+    # colors
 
     # --------------------
     # option
@@ -191,12 +154,8 @@ if [ -z $ZSH_LOADED ]; then
     setopt hist_ignore_space
     setopt hist_reduce_blanks
     setopt hist_save_no_dups
-    # shareing history
     setopt share_history
-    # append history
     setopt append_history
-    # prompt command
-    export PROMPT_COMMAND='hcmd=$(history 1); hcmd="${hcmd# *[0-9]*  }"; if [[ ${hcmd%% *} == "cd" ]]; then pwd=$OLDPWD; else pwd=$PWD; fi; hcmd=$(echo -e "cd $pwd && $hcmd"); history -s "$hcmd"'
 
     # --------------------
     # word chars
@@ -216,9 +175,9 @@ if [ -z $ZSH_LOADED ]; then
 
     # use completion
     autoload -Uz compinit -C && compinit -C
-    if [ -e /usr/local/share/zsh-completions ]; then
-      fpath=(/usr/local/share/zsh-completions $fpath)
-    fi
+    # if [ -e /usr/local/share/zsh-completions ]; then
+    #   fpath=(/usr/local/share/zsh-completions $fpath)
+    # fi
 
     zstyle ':completion:*' format '%B%d%b'
     zstyle ':completion:*' group-name ''
@@ -258,35 +217,10 @@ if [ -z $ZSH_LOADED ]; then
     zstyle ':completion:*:warnings' format ' %F{red}-- no matches found --%f'
     zstyle ':completion::complete:*' cache-path "${ZDOTDIR:-${HOME}}/.zcompcache"
     zstyle ':completion::complete:*' use-cache on
-    zstyle ':zsh-kubectl-prompt:' separator ' | ns: '
-    zstyle ':zsh-kubectl-prompt:' preprompt 'ctx: '
-    zstyle ':zsh-kubectl-prompt:' postprompt ''
+    # zstyle ':zsh-kubectl-prompt:' separator ' | ns: '
+    # zstyle ':zsh-kubectl-prompt:' preprompt 'ctx: '
+    # zstyle ':zsh-kubectl-prompt:' postprompt ''
     setopt list_packed
-
-    # --------------------
-    # prompt
-    # --------------------
-    autoload -Uz vcs_info
-    autoload -Uz add-zsh-hook
-    setopt prompt_subst
-    zstyle ':vcs_info:*' formats '(%s)-[%c]-%u[%b]'
-    zstyle ':vcs_info:*' actionformats '%F{red}(%s)-[%b|%a]%f'
-    zstyle ':vcs_info:git:*' check-for-changes true
-    zstyle ':vcs_info:git:*' stagedstr "%F{magenta}!"
-    zstyle ':vcs_info:git:*' unstagedstr "%F{yellow}+"
-    precmd() {
-        vcs_info
-    }
-    PROMPT='%F{green}%n%f:%F{cyan}%/ $ %f'
-    RPROMPT='${vcs_info_msg_0_}'
-
-    _update_vcs_info_msg() {
-        LANG=en_US.UTF-8
-        RPROMPT="%F{green}${vcs_info_msg_0_} %F{033}($ZSH_KUBECTL_PROMPT)%f"
-    }
-    add-zsh-hook precmd _update_vcs_info_msg
-
-    export LSCOLORS=CxGxcxdxCxegedabagacad
 
     mkcd() {
         if [[ -d $1 ]]; then
@@ -306,16 +240,6 @@ if [ -z $ZSH_LOADED ]; then
                 alias s='mkcd $(fd -a -H -t d . | fzf-tmux)'
                 alias vf='vim $(fd -a -H -t f . | fzf-tmux)'
             fi
-            # if type rg >/dev/null 2>&1; then
-            #     fbr() {
-            #         git branch --all | rg -v HEAD | fzf-tmux +m | sed -e "s/.* //" -e "s#remotes/[^/]*/##" | xargs git checkout
-            #     }
-            #     alias fbr=fbr
-            #     sshf() {
-            #         ssh $(rg "Host " $HOME/.ssh/config | awk '{print $2}' | rg -v "\*" | fzf-tmux +m)
-            #     }
-            #     alias sshf=sshf
-            # fi
             if type ghq >/dev/null 2>&1; then
                 alias g='mkcd $(ghq root)/$(ghq list | fzf-tmux)'
             fi
@@ -385,21 +309,185 @@ if [ -z $ZSH_LOADED ]; then
         alias vedit="$EDITOR $HOME/.vimrc"
     fi
 
-    alias vi="$EDITOR"
-    alias vim="$EDITOR"
-    alias v="$EDITOR"
-    alias vspdchk="rm -rf /tmp/starup.log && $EDITOR --startuptime /tmp/startup.log +q && less /tmp/startup.log"
-    alias xedit="$EDITOR $HOME/.Xdefaults"
-    alias wedit="$EDITOR $HOME/.config/sway/config"
-
     if type bat >/dev/null 2>&1; then
         alias cat="bat"
     fi
 
     export ZSH_LOADED=true
-fi
-
-# Generated for envman. Do not edit.
-[ -s "$HOME/.config/envman/load.sh" ] && source "$HOME/.config/envman/load.sh"
 
 export GPG_TTY=$TTY
+
+# sheldon
+eval "$(sheldon source)"
+cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}
+sheldon_cache="$cache_dir/sheldon.zsh"
+sheldon_toml="$HOME/.config/sheldon/plugins.toml"
+if [[ ! -r "$sheldon_cache" || "$sheldon_toml" -nt "$sheldon_cache" ]]; then
+  mkdir -p $cache_dir
+  sheldon source > $sheldon_cache
+fi
+source "$sheldon_cache"
+unset cache_dir sheldon_cache sheldon_toml
+
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+source <(kubectl completion zsh)
+# source <(kubectl convert completion zsh)
+if type k3d >/dev/null 2>&1; then
+    source <(k3d completion zsh)
+fi
+source <(helm completion zsh)
+source <(docker completion zsh)
+
+# alias
+rcpath="$HOME/go/src/github.com/vankichi/dotfiles"
+zpath="/usr/bin/zsh"
+container_name="dev"
+image_name="vankichi/dev:latest"
+
+function dockerrm {
+    docker container stop $(docker container ls -aq)
+    docker ps -aq | xargs docker rm -f
+    docker container prune -f
+    docker images -aq | xargs docker rmi -f
+    docker image prune -a
+    docker volume prune -f
+    docker network prune -f
+    docker system prune -a
+}
+
+alias dockerrm="dockerrm"
+
+alias vmove="cd $rcpath"
+
+alias vbuild="vmove&&docker build --pull=true --file=$rcpath/Dockerfile -t vankichi/dev:latest $rcpath"
+
+function devrun {
+    port_range="7000-9300"
+    privileged=true
+    tz_path="/usr/share/zoneinfo/Japan"
+    font_dir="/System/Library/Fonts"
+    docker_daemon="$HOME/Library/Containers/com.docker.helper/Data/.docker/daemon.json"
+    docker_config="$HOME/Library/Containers/com.docker.helper/Data/.docker/config.json"
+    docker_sock="/var/run/docker.sock"
+    container_home="/home/vankichi"
+    container_root="/root"
+    container_goroot="$container_home/go"
+    goroot="/usr/local/go"
+    case "$(uname -s)" in
+        Darwin)
+            echo 'Docker on macOS start'
+            docker run \
+                --cap-add=ALL \
+                --name $container_name \
+                --restart always \
+                --privileged=$privileged \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                -p $port_range:$port_range \
+                -v $HOME/.docker/daemon.json:$container_root/.docker/daemon.json \
+                -v $HOME/.kube:$container_root/.kube \
+                -v $HOME/.netrc:$container_root/.netrc \
+                -v $HOME/.ssh:$container_root/.ssh \
+                -v $HOME/.gnupg:$container_root/.gnupg \
+                -v $HOME/Documents:$container_root/Documents \
+                -v $HOME/Downloads:$container_root/Downloads \
+                -v $HOME/go/src:/go/src:cached \
+                -v $docker_config:/etc/docker/config.json:ro,cached \
+                -v $docker_daemon:/etc/docker/daemon.json:ro,cached \
+                -v $font_dir:/usr/share/fonts:ro \
+                -v $rcpath/coc-settings.json:$container_root/.config/nvim/coc-settings.json \
+                -v $rcpath/editorconfig:$container_root/.editorconfig \
+                -v $rcpath/gitconfig:$container_root/.gitconfig \
+                -v $rcpath/gitignore:$container_root/.gitignore \
+                -v $rcpath/init.vim:$container_root/.config/nvim/init.vim \
+                -v $rcpath/monokai.vim:$container_root/.config/nvim/colors/monokai.vim \
+                -v $rcpath/tmux.conf:$container_root/.tmux.conf \
+                -v $rcpath/zshrc:$container_root/.zshrc \
+                -v $rcpath/go.env:$container_goroot/go.env:ro \
+                -v $rcpath/go.env:$goroot/go.env:ro \
+                -v $HOME/.zsh_history:$container_root/.zsh_history \
+                -v $tz_path:/etc/localtime:ro \
+                -v $docker_sock:$docker_sock \
+                -dit $image_name
+            ;;
+
+        Linux)
+            echo 'Docker on Linux start'
+            font_dir="/usr/share/fonts"
+            tz_path="/etc/timezone"
+            docker_daemon="/etc/docker/daemon.json"
+            docker_config="/etc/docker/config.json"
+            docker run \
+                --cap-add=ALL \
+                --name $container_name \
+                --restart always \
+                --privileged=$privileged \
+                -p 1313:1313 \
+                -p 6443:6550 \
+                -u "$(id -u $USER):$(id -g $USER)" \
+                -v $HOME/.docker:$container_home/.docker \
+                -v $HOME/.docker:$container_root/.docker \
+                -v $HOME/.gnupg:$container_home/.gnupg \
+                -v $HOME/.gnupg:$container_root/.gnupg \
+                -v $HOME/.kube:$container_home/.kube \
+                -v $HOME/.netrc:$container_home/.netrc:ro \
+                -v $HOME/.ssh:$container_home/.ssh \
+                -v $HOME/.config:$container_home/.config:cached \
+                -v $HOME/.p10k.zsh:$container_home/.p10k.zsh:cached \
+                -v $HOME/.zsh_history:$container_home/.zsh_history:cached \
+                -v $HOME/Documents:$container_home/Documents \
+                -v $HOME/Downloads:$container_home/Downloads \
+                -v $HOME/go/src:$container_goroot/src:cached \
+                -v $docker_config:$docker_config:ro,cached \
+                -v $docker_daemon:$docker_daemon:ro,cached \
+                -v $docker_sock:$docker_sock \
+                -v $font_dir:$font_dir \
+                -v $rcpath/editorconfig:$container_home/.editorconfig \
+                -v $rcpath/gitattributes:$container_home/.gitattributes \
+                -v $rcpath/gitconfig:$container_home/.gitconfig \
+                -v $rcpath/gitignore:$container_home/.gitignore \
+                -v $HOME/.config/nvim:$container_home/.config/nvim \
+                -v /usr/bin/sheldon:/usr/bin/sheldon:ro,cached \
+                -v $HOME/.config/sheldon:$container_home/.config/sheldon:ro,cached \
+                -v $rcpath/go.env:$container_goroot/go.env:ro \
+                -v $rcpath/go.env:$goroot/go.env:ro \
+                -v $rcpath/zshrc:$container_home/.zshrc:ro,cached \
+                -v $tz_path:/etc/localtime:ro,cached \
+                -dit $image_name
+            ;;
+
+        CYGWIN*|MINGW32*|MSYS*)
+            echo 'MS Windows is not ready for this environment'
+            ;;
+
+        *)
+            echo 'other OS'
+            ;;
+    esac
+    # docker exec -d $container_name $zpath nvup
+}
+
+alias devrun="devrun"
+
+# alias devin="docker exec -it $container_name $zpath -c \"tmux source-file /home/vankichi/.tmux.conf && tmux -S /tmp/tmux.sock -q has-session && exec tmux -S /tmp/tmux.sock -2 attach-session -d || exec tmux -S /tmp/tmux.sock -2 new-session -n$USER -s$USER@$HOST\""
+# alias devin="docker exec -it $container_name $zsh_path -c \"tmux -S /tmp/tmux.sock -q has-session && exec tmux -S /tmp/tmux.sock -2 attach-session -d || exec tmux -S /tmp/tmux.sock -2 new-session -n$USER -s$USER@$HOST\""
+alias devin="docker exec -it $container_name $zpath"
+
+function devkill {
+    docker update --restart=no $container_name \
+        && docker container stop $(docker container ls -aq) \
+        && docker container stop $(docker ps -a -q) \
+        && docker ps -aq | xargs docker rm -f \
+        && docker container prune -f
+}
+
+alias devkill="devkill"
+
+alias devres="devkill && devrun"
+
+function fup {
+  sudo systemctl reload dbus.service
+  sudo systemctl restart fwupd.service
+  sudo lsusb
+}

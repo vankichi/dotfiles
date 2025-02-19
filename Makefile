@@ -13,6 +13,20 @@ all: prod_build login push profile git_push
 run:
 	source ./alias && devrun
 
+unlink:
+	unlink $(HOME)/.config/nvim
+
+new_link:
+	ln -sfv $(shell pwd)/gitconfig $(HOME)/.gitconfig
+	ln -sfv $(shell pwd)/zshrc $(HOME)/.zshrc
+	ln -sfv $(shell pwd)/tmux.conf $(HOME)/.config/tmux/.tmux.conf
+	# ln -sfv $(shell pwd)/config/nvim $(HOME)/.config
+	# ln -sfv $(shell pwd)/config/sheldon $(HOME)/.config
+	ln -sfv $(shell pwd)editorconfig $(HOME)/.editorconfig
+
+new_clean:
+	unlink $(HOME)/.config/tmux/.tmux.conf
+
 link:
 	mkdir -p ${HOME}/.config/nvim/colors
 	mkdir -p ${HOME}/.config/nvim/syntax

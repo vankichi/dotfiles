@@ -85,7 +85,8 @@
 [user]
     name = vankichi
     email = "kyukawa315@gmail.com"
-    signingkey = 4FFF395E80C47180
+    signingkey = 6714D997950888C6
+
 [ghq]
     root = ~/go/src
 [credential]
