@@ -32,7 +32,7 @@ RUN set -x; cd "$(mktemp -d)" \
     && REPO="${ORG}/${BIN_NAME}" \
     && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')" \
     && DOCKER_SLIM_RELEASES="https://downloads.dockerslim.com/releases" \
-    && curl -fsSLO "${DOCKER_SLIM_RELEASES}/${VERSION}/dist_${OS}.tar.gz" \
+    && curl -fsSLO "${GITHUB}/${REPO}/${RELEASE_DL}/${VERSION}/dist_${OS}.tar.gz" \
     && tar zxvf dist_${OS}.tar.gz \
     && mv dist_${OS}/docker* ${BIN_PATH} \
     && mv dist_${OS}/${BIN_NAME}* ${BIN_PATH} \
@@ -47,7 +47,7 @@ RUN set -x; cd "$(mktemp -d)" \
     && REPO="${ORG}/${NAME}" \
     && BIN_NAME="${ORG}-credential-pass" \
     && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
-    && curl -fSsLo "${BIN_PATH}/${BIN_NAME}" "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${BIN_NAME}-v${VERSION}.${OS}-${ARCH}" \
+    && curl -fsSL "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${BIN_NAME}-v${VERSION}.${OS}-${ARCH}" -o "${BIN_PATH}/${BIN_NAME}" \
     && chmod a+x ${BIN_PATH}/${BIN_NAME} \
     && upx -9 ${BIN_PATH}/${BIN_NAME}
 
@@ -59,7 +59,7 @@ RUN set -x; cd "$(mktemp -d)" \
     && REPO="docker/${NAME}" \
     && BIN_NAME="docker-buildx" \
     && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
-    && curl -fSsLo ${CLI_LIB_PATH}/${BIN_NAME} "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${NAME}-v${VERSION}.${OS}-${ARCH}" \
+    && curl -fsSL "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${NAME}-v${VERSION}.${OS}-${ARCH}" -o ${CLI_LIB_PATH}/${BIN_NAME} \
     && chmod a+x ${CLI_LIB_PATH}/${BIN_NAME} \
     && upx -9 ${CLI_LIB_PATH}/${BIN_NAME}
 
@@ -69,18 +69,19 @@ RUN set -x; cd "$(mktemp -d)" \
     && REPO="jessfraz/${NAME}" \
     && BIN_NAME=${NAME} \
     && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
-    && curl -fSsLo ${BIN_PATH}/${BIN_NAME} "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${NAME}-${OS}-${ARCH}" \
+    && curl -fsSL "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${NAME}-${OS}-${ARCH}" -o ${BIN_PATH}/${BIN_NAME} \
     && chmod a+x ${BIN_PATH}/${BIN_NAME} \
     && upx -9 ${BIN_PATH}/${BIN_NAME}
 
-FROM docker-base AS container-diff
-RUN set -x; cd "$(mktemp -d)" \
-    && NAME="container-diff" \
-    && REPO="jessfraz/${NAME}" \
-    && BIN_NAME=${NAME} \
-    && curl -fsSLo "${BIN_PATH}/${BIN_NAME}" "${GOOGLE}/${NAME}/latest/${NAME}-${OS}-${ARCH}" \
-    && chmod a+x ${BIN_PATH}/${BIN_NAME} \
-    && upx -9 ${BIN_PATH}/${BIN_NAME}
+# Archivie
+# FROM docker-base AS container-diff
+# RUN set -x; cd "$(mktemp -d)" \
+#     && NAME="container-diff" \
+#     && REPO="jessfraz/${NAME}" \
+#     && BIN_NAME=${NAME} \
+#     && curl -fsSLO "${BIN_PATH}/${BIN_NAME}" "${GOOGLE}/${NAME}/latest/${NAME}-${OS}-${ARCH}" \
+#     && chmod a+x ${BIN_PATH}/${BIN_NAME} \
+#     && upx -9 ${BIN_PATH}/${BIN_NAME}
 
 FROM docker-base AS docker-compose
 RUN set -x; cd "$(mktemp -d)" \
@@ -90,9 +91,9 @@ RUN set -x; cd "$(mktemp -d)" \
     && BIN_NAME="${ORG}-${NAME}" \
     && ARCH="x86_64" \
     && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
-    && curl -fSsLo ${BIN_PATH}/${BIN_NAME} "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${ORG}-${NAME}-${OS}-${ARCH}" \
+    && curl -fsSLo ${BIN_PATH}/${BIN_NAME} "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${ORG}-${NAME}-${OS}-${ARCH}" \
     && if [ "${ARCH}" = "amd64" ] ; then  ARCH=${XARCH} ; fi \
-    && curl -fSsLO "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${ORG}-${NAME}-${OS}-${ARCH}" \
+    && curl -fsSLO "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${ORG}-${NAME}-${OS}-${ARCH}" \
     && mv "${ORG}-${NAME}-${OS}-${ARCH}" ${BIN_PATH}/${BIN_NAME} \
     && chmod a+x ${BIN_PATH}/${BIN_NAME} \
     && upx -9 ${BIN_PATH}/${BIN_NAME}
@@ -157,7 +158,7 @@ COPY --from=common ${BIN_PATH}/dockerd ${DOCKER_PATH}/dockerd
 COPY --from=common ${BIN_PATH}/dockerd-entrypoint.sh ${DOCKER_PATH}/dockerd-entrypoint
 COPY --from=common ${BIN_PATH}/modprobe ${DOCKER_PATH}/modprobe
 COPY --from=common ${BIN_PATH}/runc ${DOCKER_PATH}/docker-runc
-COPY --from=container-diff ${BIN_PATH}/container-diff ${DOCKER_PATH}/container-diff
+# COPY --from=container-diff ${BIN_PATH}/container-diff ${DOCKER_PATH}/container-diff
 COPY --from=dive ${BIN_PATH}/dive ${DOCKER_PATH}/dive
 COPY --from=dlayer ${BIN_PATH}/dlayer ${DOCKER_PATH}/dlayer
 COPY --from=docker-compose ${BIN_PATH}/docker-compose ${DOCKER_LIB_PATH}/cli-plugins/docker-compose

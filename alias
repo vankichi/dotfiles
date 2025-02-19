@@ -23,6 +23,7 @@ alias vbuild="vmove&&docker build --pull=true --file=$rcpath/Dockerfile -t vanki
 
 function devrun {
     port_range="7000-9300"
+    port="3000"
     privileged=true
     tz_path="/usr/share/zoneinfo/Japan"
     font_dir="/System/Library/Fonts"
@@ -43,6 +44,7 @@ function devrun {
                 --privileged=$privileged \
                 -v /var/run/docker.sock:/var/run/docker.sock \
                 -p $port_range:$port_range \
+                -p $port:$port \
                 -v $HOME/.docker/daemon.json:$container_root/.docker/daemon.json \
                 -v $HOME/.kube:$container_root/.kube \
                 -v $HOME/.netrc:$container_root/.netrc \
@@ -82,6 +84,7 @@ function devrun {
                 --restart always \
                 --privileged=$privileged \
                 -p 1313:1313 \
+                -p $port:$port \
                 -u "$(id -u $USER):$(id -g $USER)" \
                 -v $HOME/.docker:$container_home/.docker \
                 -v $HOME/.docker:$container_root/.docker \

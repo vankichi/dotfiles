@@ -19,7 +19,6 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean \
     && rm -rf \
         /var/lib/apt/lists/* \
 	/var/cache/* \
-    && echo -e 'Types: deb\nURIs: http://archive.ubuntu.com/ubuntu/\nSuites: lunar\nComponents: universe\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg' >> /etc/apt/sources.list.d/ubuntu.sources\
     && apt-get update -y \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends --fix-missing \
@@ -32,11 +31,11 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean \
         curl \
         diffutils \
         gawk \
+        gfortran \
         git \
         gnupg \
         jq \
         less \
-        libtinfo5 \
         locales \
         mtr \
         ncurses-term \
@@ -55,6 +54,7 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean \
         zsh \
     && update-alternatives --set cc $(which clang) \
     && update-alternatives --set c++ $(which clang++) \
+    && apt-get upgrade -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && ln -fs /usr/share/zoneinfo/Asia/Tokyo /etc/localtime \

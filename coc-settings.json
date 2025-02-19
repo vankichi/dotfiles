@@ -1,4 +1,5 @@
 {
+  "json.enable": true,
   "coc": {
     "preferences": {
       "formatOnType": true,
@@ -63,7 +64,6 @@
         },
         "analyses": {
           "nonewvars": true,
-          "fieldalignment": true,
           "unreachable": true,
           "unusedparams": true
         }
@@ -91,14 +91,12 @@
     },
     "analyses": {
       "nonewvars": true,
-      "fieldalignment": true,
       "unreachable": true,
       "unusedparams": true
     }
   },
   "tsserver": {
-    "enable": true,
-    "tsdk": ".yarn/sdks/typescript/lib"
+    "enable": true
   },
   "eslint": {
     "packageManager": "yarn",

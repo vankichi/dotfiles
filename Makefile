@@ -2,6 +2,10 @@
 
 include Makefile.d/version.mk
 
+USER = $(eval USER := $(shell whoami))$(USER)
+USER_ID = $(eval USER_ID := $(shell id -u $(USER)))$(USER_ID)
+GROUP_ID = $(eval GROUP_ID := $(shell id -g $(USER)))$(GROUP_ID)
+GROUP_IDS = $(eval GROUP_IDS := $(shell id -G $(USER)))$(GROUP_IDS)
 ROOTDIR = $(eval ROOTDIR := $(or $(shell git rev-parse --show-toplevel), $(PWD)))$(ROOTDIR)
 
 all: prod_build login push profile git_push
@@ -167,3 +171,35 @@ git_push:
 	git add -A
 	git commit -m fix
 	git push
+
+DOCKER_EXTRA_OPTS = ""
+DOCKER_BUILDER_NAME = "vankichi-builder"
+DOCKER_BUILDER_DRIVER = "docker-container"
+DOCKER_BUILDER_PLATFORM = "linux/amd64,linux/arm64/v8"
+
+init_buildx:
+	docker run \
+	  --network=host \
+	  --privileged \
+	  --rm tonistiigi/binfmt:master \
+	  --install $(DOCKER_BUILDER_PLATFORM)
+
+create_buildx:
+	-docker buildx rm --force $(DOCKER_BUILDER_NAME)
+	docker buildx create --use \
+		--name $(DOCKER_BUILDER_NAME) \
+		--driver $(DOCKER_BUILDER_DRIVER) \
+		--driver-opt=image=moby/buildkit:master \
+		--driver-opt=network=host \
+		--buildkitd-flags="--oci-worker-gc=false --oci-worker-snapshotter=stargz" \
+		--platform $(DOCKER_BUILDER_PLATFORM) \
+		--bootstrap
+	# make add_nodes
+	docker buildx ls
+	docker buildx inspect --bootstrap $(DOCKER_BUILDER_NAME)
+	sudo chown -R $(USER):$(GROUP_ID) "$(HOME)/.docker"
+
+remove_buildx:
+	docker buildx rm --force --all-inactive
+	sudo rm -rf $(HOME)/.docker/buildx
+	docker buildx ls

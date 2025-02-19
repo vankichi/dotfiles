@@ -80,8 +80,9 @@ RUN apt-get update -y \
     && chown -R ${USER}:users ${HOME} \
     && chown -R ${USER}:users ${HOME}/.* \
     && chmod -R 755 ${HOME} \
-    && chmod -R 755 ${HOME}/.* \
-    && nvim -v \
+    && chmod -R 755 ${HOME}/.*
+
+RUN nvim -v \
     && npm install -g n
 
 RUN n lts \
