@@ -29,16 +29,18 @@ FROM docker-base AS slim
 RUN set -x; cd "$(mktemp -d)" \
     && ORG="slimtoolkit" \
     && BIN_NAME="slim" \
+    && BIN_NAME_MINT="mint" \
     && REPO="${ORG}/${BIN_NAME}" \
     && VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')" \
     && DOCKER_SLIM_RELEASES="https://downloads.dockerslim.com/releases" \
     && curl -fsSLO "${GITHUB}/${REPO}/${RELEASE_DL}/${VERSION}/dist_${OS}.tar.gz" \
     && tar zxvf dist_${OS}.tar.gz \
     && mv dist_${OS}/docker* ${BIN_PATH} \
+    && mv dist_${OS}/${BIN_NAME_MINT}* ${BIN_PATH} \
     && mv dist_${OS}/${BIN_NAME}* ${BIN_PATH} \
     && upx -9 \
-        ${BIN_PATH}/${BIN_NAME} \
-        ${BIN_PATH}/${BIN_NAME}-sensor
+        ${BIN_PATH}/${BIN_NAME_MINT} \
+        ${BIN_PATH}/${BIN_NAME_MINT}-sensor
 
 FROM docker-base AS docker-credential-pass
 RUN set -x; cd "$(mktemp -d)" \
@@ -167,5 +169,6 @@ COPY --from=dockfmt ${BIN_PATH}/dockfmt ${DOCKER_PATH}/dockfmt
 COPY --from=dockle ${BIN_PATH}/dockle ${DOCKER_PATH}/dockle
 COPY --from=slim ${BIN_PATH}/docker-slim ${DOCKER_PATH}/docker-slim
 COPY --from=slim ${BIN_PATH}/slim ${DOCKER_PATH}/slim
-COPY --from=slim ${BIN_PATH}/slim-sensor ${DOCKER_PATH}/slim-sensor
+COPY --from=slim ${BIN_PATH}/mint-sensor ${DOCKER_PATH}/mint-sensor
+COPY --from=slim ${BIN_PATH}/mint ${DOCKER_PATH}/mint
 COPY --from=trivy ${BIN_PATH}/trivy ${DOCKER_PATH}/trivy

@@ -28,7 +28,7 @@ ENV CARGO_PATH $HOME/.cargo
 ENV NVIM_HOME $HOME/.config/nvim
 ENV VIM_PLUG_HOME $NVIM_HOME/plugged/vim-plug
 ENV LIBRARY_PATH /usr/local/lib:$LIBRARY_PATH
-ENV ZPLUG_HOME $HOME/.zplug
+# ENV ZPLUG_HOME $HOME/.zplug
 ENV PATH $GOPATH/bin:/usr/local/go/bin:$CARGO_PATH/bin:$DART_PATH/bin:$GCLOUD_PATH/bin:$PATH
 
 COPY --from=docker /usr/lib/docker/cli-plugins/docker-buildx /usr/lib/docker/cli-plugins/docker-buildx
@@ -49,7 +49,7 @@ COPY --from=go /go/bin $GOPATH/bin
 COPY --from=rust /root/.cargo $CARGO_PATH
 COPY --from=rust /root/.cargo/bin/rustup $HOME/.rustup
 
-COPY coc-settings.json $NVIM_HOME/coc-settings.json
+# COPY coc-settings.json $NVIM_HOME/coc-settings.json
 COPY efm-lsp-conf.yaml $NVIM_HOME/efm-lsp-conf.yaml
 COPY gitattributes $HOME/.gitattributes
 COPY gitconfig $HOME/.gitconfig
@@ -75,12 +75,7 @@ RUN usermod -aG ${GROUP} ${WHOAMI} \
     && git clone --depth 1 https://github.com/junegunn/vim-plug.git $VIM_PLUG_HOME/autoload \
     && npm uninstall yarn -g \
     && npm install yarn -g \
-    && yarn global add https://github.com/neoclide/coc.nvim --prefix /usr/local \
-    && git clone --depth 1 https://github.com/zplug/zplug $ZPLUG_HOME \
-    && zsh -ic zplug install \
     && rm -rf ${HOME}/.cache \
-    && rm -rf ${HOME}/.zplug/cache/* \
-    && rm -rf ${HOME}/.zplug/log/* \
     && rm -rf ${HOME}/.npm/_cacache \
     && rm -rf ${HOME}/.cargo/registry/cache \
     && rm -rf /usr/local/share/.cache \

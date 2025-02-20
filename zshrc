@@ -318,16 +318,18 @@ fi
 export GPG_TTY=$TTY
 
 # sheldon
-eval "$(sheldon source)"
-cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}
-sheldon_cache="$cache_dir/sheldon.zsh"
-sheldon_toml="$HOME/.config/sheldon/plugins.toml"
-if [[ ! -r "$sheldon_cache" || "$sheldon_toml" -nt "$sheldon_cache" ]]; then
-  mkdir -p $cache_dir
-  sheldon source > $sheldon_cache
+if type sheldon >/dev/null 2>&1; then
+    eval "$(sheldon source)"
+    cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}
+    sheldon_cache="$cache_dir/sheldon.zsh"
+    sheldon_toml="$HOME/.config/sheldon/plugins.toml"
+    if [[ ! -r "$sheldon_cache" || "$sheldon_toml" -nt "$sheldon_cache" ]]; then
+      mkdir -p $cache_dir
+      sheldon source > $sheldon_cache
+    fi
+    source "$sheldon_cache"
+    unset cache_dir sheldon_cache sheldon_toml
 fi
-source "$sheldon_cache"
-unset cache_dir sheldon_cache sheldon_toml
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh

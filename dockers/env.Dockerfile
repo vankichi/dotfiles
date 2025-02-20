@@ -67,12 +67,12 @@ RUN apt-get update -y \
     python3-setuptools \
     python3-venv \
     && apt-get clean \
-    && curl -LO "https://github.com/neovim/neovim/releases/download/stable/nvim-linux64.tar.gz" \
-    && tar -zxvf nvim-linux64.tar.gz \
-    && mv ./nvim-linux64/bin/nvim /usr/bin/nvim \
+    && curl -LO "https://github.com/neovim/neovim/releases/download/v0.10.4/nvim-linux-x86_64.tar.gz" \
+    && tar -zxvf nvim-linux-x86_64.tar.gz \
+    && mv ./nvim-linux-x86_64/bin/nvim /usr/bin/nvim \
     && chmod 755 -R /usr/bin/nvim \
-    && mv ./nvim-linux64/share/nvim /usr/share/nvim \
-    && mv ./nvim-linux64/lib/nvim /usr/lib/nvim \
+    && mv ./nvim-linux-x86_64/share/nvim /usr/share/nvim \
+    && mv ./nvim-linux-x86_64/lib/nvim /usr/lib/nvim \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install --upgrade --break-system-packages ranger-fm thefuck httpie python-language-server vim-vint grpcio-tools \
@@ -86,7 +86,6 @@ RUN nvim -v \
     && npm install -g n
 
 RUN n lts \
-    && hash -r \
     && bash -c "chown -R ${USER} $(npm config get prefix)/{lib/node_modules,bin,share}" \
     && bash -c "chmod -R 755 $(npm config get prefix)/{lib/node_modules,bin,share}" \
     && npm install -g \

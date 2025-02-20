@@ -26,6 +26,10 @@ RUN rustup install stable \
 # RUN cargo install --force --no-default-features \
 #     --git https://github.com/mozilla/sccache sccache
 
+FROM rust-base AS starship
+RUN cargo install --force --no-default-features \
+    --git https://github.com/starship/starship
+
 FROM rust-base AS cargo-bloat
 RUN  cargo install --force --no-default-features \
     --git https://github.com/RazrFalcon/cargo-bloat
@@ -83,6 +87,7 @@ ENV RUSTUP ${HOME}/.rustup
 ENV CARGO ${HOME}/.cargo
 ENV BIN_PATH ${CARGO}/bin
 
+COPY --from=starship /root/.cargo/bin/starship /root/.cargo/bin/starship
 COPY --from=rust-base /root/.cargo /root/.cargo
 COPY --from=bat /root/.cargo/bin/bat /root/.cargo/bin/bat
 COPY --from=bottom /root/.cargo/bin/btm /root/.cargo/bin/btm
