@@ -39,9 +39,6 @@ apply = ['defer']
 github = "junegunn/fzf"
 apply = ['fzf-install', 'fzf-source']
 
-[plugins.powerlevel10k]
-github = "romkatv/powerlevel10k"
-
 [templates]
 PATH = 'export PATH="$PATH:{{ dir }}"'
 defer = "{% for file in files %}zsh-defer source \"{{ file }}\"\n{% endfor %}"

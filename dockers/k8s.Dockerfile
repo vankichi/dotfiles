@@ -192,7 +192,9 @@ RUN set -x; cd "$(mktemp -d)" \
 
 FROM kube-base AS kpt
 RUN set -x; cd "$(mktemp -d)" \
-    && curl -fsSLo ${BIN_PATH}/kpt ${GOOGLE}/kpt-dev/latest/${OS}_${ARCH}/kpt \
+    && curl -fsSLO https://github.com/kptdev/kpt/releases/download/v1.0.0-beta.59/kpt_linux_amd64-1.0.0-beta.59.tar.gz \
+    && tar -zxvf kpt_linux_amd64-1.0.0-beta.59.tar.gz \
+    && mv kpt ${BIN_PATH}/kpt \
     && chmod a+x ${BIN_PATH}/kpt
 
 FROM kube-base AS kustomize

@@ -16,6 +16,10 @@ ENV GROUP sudo,root,users,docker,wheel
 ENV UID ${USER_ID}
 ENV GITHUB https://github.com
 ENV API_GITHUB https://api.github.com/repos
+ENV CFLAGS "-mno-avx512f -mno-avx512dq -mno-avx512cd -mno-avx512bw -mno-avx512vl"
+ENV CXXFLAGS "-std=c++20 ${CFLAGS}"
+ENV CC gcc
+ENV CXX g++
 
 RUN groupadd --non-unique --gid ${DOCKER_GROUP_ID} docker \
     && groupadd --non-unique --gid ${GROUP_ID} wheel \
@@ -52,6 +56,8 @@ RUN echo $'/lib\n\
 RUN apt-get update -y \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends --fix-missing \
+    build-essential \
+    ca-certificates \
     libgtk-3-dev \
     liblzma-dev \
     libhdf5-serial-dev \
@@ -67,7 +73,7 @@ RUN apt-get update -y \
     python3-setuptools \
     python3-venv \
     && apt-get clean \
-    && curl -LO "https://github.com/neovim/neovim/releases/download/v0.10.4/nvim-linux-x86_64.tar.gz" \
+    && curl -LO "https://github.com/neovim/neovim/releases/download/v0.11.5/nvim-linux-x86_64.tar.gz" \
     && tar -zxvf nvim-linux-x86_64.tar.gz \
     && mv ./nvim-linux-x86_64/bin/nvim /usr/bin/nvim \
     && chmod 755 -R /usr/bin/nvim \

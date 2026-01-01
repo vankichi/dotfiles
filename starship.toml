@@ -1,8 +1,86 @@
-[character]
-symbol = ">"
-#error_symbol = "[error]"
-use_symbol_for_status = true
+format = """
+[](fg:#7aa2f7)\
+$os\
+[ ](fg:#7aa2f7 bg:#1a1b26)\
+$directory\
+$git_branch\
+$git_status\
+$git_metrics\
+[](fg:#1a1b26)\
+$fill\
+[](fg:#1a1b26)\
+$conda\
+[](fg:#9ece6a bg:#1a1b26)\
+$python\
+[](fg:#9ece6a)\
+\n$character\
+"""
+
+right_format = """
+$cmd_duration
+$lua
+$rust
+$golang
+$time
+"""
 
 [directory]
+truncation_length = 6
+truncation_symbol = ' '
 truncate_to_repo = false
-truncation_length = 30
+home_symbol = ' ~'
+style = 'fg:#7aa2f7 bg:#1a1b26'
+read_only = ' 󰌾 '
+read_only_style = 'fg:#f7768e bg:#1a1b26'
+format = '[$path]($style)[$read_only]($read_only_style)'
+
+[os]
+format = "[$symbol]($style)"
+style = 'fg:#1a1b26 bg:#7aa2f7'
+disabled = false
+[os.symbols]
+Macos = " "
+Ubuntu = " "
+Garuda = "🦅 "
+Linux = "🐧 "
+
+[character]
+success_symbol = "[❯](green)"
+error_symbol = "[❯](red)"
+
+[git_branch]
+symbol = '  ' # nf-fa-github_alt, nf-fa-code_fork
+truncation_length = 4
+truncation_symbol = ''
+style = 'fg:#7aa2f7 bg:#1a1b26'
+format = '[  $symbol$branch(:$remote_branch)]($style)' # nf-pl-left_soft_divider
+
+[git_status]
+style = 'fg:#e0af68 bg:#1a1b26'
+conflicted = '='
+ahead = '⇡${count}'
+behind = '⇣${count}'
+diverged = '⇕'
+up_to_date = '✓'
+untracked = '?'
+stashed = '$'
+modified = '!${count}'
+renamed = '»'
+deleted = '✘'
+format = '([\[$all_status$ahead_behind\]]($style))'
+
+[git_metrics]
+added_style = 'fg:#9ece6a bg:#1a1b26'
+deleted_style = 'fg:#9ece6a bg:#1a1b26'
+format = '[+$added/-$deleted]($deleted_style)'
+disabled = false
+
+[cmd_duration]
+min_time = 1
+style = 'fg:#e0af68'
+format = "[   $duration]($style)"
+
+[golang]
+format = '[  $symbol $version]($style)'
+version_format = 'v$raw'
+symbol = " "
