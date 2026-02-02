@@ -10,9 +10,9 @@ $git_metrics\
 $fill\
 [](fg:#1a1b26)\
 $conda\
-[](fg:#9ece6a bg:#1a1b26)\
+[](fg:#7aa2f7 bg:#1a1b26)\
 $python\
-[](fg:#9ece6a)\
+[](fg:#7aa2f7)\
 \n$character\
 """
 
@@ -21,6 +21,8 @@ $cmd_duration
 $lua
 $rust
 $golang
+$nodejs
+$aws
 $time
 """
 
@@ -63,7 +65,7 @@ behind = '⇣${count}'
 diverged = '⇕'
 up_to_date = '✓'
 untracked = '?'
-stashed = '$'
+stashed = '\$'
 modified = '!${count}'
 renamed = '»'
 deleted = '✘'
@@ -84,3 +86,12 @@ format = "[   $duration]($style)"
 format = '[  $symbol $version]($style)'
 version_format = 'v$raw'
 symbol = " "
+
+[nodejs]
+format = '[  $symbol $version]($style)'
+version_format = 'v$raw'
+symbol = " "
+
+[aws]
+symbol = '☁️ '
+
