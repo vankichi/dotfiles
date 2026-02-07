@@ -6,6 +6,7 @@ $directory\
 $git_branch\
 $git_status\
 $git_metrics\
+[ ](bg:#1a1b26)\
 [](fg:#1a1b26)\
 $fill\
 \n$character\
