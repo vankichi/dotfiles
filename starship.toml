@@ -8,11 +8,6 @@ $git_status\
 $git_metrics\
 [](fg:#1a1b26)\
 $fill\
-[](fg:#1a1b26)\
-$conda\
-[](fg:#7aa2f7 bg:#1a1b26)\
-$python\
-[](fg:#7aa2f7)\
 \n$character\
 """
 
@@ -22,6 +17,8 @@ $lua
 $rust
 $golang
 $nodejs
+$python
+$conda
 $aws
 $time
 """
