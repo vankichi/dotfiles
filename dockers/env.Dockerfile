@@ -135,7 +135,7 @@ WORKDIR /tmp
 ARG NGT_VERSION
 ENV CFLAGS "-mno-avx512f -mno-avx512dq -mno-avx512cd -mno-avx512bw -mno-avx512vl"
 ENV CXXFLAGS ${CFLAGS}
-RUN curl -LO "https://github.com/yahoojapan/NGT/archive/v${NGT_VERSION}.tar.gz" \
+RUN curl -LO "https://github.com/NGT-labs/NGT/archive/v${NGT_VERSION}.tar.gz" \
     && tar zxf "v${NGT_VERSION}.tar.gz" -C /tmp \
     && cd "/tmp/NGT-${NGT_VERSION}" \
     && cmake -DNGT_LARGE_DATASET=ON . \
