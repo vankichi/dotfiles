@@ -11,7 +11,7 @@ ENV RELEASE_LATEST releases/latest
 ENV LOCAL /usr/local
 ENV BIN_PATH ${LOCAL}/bin
 
-FROM aquasec/trivy:latest AS trivy
+FROM aquasec/trivy:0.69.3 AS trivy
 
 FROM goodwithtech/dockle:latest AS dockle-base
 

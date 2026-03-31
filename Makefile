@@ -74,7 +74,8 @@ build:
 	docker build -t vankichi/dev:latest .
 
 docker_build:
-	docker build ${ARGS} --squash -t ${IMAGE_NAME}:latest -f ${DOCKERFILE} .
+	# docker build ${ARGS} --squash -t ${IMAGE_NAME}:latest -f ${DOCKERFILE} .
+	docker buildx build --platform $(DOCKER_BUILDER_PLATFORM) ${ARGS} --squash -t ${IMAGE_NAME}:latest -f ${DOCKERFILE} . --push
 	# docker buildx build --squash -t ${IMAGE_NAME}:latest -f ${DOCKERFILE} .
 
 docker_push:
@@ -189,7 +190,7 @@ git_push:
 DOCKER_EXTRA_OPTS = ""
 DOCKER_BUILDER_NAME = "vankichi-builder"
 DOCKER_BUILDER_DRIVER = "docker-container"
-DOCKER_BUILDER_PLATFORM = "linux/amd64,linux/arm64/v8"
+DOCKER_BUILDER_PLATFORM = "linux/amd64,linux/arm64"
 
 init_buildx:
 	docker run \

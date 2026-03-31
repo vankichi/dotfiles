@@ -7,6 +7,7 @@ ARG GROUP_ID=1000
 ARG DOCKER_GROUP_ID=961
 ARG GROUP_IDS=${GROUP_ID}
 ARG WHOAMI=vankichi
+ARG TARGETARCH
 
 ENV BASE_DIR /home
 ENV USER ${WHOAMI}
@@ -73,12 +74,17 @@ RUN apt-get update -y \
     python3-setuptools \
     python3-venv \
     && apt-get clean \
-    && curl -LO "https://github.com/neovim/neovim/releases/download/v0.11.5/nvim-linux-x86_64.tar.gz" \
-    && tar -zxvf nvim-linux-x86_64.tar.gz \
-    && mv ./nvim-linux-x86_64/bin/nvim /usr/bin/nvim \
+    && case "${TARGETARCH}" in \
+        amd64) NVIM_ARCH="x86_64" ;; \
+        arm64) NVIM_ARCH="arm64" ;; \
+        *) echo "Unsupported TARGETARCH: ${TARGETARCH}"; exit 1 ;; \
+      esac \
+    && curl -fL -o "nvim-linux-${NVIM_ARCH}.tar.gz" "https://github.com/neovim/neovim/releases/download/v0.12.0/nvim-linux-${NVIM_ARCH}.tar.gz" \
+    && tar -zxf "nvim-linux-${NVIM_ARCH}.tar.gz" \
+    && mv "./nvim-linux-${NVIM_ARCH}/bin/nvim" /usr/bin/nvim \
     && chmod 755 -R /usr/bin/nvim \
-    && mv ./nvim-linux-x86_64/share/nvim /usr/share/nvim \
-    && mv ./nvim-linux-x86_64/lib/nvim /usr/lib/nvim \
+    && mv ./nvim-linux-${NVIM_ARCH}/share/nvim /usr/share/nvim \
+    && mv ./nvim-linux-${NVIM_ARCH}/lib/nvim /usr/lib/nvim \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install --upgrade --break-system-packages ranger-fm thefuck httpie python-language-server vim-vint grpcio-tools \
@@ -101,11 +107,12 @@ RUN n lts \
         markdownlint-cli \
         npm \
         prettier \
-        resume-cli \
-        terminalizer \
+        # resume-cli \
+        # terminalizer \
         typescript \
         typescript-language-server \
         yarn \
+	--omit=optional --no-audit --no-fund \
     && bash -c "chown -R ${USER} $(npm config get prefix)/{lib/node_modules,bin,share}" \
     && bash -c "chmod -R 755 $(npm config get prefix)/{lib/node_modules,bin,share}" \
     && apt purge -y nodejs npm \
@@ -118,7 +125,11 @@ RUN cmake --version
 WORKDIR /tmp
 RUN set -x; cd "$(mktemp -d)" \
     && OS="linux" \
-    && ARCH="x86_64" \
+    && case "${TARGETARCH}" in \
+        amd64) ARCH="x86_64" ;; \
+        arm64) ARCH="aarch_64" ;; \
+        *) echo "Unsupported TARGETARCH: ${TARGETARCH}"; exit 1 ;; \
+      esac \
     && REPO_NAME="protobuf" \
     && BIN_NAME="protoc" \
     && RELEASE_LATEST="releases/latest" \
@@ -138,7 +149,12 @@ ENV CXXFLAGS ${CFLAGS}
 RUN curl -LO "https://github.com/NGT-labs/NGT/archive/v${NGT_VERSION}.tar.gz" \
     && tar zxf "v${NGT_VERSION}.tar.gz" -C /tmp \
     && cd "/tmp/NGT-${NGT_VERSION}" \
-    && cmake -DNGT_LARGE_DATASET=ON . \
+    && if [ "$TARGETARCH" = "arm64" ]; then \
+	export CFLAGS=""; \
+	export CXXFLAGS=""; \
+    fi \
+    && cmake -DNGT_LARGE_DATASET=ON -DCMAKE_C_FLAGS="$CFLAGS" -DCMAKE_CXX_FLAGS="$CXXFLAGS" . \
+    # && cmake -DNGT_LARGE_DATASET=ON . \
     && make -j -C "/tmp/NGT-${NGT_VERSION}" \
     && make install -C "/tmp/NGT-${NGT_VERSION}" \
     && cd /tmp \
