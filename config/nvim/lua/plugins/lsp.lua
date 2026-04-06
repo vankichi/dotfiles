@@ -1,142 +1,133 @@
-local languages = {
-	"bash",
-	"c",
-	"cpp",
-	"dart",
-	"dockerfile",
-	"fish",
-	"git_config",
-	"go",
-	"gomod",
-	"gosum",
-	"gpg",
-	"graphql",
-	"helm",
-	"html",
-	"javascript",
-	"json",
-	-- "kotolin",
-	"lua",
-	"make",
-	"markdown",
-	"markdown_inline",
-	"rust",
-	"tsx",
-	"typescript",
-	"vim",
-	"yaml",
-}
+-- lua/plugins/lsp.lua
+-- mason-lspconfig v2 対応（setup_handlers は廃止）
+-- Neovim 0.11+ 想定: vim.lsp.config() + vim.lsp.enable()
 
-local lsps = {
-	-- "gopls",
-	"lua_ls",
-	"rust_analyzer",
-	"dockerls",
-	"clangd",
-	"pyright",
-        "ts_ls",
+local treesitter_languages = {
+	"bash", "c", "cpp", "dart", "dockerfile", "fish", "git_config",
+	"go", "gomod", "gosum", "gpg", "graphql", "helm",
+	"html", "css", "javascript", "typescript", "tsx", "json",
+	"lua", "make", "markdown", "markdown_inline",
+	"rust", "vim", "yaml", "kotlin",
 }
-
-local on_attach = function(client, bufnr)
-	local function buf_set_keymap(...) vim.api.nvim_buf_set_keymap(bufnr, ...) end
-	local function buf_set_option(...) vim.api.nvim_buf_set_option(bufnr, ...) end
-end
 
 return {
-	---@syntax_highlight
+	-- Treesitter
 	{
 		"nvim-treesitter/nvim-treesitter",
 		build = ":TSUpdate",
 		config = function()
-			local configs = require("nvim-treesitter.configs")
-			configs.setup({
-				ensure_installed = languages,
+			require("nvim-treesitter.configs").setup({
+				ensure_installed = treesitter_languages,
 				sync_install = false,
 				highlight = { enable = true },
 				indent = { enable = false },
 			})
-		end
+		end,
 	},
-	---@lsp
+
+	-- LSP
 	{
 		"neovim/nvim-lspconfig",
-		event = "BufReadPre",
+		event = { "BufReadPre", "BufNewFile" },
 		dependencies = {
 			{
 				"williamboman/mason.nvim",
 				config = function()
-				    require("mason").setup()
+					require("mason").setup()
 				end,
-				-- version: "^1.0.0",
 			},
 			{
-				"williamboman/mason-lspconfig.nvim",
-				opts = {
-				    ensure_installed = lsps
-				},
+				"mason-org/mason-lspconfig.nvim",
+				-- v2系を想定（setup_handlers無し）
 				config = function()
-				    require("mason-lspconfig").setup()
+					require("mason-lspconfig").setup({
+						-- v2では automatic_enable が導入され remember: デフォルトで有効
+						-- 明示したいなら ↓
+						automatic_enable = true,
+					})
 				end,
 			},
 			{ "hrsh7th/cmp-nvim-lsp" },
 		},
 		config = function()
-			local lspconfig = require("lspconfig")
-			-- local cmp_lsp = require("cmp_nvim_lsp")
-			local capabilities = vim.lsp.protocol.make_client_capabilities()
-			-- local capabilities = cmp_lsp.default_capabilities()
-			for _, server_name in ipairs(lsps) do
-				vim.lsp.config(server_name, {capabilities})
+			local cmp_lsp = require("cmp_nvim_lsp")
+			local capabilities = cmp_lsp.default_capabilities(vim.lsp.protocol.make_client_capabilities())
+
+			-- tsserver / ts_ls の揺れを吸収（存在する方を使う）
+			local ts_name = "tsserver"
+			do
+				local ok, configs = pcall(require, "lspconfig.configs")
+				if ok and configs and configs.ts_ls ~= nil then
+					ts_name = "ts_ls"
+				end
 			end
-			vim.lsp.config("gopls", {
-				cmd = { "gopls" },
-				capabilities = capabilities,
-				settings = {
-					gopls = {
-						experimentalPostfixCompletions = true,
-						analyses = {
-							unusedparams = true,
-							shadow = true,
+
+			local servers = {
+				gopls = {
+					cmd = { "gopls" },
+					capabilities = capabilities,
+					settings = {
+						gopls = {
+							experimentalPostfixCompletions = true,
+							analyses = { unusedparams = true, shadow = true },
+							buildFlags = { "-tags=e2e" },
+							staticcheck = true,
 						},
-						buildFlags = {"-tags=e2e" },
-						staticcheck = true,
+					},
+					init_options = { usePlaceholders = true },
+				},
+
+				[ts_name] = {
+					capabilities = capabilities,
+				},
+
+				tailwindcss = { capabilities = capabilities },
+				html = { capabilities = capabilities },
+				cssls = { capabilities = capabilities },
+				rust_analyzer = { capabilities = capabilities },
+
+				lua_ls = {
+					capabilities = capabilities,
+					settings = {
+						Lua = {
+							diagnostics = { globals = { "vim" } },
+							workspace = { checkThirdParty = false },
+							telemetry = { enable = false },
+							format = { enable = true },
+						},
 					},
 				},
-				init_options = {
-					usePlaceholders = true,
-				},
-			})
+
+				kotlin_language_server = { capabilities = capabilities },
+
+				dockerls = { capabilities = capabilities },
+			}
+
+			-- 1) まず Neovim に「各サーバーの設定」を登録
+			local enable_list = {}
+			for name, opts in pairs(servers) do
+				vim.lsp.config(name, opts)
+				table.insert(enable_list, name)
+			end
+
+			-- 2) 有効化（インストール済みのものが attach される）
+			-- mason-lspconfig v2 の automatic_enable が有効なら、これ自体は不要な場合もあるが、
+			-- 明示すると挙動が読みやすいので残す。
+			vim.lsp.enable(enable_list)
 		end,
 	},
-	---@completion
+
+	-- Completion（元の構成を維持）
 	{
 		"hrsh7th/nvim-cmp",
 		event = { "InsertEnter", "CmdlineEnter" },
 		dependencies = {
-			{ "f3fora/cmp-spell", event = "InsertEnter" },
-			{ "hrsh7th/cmp-buffer", event = "InsertEnter" },
-			{ "hrsh7th/cmp-calc", event = "InsertEnter" },
-			{ "hrsh7th/cmp-cmdline", event = "ModeChanged" },
-			{ "hrsh7th/cmp-emoji", event = "InsertEnter" },
+			{ "hrsh7th/cmp-buffer",                  event = "InsertEnter" },
+			{ "hrsh7th/cmp-cmdline",                 event = "ModeChanged" },
 			{ "hrsh7th/cmp-nvim-lsp" },
-			{ "hrsh7th/cmp-nvim-lsp-document-symbol", event = "InsertEnter" },
-			{ "hrsh7th/cmp-nvim-lsp-document-symbol", event = "InsertEnter" },
 			{ "hrsh7th/cmp-nvim-lsp-signature-help", event = "InsertEnter" },
-			{ "hrsh7th/cmp-nvim-lua", event = "InsertEnter" },
-			{ "hrsh7th/cmp-path", event = "InsertEnter" },
-			{ "ray-x/cmp-treesitter", event = "InsertEnter" },
-			---@Go
-			{
-				"ray-x/go.nvim",
-				ft = { "go" },
-				config = true,
-				opts = {
-					gofmt = "gofumpt",
-					goimports = "strictgoimports",
-					lsp_cfg = false,
-				},
-			},
-			---@snippets
+			{ "hrsh7th/cmp-nvim-lua",                event = "InsertEnter" },
+			{ "hrsh7th/cmp-path",                    event = "InsertEnter" },
 			{
 				"L3MON4D3/LuaSnip",
 				build = "make install_jsregexp",
@@ -149,229 +140,86 @@ return {
 					require("luasnip.loaders.from_vscode").lazy_load()
 				end,
 			},
-			{ "saadparwaiz1/cmp_luasnip", event = "InsertEnter" },
+			{ "saadparwaiz1/cmp_luasnip",     event = "InsertEnter" },
 			{ "rafamadriz/friendly-snippets", event = "InsertEnter" },
-			---@icon
-			{ "onsails/lspkind.nvim", event = "InsertEnter" },
-			---@copilot TODO
+			{ "onsails/lspkind.nvim",         event = "InsertEnter" },
 		},
 		config = function()
-			local has_words_before = function()
-				local line, col = unpack(vim.api.nvim_win_get_cursor(0))
-				return col ~= 0 and vim.api.nvim_buf_get_lines(0, line - 1, line, true)[1]:sub(col, col):match("%s") == nil
-			end
-			local feedkey = function(key, mode)
-				vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(key, true, true, true), mode, true)
-			end
 			local cmp = require("cmp")
 			local luasnip = require("luasnip")
 			local lspkind = require("lspkind")
-			local opts = {
+
+			local function has_words_before()
+				local line, col = vim.api.nvim_win_get_cursor(0)
+				return col ~= 0
+						and vim.api.nvim_buf_get_lines(0, line - 1, line, true)[1]:sub(col, col):match("%s") == nil
+			end
+
+			cmp.setup({
 				snippet = {
 					expand = function(args)
 						require("luasnip").lsp_expand(args.body)
-					end
-				},
-				window = {
-					completion = cmp.config.window.bordered({
-						border = "single",
-						col_offset = -3,
-						side_padding = 0,
-					}),
-					documentation = cmp.config.window.bordered({
-						winhiglight = "NormalFloat:CompeDocumentation,FloatBorder:TelescopeBorder",
-					}),
+					end,
 				},
 				mapping = cmp.mapping.preset.insert({
-					["<Tab>"] = cmp.mapping(function(fallback)
+					["<C-j>"] = cmp.mapping(function(fallback)
 						if cmp.visible() then
 							cmp.select_next_item()
 						elseif luasnip.expand_or_jumpable() then
-							luasnip.expand_or_jump()  -- LuaSnip でスニペットを展開またはジャンプ
+							luasnip.expand_or_jump()
 						elseif has_words_before() then
 							cmp.complete()
 						else
-							fallback()  -- デフォルトの <Tab> の動作
+							fallback()
 						end
 					end, { "i", "s" }),
-					["<S-Tab>"] = cmp.mapping(function()
+					["<C-k>"] = cmp.mapping(function()
 						if cmp.visible() then
 							cmp.select_prev_item()
 						elseif luasnip.jumpable(-1) then
-							luasnip.jump(-1)  -- LuaSnip で前のスニペットへジャンプ
+							luasnip.jump(-1)
 						end
 					end, { "i", "s" }),
-					["<C-d>"] = cmp.mapping.scroll_docs(-4),
-					["<C-u>"] = cmp.mapping.scroll_docs(4),
-					["<C-e>"] = cmp.mapping.close(),
-					["<CR>"] = cmp.mapping.confirm({ select = true }), -- Accept currently selected item. Set `select` to `false` to only confirm explicitly selected items.
+					["<CR>"] = cmp.mapping.confirm({ select = true }),
 				}),
 				sources = cmp.config.sources({
-					---@Copilot_Source
-					-- { name = "copilot", group_index = 2 },
-					-- { name = "copilot_cmp", group_index = 2 },
-					---@Other_Sources
-					{ name = "nvim_lsp", group_index = 2 },
-					{ name = "nvim_lsp_signature_help", group_index = 2 },
-					{ name = "nvim_lua", group_index = 2 },
-					{ name = "luasnip", group_index = 2 },
-					{ name = "buffer", get_bufnrs = vim.api.nvim_list_bufs, group_index = 2 },
-					{ name = "look", group_index = 2 },
-					{ name = "path", group_index = 2 },
+					{ name = "nvim_lsp" },
+					{ name = "nvim_lsp_signature_help" },
+					{ name = "nvim_lua" },
+					{ name = "luasnip" },
+					{ name = "copilot" },
+					{ name = "buffer" },
+					{ name = "path" },
 					{ name = "cmdline" },
-					{ name = "git" },
 				}),
 				formatting = {
 					format = lspkind.cmp_format({
 						mode = "symbol_text",
 						preset = "codicons",
-						-- with_text = false,
 						maxwidth = 50,
 						ellipsis_char = "...",
-						menu = {
-							copilot = "[COP]",
-							nvim_lua = "[LUA]",
-							nvim_lsp = "[LSP]",
-							cmp_tabnine = "[TN]",
-							luasnip = "[LSN]",
-							buffer = "[Buf]",
-							path = "[PH]",
-							look = "[LK]",
-						},
-						symbol_map = {
-							Array = "",
-							Boolean = "",
-							Class = " ",
-							Color = " ",
-							Constant = " ",
-							Constructor = " ",
-							Copilot = "",
-							Enum = " ",
-							EnumMember = " ",
-							Event = " ",
-							Field = " ",
-							File = " ",
-							Folder = " ",
-							Function = " ",
-							Interface = " ",
-							Key = "",
-							Keyword = " ",
-							Method = " ",
-							Module = " ",
-							Namespace = "",
-							Null = "",
-							Number = "",
-							Object = "",
-							Operator = " ",
-							Package = "",
-							Property = " ",
-							Reference = " ",
-							Snippet = " ",
-							String = "",
-							Struct = " ",
-							Text = " ",
-							TypeParameter = " ",
-							Unit = " ",
-							Value = " ",
-							Variable = " ",
-						},
 					}),
 				},
-				-- 補完動作設定
-				completion = {
-					completeopt = 'menu,menuone,noselect',  -- メニューの表示
+				sorting = {
+					priority_weight = 2,
+					comparators = {
+						function(e1, e2)
+							local k = require("cmp").lsp.CompletionItemKind
+							if e1:get_kind() == k.Variable and e2:get_kind() ~= k.Variable then
+								return false
+							end
+							if e2:get_kind() == k.Variable and e1:get_kind() ~= k.Variable then
+								return true
+							end
+						end,
+						require("cmp.config.compare").offset,
+						require("cmp.config.compare").exact,
+						require("cmp.config.compare").score,
+					},
 				},
-				-- 予測テキスト（選択候補）を表示
-				experimental = {
-					ghost_text = true,  -- 補完候補を選択前に表示
-				},
-			}
-			cmp.setup(opts)
-		end
-	}
-
-	-- {
-	-- 	"hrsh7th/nvim-cmp",
-	-- 	event = { "InsertEnter", "CmdlineEnter" },
-	-- 	dependencies = {
--- 		{ "ray-x/cmp-treesitter", event = "InsertEnter" },
-	-- 		{
-	-- 			"petertriho/cmp-git",
-	-- 			config = true,
-	-- 			event = "InsertEnter",
-	-- 			dependencies = { "nvim-lua/plenary.nvim" },
-	-- 		},
-	-- 		{ "octaltree/cmp-look", event = "InsertEnter" },
-	-- 	},
-	-- 	config = function()
-	-- 		local cmp = require("cmp")
-	-- 		local luasnip = require("luasnip")
-	-- 		local lspkind = require("lspkind")
-	-- 		local opts = {
-	-- 			snippet = {
-	-- 				expand = function(args)
-	-- 					luasnip.lsp_expand(args.body)
-	-- 				end,
-	-- 			},
-	-- 		mapping = {
-	-- 			['<C-p>'] = cmp.mapping.select_prev_item(),
-	-- 			['<C-n>'] = cmp.mapping.select_next_item(),
-	-- 			['<C-y>'] = cmp.mapping.confirm({ select = true }),
-	-- 			['<C-e>'] = cmp.mapping.close(),
-	-- 		},
-	-- 			sources = cmp.config.sources({
-	-- 				-- Copilot Source
-	-- 				{ name = "copilot", group_index = 2 },
-	-- 				{ name = "copilot_cmp", group_index = 2 },
-	-- 				-- Other Sources
-	-- 				{ name = "nvim_lsp", group_index = 2 },
-	-- 				{ name = "nvim_lsp_signature_help" },
-	-- 				{ name = "luasnip", group_index = 2 },
-	-- 				-- { name = "buffer", get_bufnrs = vim.api.nvim_list_bufs, group_index = 2 },
-	-- 				{ name = "look", group_index = 2 },
-	-- 				{ name = "path", group_index = 2 },
-	-- 				{ name = "cmdline" },
-	-- 				{ name = "git" },
-	-- 			}),
-	-- 		}
-	-- 		cmp.setup(opts)
-	-- 	end,
-	-- },
-	-- {
-	-- 	"nathom/filetype.nvim",
-	-- 	lazy = false,
-	-- 	config = true,
-	-- 	opts = {
-	-- 		overrides = {
-	-- 			extensions = {},
-	-- 			literal = {},
-	-- 			complex = {
-	-- 				[".*git/config"] = "gitconfig",
-	-- 			},
-	-- 			function_extensions = {
-	-- 				["cpp"] = function()
-	-- 					vim.bo.filetype = "cpp"
-	-- 					vim.bo.cinoptions = vim.bo.cinoptions .. "L0"
-	-- 				end,
-	-- 				["pdf"] = function()
-	-- 					vim.bo.filetype = "pdf"
-	-- 					fn.jobstart("open -a skim " .. '"' .. fn.expand("%") .. '"')
-	-- 				end,
-	-- 			},
-	-- 			function_literal = {
-	-- 				Brewfile = function()
-	-- 					vim.cmd("syntax off")
-	-- 				end,
-	-- 			},
-	-- 			function_complex = {
-	-- 				["*.math_notes/%w+"] = function()
-	-- 					vim.cmd("iabbrev $ $$")
-	-- 				end,
-	-- 			},
-	-- 			shebang = {
-	-- 				dash = "sh",
-	-- 			},
-	-- 		},
-	-- 	},
-	-- },
+				completion = { completeopt = "menu,menuone,noselect" },
+				experimental = { ghost_text = true },
+			})
+		end,
+	},
 }

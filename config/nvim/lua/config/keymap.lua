@@ -42,7 +42,48 @@ keymap("n", "<C-q>", ":qall<CR>", { noremap = true })
 keymap("n", "q", ":q<CR>", { noremap = true })
 
 ---@telescope
-keymap("n", "<leader><leader>", ":lua require('telescope.builtin').find_files(require('telescope.themes').get_dropdown({}))<CR>", { noremap = true, silent = true })
-keymap("n", "<leader>fg", ":lua require('telescope.builtin').live_grep(require('telescope.themes').get_dropdown({}))<CR>", { noremap = true, silent = true })
-keymap("n", "<leader>fb", ":lua require('telescope.builtin').buffers(require('telescope.themes').get_dropdown({}))<CR>", { noremap = true, silent = true })
-keymap("n", "<leader>fh", ":lua require('telescope.builtin').help_tags(require('telescope.themes').get_dropdown({}))<CR>", { noremap = true, silent = true })
+keymap("n", "<leader><leader>",
+":lua require('telescope.builtin').find_files(require('telescope.themes').get_dropdown({}))<CR>",
+{ noremap = true, silent = true })
+keymap("n", "<leader>fg", ":lua require('telescope.builtin').live_grep(require('telescope.themes').get_dropdown({}))<CR>",
+{ noremap = true, silent = true })
+keymap("n", "<leader>fb", ":lua require('telescope.builtin').buffers(require('telescope.themes').get_dropdown({}))<CR>",
+{ noremap = true, silent = true })
+keymap("n", "<leader>fh", ":lua require('telescope.builtin').help_tags(require('telescope.themes').get_dropdown({}))<CR>",
+{ noremap = true, silent = true })
+
+---@format
+vim.api.nvim_create_autocmd("FileType", {
+  callback = function()
+    local ft = vim.bo.filetype
+
+    -- Lua: space 2
+    if ft == "lua" then
+      vim.bo.expandtab = true
+      vim.bo.shiftwidth = 2
+      vim.bo.tabstop = 2
+      vim.bo.softtabstop = 2
+
+    -- Go: tab 4
+    elseif ft == "go" then
+      vim.bo.expandtab = false
+      vim.bo.shiftwidth = 4
+      vim.bo.tabstop = 4
+
+    -- JS / TS: space 2
+    elseif ft == "javascript" or ft == "typescript" then
+      vim.bo.expandtab = true
+      vim.bo.shiftwidth = 2
+      vim.bo.tabstop = 2
+      vim.bo.softtabstop = 2
+
+    -- Python: space 4
+    elseif ft == "python" then
+      vim.bo.expandtab = true
+      vim.bo.shiftwidth = 4
+      vim.bo.tabstop = 4
+      vim.bo.softtabstop = 4
+    end
+  end,
+})
+

@@ -6,27 +6,22 @@ opt.encoding = "utf-8"
 opt.fileencoding = "utf-8"
 opt.number = true
 vim.scriptencoding = "utf-8"
--- --------------------
--- Eable Filetype for Read file settings
--- --------------------
-vim.cmd("filetype off")
-vim.cmd("filetype plugin indent off")
 
 -- -------------------------
 -- ---- Default Setting ----
 -- -------------------------
-opt.completeopt = {"menu", "preview", "noinsert"}
+opt.completeopt = { "menu", "preview", "noinsert" }
 opt.wrap = true
 opt.synmaxcol = 2000
 opt.showmatch = true
 opt.matchtime = 2
 opt.list = true
-opt.listchars = {space = " ", tab = "> ", trail = "_", eol = "↲", extends = "»", precedes = "«", nbsp = "%"}
+opt.listchars = { space = " ", tab = "> ", trail = "_", eol = "↲", extends = "»", precedes = "«", nbsp = "%" }
 opt.display = "lastline"
 opt.nrformats = ""
 opt.virtualedit = "block"
 opt.wildmenu = true
-opt.wildmode = {"list:longest", "full"}
+opt.wildmode = { "list:longest", "full" }
 opt.autoread = true
 opt.autowrite = true
 opt.swapfile = false
@@ -56,7 +51,7 @@ opt.shiftround = true
 opt.list = true
 opt.whichwrap = "b,s,h,l,<,>,[,]"
 opt.scrolloff = 5
-opt.backspace = {"indent", "eol", "start"}
+opt.backspace = { "indent", "eol", "start" }
 opt.matchpairs:append("<:>")
 opt.switchbuf = "useopen"
 opt.history = 100
@@ -67,11 +62,11 @@ opt.ttyfast = true
 opt.viminfo = "'100,/50,%,<1000,f50,s100,:100,c,h,!"
 opt.shortmess:append("I")
 opt.fileformat = "unix"
-opt.fileformats = {"unix", "dos", "mac"}
+opt.fileformats = { "unix", "dos", "mac" }
 opt.foldmethod = "manual"
 
 if vim.fn.executable("zsh") == 1 then
-  opt.shell = "zsh"
+	opt.shell = "zsh"
 end
 
 -- ----------------------
@@ -101,66 +96,31 @@ vim.cmd("command! -nargs=* Autocmd autocmd AutoGroup <args>")
 vim.cmd("command! -nargs=* AutocmdFT autocmd AutoGroup FileType <args>")
 vim.api.nvim_create_augroup("FileTypeIndent", { clear = true })
 local function set_indent(tab, shift, expand)
-  vim.bo.tabstop = tab
-  vim.bo.shiftwidth = shift
-  vim.bo.expandtab = expand
+	vim.bo.tabstop = tab
+	vim.bo.shiftwidth = shift
+	vim.bo.expandtab = expand
 end
--- ----------------------------
--- ---- File type settings ----
--- ----------------------------
--- vim.api.nvim_create_autocmd({"BufNewFile", "BufRead"}, {
---   pattern = {"*.go", "*go.mod"},
---   command = "set filetype=go",
--- })
-
 -- ------------------------------
 -- ---- Indentation settings ----
 -- ------------------------------
 -- indentLine settings (assuming a plugin like 'IndentLine' is being used)
 vim.g.indentLine_faster = 1
 vim.api.nvim_set_keymap("n", "<silent><Leader>i", ":<C-u>IndentLinesToggle<CR>", { noremap = true, silent = true })
-
--- Filetype-specific settings
--- vim.api.nvim_create_autocmd("FileType", {
---   pattern = {"coffee", "javascript", "javascript.jsx", "jsx", "json"},
---   command = "setlocal sw=2 sts=2 ts=2 expandtab completeopt=menu,preview omnifunc=nodejscomplete#CompleteJS omnifunc=lsp#complete",
--- })
-
--- vim.api.nvim_create_autocmd("FileType", {
---   pattern = {"go"},
---   command = "setlocal noexpandtab sw=4 ts=4 completeopt=menu,menuone,preview,noselect,noinsert",
--- })
---
 vim.api.nvim_create_autocmd("FileType", {
-  group = "FileTypeIndent",
-  pattern = {"js", "jsx", "ts", "tsx", "typescript", "typescriptreact", "javascript", "javascriptreact"},
-  -- command = "setlocal expandtab sw=2 ts=2 completeopt=menu,menuone,preview,noselect,noinsert",
-  callback = function ()
-    set_indent(2, 2, true)
-  end
+	group = "FileTypeIndent",
+	pattern = { "js", "jsx", "ts", "tsx", "typescript", "typescriptreact", "javascript", "javascriptreact" },
+	-- command = "setlocal expandtab sw=2 ts=2 completeopt=menu,menuone,preview,noselect,noinsert",
+	callback = function()
+		set_indent(2, 2, true)
+	end
 })
---
--- vim.api.nvim_create_autocmd("FileType", {
---   pattern = {"html", "xhtml"},
---   command = "setlocal smartindent expandtab ts=2 sw=2 sts=2 completeopt=menu,preview",
--- })
 
--- -------------------------
--- ---- Golang settings ----
--- -------------------------
--- Autocmd for Go to organize imports before saving
--- vim.api.nvim_create_autocmd("BufWritePre", {
---   pattern = {"*.go"},
---   command = "silent call CocAction('runCommand', 'editor.action.organizeImport')",
--- })
+-- ------------------------------
+-- ---- Window size settings ----
+-- ------------------------------
+vim.api.nvim_create_autocmd({"WinNew", "WinClosed"}, {
+  callback = function()
+    vim.cmd("wincmd =")
+  end,
+})
 
--- -------------------------
--- Enable Filetype plugins
--- -------------------------
--- vim.cmd("filetype plugin indent on")
--- vim.cmd("filetype on")
---
--- -- Filetype-specific local settings
--- vim.api.nvim_create_autocmd("FileType", {
---   pattern = {"js", "javascript", "ts", "tsx", "typescript", "typescriptreact"},
---   command = "setlocal sw=2 sts=2 ts=2 et",
