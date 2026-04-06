@@ -45,36 +45,40 @@ if type go >/dev/null 2>&1; then
     export GO111MODULE=on
     export GO15VENDOREXPERIMENT=1
     export GOPRIVATE="*.yahoo.co.jp"
-    export NVIM_GO_LOG_FILE=$XDG_DATA_HOME/go
+    export NVIM_GO_LOG_FILE=$NVIM_LOG_FILE_PATH/go
 fi
 
 # --------------------
 # nvim(NeoVim)
 # --------------------
 if type nvim >/dev/null 2>&1; then
-    # export VIM=$(which nvim)
+    export NVIM_HOME=$XDG_CONFIG_HOME/nvim
     if [ $(uname) = 'Darwin' ]; then
-        export VIMRUNTIME=/usr/local/share/nvim/runtime
+        export VIMRUNTIME=/opt/homebrew/share/nvim/runtime
+        export NVIM_LOG_FILE_PATH=$NVIM_HOME/log
     else
         export VIMRUNTIME=/usr/share/nvim/runtime
+        export XDG_DATA_HOME=$NVIM_HOME/log
+        export NVIM_LOG_FILE_PATH=$XDG_DATA_HOME
     fi
-    export NVIM_HOME=$XDG_CONFIG_HOME/nvim
-    export XDG_DATA_HOME=$NVIM_HOME/log
-    export NVIM_LOG_FILE_PATH=$XDG_DATA_HOME
     # export NVIM_TUI_ENABLE_TRUE_COLOR=1
     export NVIM_PYTHON_LOG_LEVEL=WARNING;
     export NVIM_PYTHON_LOG_FILE=$NVIM_LOG_FILE_PATH/nvim.log;
     export NVIM_LISTEN_ADDRESS="127.0.0.1:7650";
+    alias vim=$(which nvim)
+    export EDITOR=$(which nvim)
+    export VISUAL=$(which nvim)
 elif type vim >/dev/null 2>&1; then
     export VIM=$(which vim)
     export VIMRUNTIME=/usr/share/vim/vim*
+    alias vim=$(which vim)
+    export EDITOR=$(which vim)
+    export VISUAL=$(which vim)
 else
     export VIM=$(which vi)
+    export EDITOR=$(which vi)
+    export VISUAL=$(which vi)
 fi
-
-alias vim=$(which nvim)
-export EDITOR=$(which nvim)
-export VISUAL=$(which nvim)
 export PAGER=$(which less)
 export SUDO_EDITOR=$EDITOR
 
@@ -321,13 +325,19 @@ if type sheldon >/dev/null 2>&1; then
     unset cache_dir sheldon_cache sheldon_toml
 fi
 
-source <(kubectl completion zsh)
+if type kubectl >/dev/null 2>&1; then
+    source <(kubectl completion zsh)
+fi
 # source <(kubectl convert completion zsh)
 if type k3d >/dev/null 2>&1; then
     source <(k3d completion zsh)
 fi
-source <(helm completion zsh)
-source <(docker completion zsh)
+if type helm >/dev/null 2>&1; then
+    source <(helm completion zsh)
+fi
+if type docker >/dev/null 2>&1; then
+    source <(docker completion zsh)
+fi
 
 # alias
 rcpath="$HOME/go/src/github.com/vankichi/dotfiles"
@@ -481,3 +491,8 @@ function fup {
 eval "$(starship init zsh)"
 
 export HELIX_RUNTIME=~/go/src/github.com/helix-editor/helix/runtime
+
+# >>> Takumi Guard PyPI Proxy >>>
+export PIP_INDEX_URL="https://pypi.flatt.tech/simple/"
+export UV_INDEX_URL="https://pypi.flatt.tech/simple/"
+# <<< Takumi Guard PyPI Proxy <<<

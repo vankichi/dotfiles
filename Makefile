@@ -30,15 +30,9 @@ new_clean:
 link:
 	mkdir -p ${HOME}/.config
 	mkdir -p ${HOME}/.config/tmux
-	mkdir -p ${HOME}/.config/nvim
-	mkdir -p ${HOME}/.config/nvim/colors
-	mkdir -p ${HOME}/.config/nvim/syntax
-	ln -sfv $(ROOTDIR)/init.vim $(HOME)/.config/nvim/init.vim
+	mkdir -p ${HOME}/.config/sheldon
+	ln -sfnv $(ROOTDIR)/config/nvim $(HOME)/.config/nvim
 	ln -sfv $(ROOTDIR)/starship.toml $(HOME)/.config/starship.toml
-	ln -sfv $(ROOTDIR)/efm-lsp-conf.yaml $(HOME)/.config/nvim/efm-lsp-conf.yaml
-	ln -sfv $(ROOTDIR)/coc-settings.json $(HOME)/.config/nvim/coc-settings.json
-	ln -sfv $(ROOTDIR)/monokai.vim $(HOME)/.config/nvim/colors/monokai.vim
-	# ln -sfv $(ROOTDIR)/go.vim $(HOME)/.config/nvim/syntax/go.vim
 	ln -sfv $(ROOTDIR)/zshrc $(HOME)/.zshrc
 	ln -sfv $(ROOTDIR)/editorconfig $(HOME)/.editorconfig
 	ln -sfv $(ROOTDIR)/alias $(HOME)/.aliases
@@ -47,6 +41,7 @@ link:
 	ln -sfv $(ROOTDIR)/gitignore $(HOME)/.gitignore
 	ln -sfv $(ROOTDIR)/tmux.conf $(HOME)/.tmux.conf
 	ln -sfv $(ROOTDIR)/tmux-kube $(HOME)/.tmux-kube
+	ln -sfv $(ROOTDIR)/config/sheldon/plugins.toml $(HOME)/.config/sheldon/plugins.toml
 	# ln -sfv $(ROOTDIR)/tmux.new-session $(HOME)/.tmux.new-session
 
 clean:
