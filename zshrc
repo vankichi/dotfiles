@@ -13,9 +13,9 @@ if type tmux >/dev/null 2>&1; then
                 tmux attach-session -t "$ID" # if available attach to it
             fi
         else
-            tmux source-file /home/${USER}/.config/tmux/.tmux.conf
+            tmux source-file ${HOME}/.config/tmux/.tmux.conf
             pkill tmux
-            tmux -f /home/${USER}/.config/tmux/.tmux.conf new-session -n$USER -s$USER@$HOST
+            tmux -f ${HOME}/.config/tmux/.tmux.conf new-session -n$USER -s$USER@$HOST
             tmux unbind C-b
             tmux set -g prefix C-w
         fi

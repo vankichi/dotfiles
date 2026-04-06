@@ -7,7 +7,7 @@ USER_ID = $(eval USER_ID := $(shell id -u $(USER)))$(USER_ID)
 GROUP_ID = $(eval GROUP_ID := $(shell id -g $(USER)))$(GROUP_ID)
 GROUP_IDS = $(eval GROUP_IDS := $(shell id -G $(USER)))$(GROUP_IDS)
 ROOTDIR = $(eval ROOTDIR := $(or $(shell git rev-parse --show-toplevel), $(PWD)))$(ROOTDIR)
-
+# $(ROOTDIR)/
 all: prod_build login push profile git_push
 
 run:
@@ -28,23 +28,26 @@ new_clean:
 	unlink $(HOME)/.config/tmux/.tmux.conf
 
 link:
+	mkdir -p ${HOME}/.config
+	mkdir -p ${HOME}/.config/tmux
+	mkdir -p ${HOME}/.config/nvim
 	mkdir -p ${HOME}/.config/nvim/colors
 	mkdir -p ${HOME}/.config/nvim/syntax
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))init.vim $(HOME)/.config/nvim/init.vim
-	# ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))starship.toml $(HOME)/.config/starship.toml
-	# ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))efm-lsp-conf.yaml $(HOME)/.config/nvim/efm-lsp-conf.yaml
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))coc-settings.json $(HOME)/.config/nvim/coc-settings.json
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))monokai.vim $(HOME)/.config/nvim/colors/monokai.vim
-	# ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))go.vim $(HOME)/.config/nvim/syntax/go.vim
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))zshrc $(HOME)/.zshrc
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))editorconfig $(HOME)/.editorconfig
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))alias $(HOME)/.aliases
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))gitconfig $(HOME)/.gitconfig
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))gitattributes $(HOME)/.gitattributes
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))gitignore $(HOME)/.gitignore
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))tmux.conf $(HOME)/.tmux.conf
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))tmux-kube $(HOME)/.tmux-kube
-	# ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))tmux.new-session $(HOME)/.tmux.new-session
+	ln -sfv $(ROOTDIR)/init.vim $(HOME)/.config/nvim/init.vim
+	ln -sfv $(ROOTDIR)/starship.toml $(HOME)/.config/starship.toml
+	ln -sfv $(ROOTDIR)/efm-lsp-conf.yaml $(HOME)/.config/nvim/efm-lsp-conf.yaml
+	ln -sfv $(ROOTDIR)/coc-settings.json $(HOME)/.config/nvim/coc-settings.json
+	ln -sfv $(ROOTDIR)/monokai.vim $(HOME)/.config/nvim/colors/monokai.vim
+	# ln -sfv $(ROOTDIR)/go.vim $(HOME)/.config/nvim/syntax/go.vim
+	ln -sfv $(ROOTDIR)/zshrc $(HOME)/.zshrc
+	ln -sfv $(ROOTDIR)/editorconfig $(HOME)/.editorconfig
+	ln -sfv $(ROOTDIR)/alias $(HOME)/.aliases
+	ln -sfv $(ROOTDIR)/gitconfig $(HOME)/.gitconfig
+	ln -sfv $(ROOTDIR)/gitattributes $(HOME)/.gitattributes
+	ln -sfv $(ROOTDIR)/gitignore $(HOME)/.gitignore
+	ln -sfv $(ROOTDIR)/tmux.conf $(HOME)/.tmux.conf
+	ln -sfv $(ROOTDIR)/tmux-kube $(HOME)/.tmux-kube
+	# ln -sfv $(ROOTDIR)/tmux.new-session $(HOME)/.tmux.new-session
 
 clean:
 	# sed -e "/\[\ \-f\ \$HOME\/\.aliases\ \]\ \&\&\ source\ \$HOME\/\.aliases/d" ~/.zshrc
