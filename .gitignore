@@ -2,3 +2,4 @@
 ./hosts.deny
 config/nvim/lazy-lock.json
 config/nvim/log/
+zshrc.local

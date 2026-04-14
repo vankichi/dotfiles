@@ -124,3 +124,10 @@ vim.api.nvim_create_autocmd({"WinNew", "WinClosed"}, {
   end,
 })
 
+-- --------------------------------
+-- ---- Auto-reload on change  ----
+-- --------------------------------
+vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold" }, {
+  command = "checktime",
+})
+

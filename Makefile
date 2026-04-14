@@ -19,13 +19,14 @@ unlink:
 new_link:
 	ln -sfv $(shell pwd)/gitconfig $(HOME)/.gitconfig
 	ln -sfv $(shell pwd)/zshrc $(HOME)/.zshrc
-	ln -sfv $(shell pwd)/tmux.conf $(HOME)/.config/tmux/.tmux.conf
+	[ -f $(shell pwd)/zshrc.local ] && ln -sfv $(shell pwd)/zshrc.local $(HOME)/.zshrc.local || true
+	ln -sfv $(shell pwd)/tmux.conf $(HOME)/.config/tmux/tmux.conf
 	# ln -sfv $(shell pwd)/config/nvim $(HOME)/.config
 	# ln -sfv $(shell pwd)/config/sheldon $(HOME)/.config
-	ln -sfv $(shell pwd)editorconfig $(HOME)/.editorconfig
+	ln -sfv $(shell pwd)/editorconfig $(HOME)/.editorconfig
 
 new_clean:
-	unlink $(HOME)/.config/tmux/.tmux.conf
+	unlink $(HOME)/.config/tmux/tmux.conf
 
 link:
 	mkdir -p ${HOME}/.config
@@ -34,12 +35,13 @@ link:
 	ln -sfnv $(ROOTDIR)/config/nvim $(HOME)/.config/nvim
 	ln -sfv $(ROOTDIR)/starship.toml $(HOME)/.config/starship.toml
 	ln -sfv $(ROOTDIR)/zshrc $(HOME)/.zshrc
+	[ -f $(ROOTDIR)/zshrc.local ] && ln -sfv $(ROOTDIR)/zshrc.local $(HOME)/.zshrc.local || true
 	ln -sfv $(ROOTDIR)/editorconfig $(HOME)/.editorconfig
 	ln -sfv $(ROOTDIR)/alias $(HOME)/.aliases
 	ln -sfv $(ROOTDIR)/gitconfig $(HOME)/.gitconfig
 	ln -sfv $(ROOTDIR)/gitattributes $(HOME)/.gitattributes
 	ln -sfv $(ROOTDIR)/gitignore $(HOME)/.gitignore
-	ln -sfv $(ROOTDIR)/tmux.conf $(HOME)/.tmux.conf
+	ln -sfv $(ROOTDIR)/tmux.conf $(HOME)/.config/tmux/tmux.conf
 	ln -sfv $(ROOTDIR)/tmux-kube $(HOME)/.tmux-kube
 	ln -sfv $(ROOTDIR)/config/sheldon/plugins.toml $(HOME)/.config/sheldon/plugins.toml
 	# ln -sfv $(ROOTDIR)/tmux.new-session $(HOME)/.tmux.new-session
@@ -58,7 +60,7 @@ clean:
 	unlink $(HOME)/.gitconfig
 	unlink $(HOME)/.gitattributes
 	unlink $(HOME)/.gitignore
-	unlink $(HOME)/.tmux.conf
+	unlink $(HOME)/.config/tmux/tmux.conf
 	unlink $(HOME)/.tmux-kube
 	# unlink $(HOME)/.tmux.new-session
 

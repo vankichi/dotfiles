@@ -57,7 +57,7 @@ COPY gitignore $HOME/.gitignore
 COPY init.vim $NVIM_HOME/init.vim
 COPY monokai.vim $NVIM_HOME/colors/monokai.vim
 COPY tmux-kube $HOME/.tmux-kube
-COPY tmux.conf $HOME/.tmux.conf
+COPY tmux.conf $HOME/.config/tmux/tmux.conf
 COPY vintrc.yaml $HOME/.vintrc.yaml
 COPY zshrc $HOME/.zshrc
 

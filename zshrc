@@ -3,21 +3,12 @@ USER=$(whoami)
 HOST=$(hostname)
 
 if type tmux >/dev/null 2>&1; then
-    if [ -z $TMUX ]; then
-        if [ "$HOST" = "$USER" ]; then
-            # get the id of a deattached session
-            ID="$(tmux ls | grep -vm1 attached | cut -d: -f1)" # get the id of a deattached session
-            if [[ -z $ID ]]; then # if not available create a new one
-                tmux -f /home/${USER}/.config/tmux/.tmux.conf new-session -n$USER -s$USER@$HOST
-            else
-                tmux attach-session -t "$ID" # if available attach to it
-            fi
+    if [ -z "$TMUX" ]; then
+        ID="$(tmux ls 2>/dev/null | grep -vm1 attached | cut -d: -f1)"
+        if [[ -z "$ID" ]]; then
+            tmux new-session -n "$USER" -s "$USER@$HOST"
         else
-            tmux source-file ${HOME}/.config/tmux/.tmux.conf
-            pkill tmux
-            tmux -f ${HOME}/.config/tmux/.tmux.conf new-session -n$USER -s$USER@$HOST
-            tmux unbind C-b
-            tmux set -g prefix C-w
+            tmux attach-session -t "$ID"
         fi
     fi
 fi
@@ -64,7 +55,7 @@ if type nvim >/dev/null 2>&1; then
     # export NVIM_TUI_ENABLE_TRUE_COLOR=1
     export NVIM_PYTHON_LOG_LEVEL=WARNING;
     export NVIM_PYTHON_LOG_FILE=$NVIM_LOG_FILE_PATH/nvim.log;
-    export NVIM_LISTEN_ADDRESS="127.0.0.1:7650";
+    export NVIM_LISTEN_ADDRESS="/tmp/nvim_$$";
     alias vim=$(which nvim)
     export EDITOR=$(which nvim)
     export VISUAL=$(which nvim)
@@ -92,11 +83,15 @@ export K9S="$HOME/.local/bin"
 # --------------------
 # export NODE_PATH="/usr/local/lib/node_modules"
 
+# --------------------
+# volta
+# --------------------
+export VOLTA_HOME=$HOME/.volta
 
 # --------------------
 # PATH
 # --------------------
-export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:/usr/local/share/npm/bin:/usr/local/go/bin:/usr/local/lib:/opt/local/bin:$GOBIN:$HOME/.cargo/bin:/root/.cargo/bin:/GCLOUD_PATH/bin:$K9S:$PATH"
+export PATH="/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin:/usr/local/share/npm/bin:/usr/local/go/bin:/usr/local/lib:/opt/local/bin:$GOBIN:$HOME/.cargo/bin:/root/.cargo/bin:/GCLOUD_PATH/bin:$K9S:$VOLTA_HOME/bin:$PATH"
 
 if [ ! -f "$HOME/.zshrc.zwc" -o "$HOME/.zshrc" -nt "$HOME/.zshrc.zwc" ]; then
     zcompile $HOME/.zshrc
@@ -401,7 +396,7 @@ function devrun {
                 -v $rcpath/gitignore:$container_root/.gitignore \
                 -v $rcpath/init.vim:$container_root/.config/nvim/init.vim \
                 -v $rcpath/monokai.vim:$container_root/.config/nvim/colors/monokai.vim \
-                -v $rcpath/tmux.conf:$container_root/.tmux.conf \
+                -v $rcpath/tmux.conf:$container_root/.config/tmux/tmux.conf \
                 -v $rcpath/zshrc:$container_root/.zshrc \
                 -v $rcpath/go.env:$container_goroot/go.env:ro \
                 -v $rcpath/go.env:$goroot/go.env:ro \
@@ -488,11 +483,12 @@ function fup {
   sudo lsusb
 }
 
+TRAPUSR1() {
+  source ~/.zshrc
+  zle && zle reset-prompt
+}
+
 eval "$(starship init zsh)"
 
-export HELIX_RUNTIME=~/go/src/github.com/helix-editor/helix/runtime
+[ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"
 
-# >>> Takumi Guard PyPI Proxy >>>
-export PIP_INDEX_URL="https://pypi.flatt.tech/simple/"
-export UV_INDEX_URL="https://pypi.flatt.tech/simple/"
-# <<< Takumi Guard PyPI Proxy <<<
