@@ -7,18 +7,21 @@ return {
   },
   {
     "numToStr/Comment.nvim",
-    opts = {},
-    init = function()
-      pre_hook = require("ts_context_commentstring.integrations.comment_nvim").create_pre_hook()
+    dependencies = { "JoosepAlviste/nvim-ts-context-commentstring" },
+    opts = function()
+      local ts_hook = require("ts_context_commentstring.integrations.comment_nvim").create_pre_hook()
+      return {
+        pre_hook = function(ctx)
+          return ts_hook(ctx) or vim.bo.commentstring
+        end,
+        toggler = {
+          line = "<C-c>",
+        },
+        opleader = {
+          line = "<C-c>",
+        },
+      }
     end,
-    opts = {
-      toggler = {
-	line = "<C-c>",
-      },
-      opleader = {
-	line = "<C-c>",
-      },
-    },
   },
   {
     "windwp/nvim-autopairs",
