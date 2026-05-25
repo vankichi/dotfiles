@@ -2,6 +2,20 @@
 USER=$(whoami)
 HOST=$(hostname)
 
+# --------------------
+# Homebrew shellenv (macOS)
+# non-login shell (tmux split-pane 等) では path_helper が走らず
+# brew prefix が PATH に乗らないことがあり、後続の `type fzf` 等の
+# 偽陰性で alias が消える。zshrc 冒頭で確定させる。
+# --------------------
+if [ "$(uname -s)" = Darwin ]; then
+    if [ -x /opt/homebrew/bin/brew ]; then
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+    elif [ -x /usr/local/bin/brew ]; then
+        eval "$(/usr/local/bin/brew shellenv)"
+    fi
+fi
+
 if type tmux >/dev/null 2>&1; then
     if [ -z "$TMUX" ]; then
         ID="$(tmux ls 2>/dev/null | grep -vm1 attached | cut -d: -f1)"
@@ -223,18 +237,6 @@ mkcd() {
     fi
 }
 
-if type fzf >/dev/null 2>&1; then
-    if type fzf-tmux >/dev/null 2>&1; then
-        if type fd >/dev/null 2>&1; then
-            alias s='mkcd $(fd -a -H -t d . | fzf-tmux)'
-            alias vf='vim $(fd -a -H -t f . | fzf-tmux)'
-        fi
-        if type ghq >/dev/null 2>&1; then
-            alias g='mkcd $(ghq root)/$(ghq list | fzf-tmux)'
-        fi
-    fi
-fi
-
 # --------------------
 # alias
 # --------------------
@@ -318,6 +320,20 @@ if type sheldon >/dev/null 2>&1; then
     fi
     source "$sheldon_cache"
     unset cache_dir sheldon_cache sheldon_toml
+fi
+
+# fzf 系 alias は sheldon が PATH に fzf / fzf-tmux を入れた後で判定する。
+# (旧位置だと `type fzf` が偽陰性となり、g / s / vf alias が定義されなかった)
+if type fzf >/dev/null 2>&1; then
+    if type fzf-tmux >/dev/null 2>&1; then
+        if type fd >/dev/null 2>&1; then
+            alias s='mkcd $(fd -a -H -t d . | fzf-tmux)'
+            alias vf='vim $(fd -a -H -t f . | fzf-tmux)'
+        fi
+        if type ghq >/dev/null 2>&1; then
+            alias g='mkcd $(ghq root)/$(ghq list | fzf-tmux)'
+        fi
+    fi
 fi
 
 if type kubectl >/dev/null 2>&1; then
