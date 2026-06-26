@@ -24,9 +24,25 @@ new_link:
 	# ln -sfv $(shell pwd)/config/nvim $(HOME)/.config
 	# ln -sfv $(shell pwd)/config/sheldon $(HOME)/.config
 	ln -sfv $(shell pwd)/editorconfig $(HOME)/.editorconfig
+	# Claude Code config (runtime state stays local under ~/.claude)
+	mkdir -p $(HOME)/.claude
+	ln -sfv $(shell pwd)/claude/CLAUDE.md $(HOME)/.claude/CLAUDE.md
+	ln -sfv $(shell pwd)/claude/settings.json $(HOME)/.claude/settings.json
+	ln -sfv $(shell pwd)/claude/statusline-command.sh $(HOME)/.claude/statusline-command.sh
+	ln -sfnv $(shell pwd)/claude/agents $(HOME)/.claude/agents
+	ln -sfnv $(shell pwd)/claude/skills $(HOME)/.claude/skills
+	ln -sfnv $(shell pwd)/claude/hooks $(HOME)/.claude/hooks
+	ln -sfnv $(shell pwd)/claude/rules $(HOME)/.claude/rules
 
 new_clean:
 	unlink $(HOME)/.config/tmux/tmux.conf
+	unlink $(HOME)/.claude/CLAUDE.md
+	unlink $(HOME)/.claude/settings.json
+	unlink $(HOME)/.claude/statusline-command.sh
+	unlink $(HOME)/.claude/agents
+	unlink $(HOME)/.claude/skills
+	unlink $(HOME)/.claude/hooks
+	unlink $(HOME)/.claude/rules
 
 link:
 	mkdir -p ${HOME}/.config
@@ -45,6 +61,15 @@ link:
 	ln -sfv $(ROOTDIR)/tmux-kube $(HOME)/.tmux-kube
 	ln -sfv $(ROOTDIR)/config/sheldon/plugins.toml $(HOME)/.config/sheldon/plugins.toml
 	# ln -sfv $(ROOTDIR)/tmux.new-session $(HOME)/.tmux.new-session
+	# Claude Code config (runtime state stays local under ~/.claude)
+	mkdir -p $(HOME)/.claude
+	ln -sfv $(ROOTDIR)/claude/CLAUDE.md $(HOME)/.claude/CLAUDE.md
+	ln -sfv $(ROOTDIR)/claude/settings.json $(HOME)/.claude/settings.json
+	ln -sfv $(ROOTDIR)/claude/statusline-command.sh $(HOME)/.claude/statusline-command.sh
+	ln -sfnv $(ROOTDIR)/claude/agents $(HOME)/.claude/agents
+	ln -sfnv $(ROOTDIR)/claude/skills $(HOME)/.claude/skills
+	ln -sfnv $(ROOTDIR)/claude/hooks $(HOME)/.claude/hooks
+	ln -sfnv $(ROOTDIR)/claude/rules $(HOME)/.claude/rules
 
 clean:
 	# sed -e "/\[\ \-f\ \$HOME\/\.aliases\ \]\ \&\&\ source\ \$HOME\/\.aliases/d" ~/.zshrc
@@ -63,6 +88,13 @@ clean:
 	unlink $(HOME)/.config/tmux/tmux.conf
 	unlink $(HOME)/.tmux-kube
 	# unlink $(HOME)/.tmux.new-session
+	unlink $(HOME)/.claude/CLAUDE.md
+	unlink $(HOME)/.claude/settings.json
+	unlink $(HOME)/.claude/statusline-command.sh
+	unlink $(HOME)/.claude/agents
+	unlink $(HOME)/.claude/skills
+	unlink $(HOME)/.claude/hooks
+	unlink $(HOME)/.claude/rules
 
 zsh: link
 	[ -f $(HOME)/.zshrc ] && echo "[ -f $$HOME/.aliases ] && source $$HOME/.aliases" >> $(HOME)/.zshrc

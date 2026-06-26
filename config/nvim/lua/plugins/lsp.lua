@@ -39,6 +39,18 @@ return {
 				-- v2系を想定（setup_handlers無し）
 				config = function()
 					require("mason-lspconfig").setup({
+						-- automatic_enable は「インストール済みサーバーの有効化」のみ。
+						-- インストール自体は ensure_installed が無いと行われないため、
+						-- 設定対象のサーバーを明示して再現可能にする。
+						ensure_installed = {
+							"ts_ls", -- TypeScript / JavaScript
+							"tailwindcss",
+							"html",
+							"cssls",
+							"lua_ls",
+							"kotlin_language_server",
+							"dockerls",
+						},
 						-- v2では automatic_enable が導入され remember: デフォルトで有効
 						-- 明示したいなら ↓
 						automatic_enable = true,
