@@ -60,12 +60,14 @@ if type nvim >/dev/null 2>&1; then
     export NVIM_HOME=$XDG_CONFIG_HOME/nvim
     if [ $(uname) = 'Darwin' ]; then
         export VIMRUNTIME=/opt/homebrew/share/nvim/runtime
-        export NVIM_LOG_FILE_PATH=$NVIM_HOME/log
     else
         export VIMRUNTIME=/usr/share/nvim/runtime
-        export XDG_DATA_HOME=$NVIM_HOME/log
-        export NVIM_LOG_FILE_PATH=$XDG_DATA_HOME
     fi
+    # nvim の data は XDG default (~/.local/share/nvim) に、log は ~/.local/state/nvim に置く。
+    # ~/.config/nvim は repo への symlink なので、$NVIM_HOME 配下に XDG_DATA_HOME を向けると
+    # 全 XDG アプリの状態まで repo に流れ込む。local に固定して repo を汚さない。
+    export NVIM_LOG_FILE_PATH=$HOME/.local/state/nvim
+    mkdir -p "$NVIM_LOG_FILE_PATH"
     # export NVIM_TUI_ENABLE_TRUE_COLOR=1
     export NVIM_PYTHON_LOG_LEVEL=WARNING;
     export NVIM_PYTHON_LOG_FILE=$NVIM_LOG_FILE_PATH/nvim.log;
@@ -280,20 +282,6 @@ bindkey '^s' fzf-z-search
 
 # nvim
 if type nvim >/dev/null 2>&1; then
-    alias nvup="nvim +UpdateRemotePlugins +PlugInstall +PlugUpdate +PlugUpgrade +PlugClean +CocInstall +CocUpdate +qall"
-    nvim-init() {
-        rm -rf "$HOME/.config/gocode"
-        rm -rf "$HOME/.config/nvim/autoload"
-        rm -rf "$HOME/.config/nvim/ftplugin"
-        rm -rf "$HOME/.config/nvim/log"
-        rm -rf "$HOME/.config/nvim/plugged"
-        nvup
-        rm "$HOME/.nvimlog"
-        rm "$HOME/.viminfo"
-    }
-    alias vedit="$EDITOR $HOME/.config/nvim/init.vim"
-    alias nvinit="nvim-init"
-    alias vback="cp $HOME/.config/nvim/init.vim $HOME/.config/nvim/init.vim.back"
     alias vake="$EDITOR Makefile"
     alias vocker="$EDITOR Dockerfile"
 else
@@ -406,12 +394,9 @@ function devrun {
                 -v $docker_config:/etc/docker/config.json:ro,cached \
                 -v $docker_daemon:/etc/docker/daemon.json:ro,cached \
                 -v $font_dir:/usr/share/fonts:ro \
-                -v $rcpath/coc-settings.json:$container_root/.config/nvim/coc-settings.json \
                 -v $rcpath/editorconfig:$container_root/.editorconfig \
                 -v $rcpath/gitconfig:$container_root/.gitconfig \
                 -v $rcpath/gitignore:$container_root/.gitignore \
-                -v $rcpath/init.vim:$container_root/.config/nvim/init.vim \
-                -v $rcpath/monokai.vim:$container_root/.config/nvim/colors/monokai.vim \
                 -v $rcpath/tmux.conf:$container_root/.config/tmux/tmux.conf \
                 -v $rcpath/zshrc:$container_root/.zshrc \
                 -v $rcpath/go.env:$container_goroot/go.env:ro \

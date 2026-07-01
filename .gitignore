@@ -1,7 +1,7 @@
 ./hosts.allow
 ./hosts.deny
 config/nvim/lazy-lock.json
-config/nvim/log/
+config/nvim/log
 zshrc.local
 # Claude Code: machine-local / company-internal config must never be tracked (public repo)
 claude/settings.local.json

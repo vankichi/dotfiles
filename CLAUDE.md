@@ -11,15 +11,11 @@ Personal dotfiles and Docker-based development environment for vankichi. The rep
 ## Key Commands
 
 ```bash
-# Symlink dotfiles to $HOME (legacy layout)
-make link
-
-# Symlink dotfiles (newer layout using ~/.config paths)
+# Symlink dotfiles to $HOME (uses ~/.config paths)
 make new_link
 
 # Remove symlinks
-make clean        # legacy
-make new_clean    # newer
+make new_clean
 
 # Build the main dev container image
 make build                # simple docker build
@@ -58,7 +54,6 @@ make create_buildx        # create buildx builder "vankichi-builder"
 - **Makefile.d/version.mk** — Version-fetching targets, included by the main Makefile.
 - **alias** — Shell functions (`devrun`, `devin`, `devkill`) for container lifecycle. `devrun` mounts dotfiles, Go src, Docker socket, SSH keys, etc. into the container; platform-aware (macOS vs Linux).
 - **config/nvim/** — Lua-based Neovim config (lazy.nvim plugin manager).
-- **nvim/plugins.lua** — Older Neovim plugin config (separate from config/nvim/).
 - **config/sheldon/plugins.toml** — Sheldon zsh plugin manager config.
 
 ## Docker Image Hierarchy

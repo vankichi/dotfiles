@@ -118,6 +118,23 @@ vim.api.nvim_create_autocmd("FileType", {
 -- ------------------------------
 -- ---- Window size settings ----
 -- ------------------------------
+-- Workaround: Neovim 0.12.3 bug where get_range is called on an
+-- invalidated/non-TSNode during injection processing (languagetree.lua).
+do
+	local _orig_get_range = vim.treesitter.get_range
+	vim.treesitter.get_range = function(node, source, metadata)
+		local ok, result = pcall(_orig_get_range, node, source, metadata)
+		if ok then return result end
+		return { 0, 0, 0, 0, 0, 0 }
+	end
+end
+
+vim.api.nvim_create_autocmd("FileType", {
+	callback = function(args)
+		pcall(vim.treesitter.start, args.buf)
+	end,
+})
+
 vim.api.nvim_create_autocmd({"WinNew", "WinClosed"}, {
   callback = function()
     vim.cmd("wincmd =")

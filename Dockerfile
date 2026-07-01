@@ -49,16 +49,11 @@ COPY --from=go /go/bin $GOPATH/bin
 COPY --from=rust /root/.cargo $CARGO_PATH
 COPY --from=rust /root/.cargo/bin/rustup $HOME/.rustup
 
-# COPY coc-settings.json $NVIM_HOME/coc-settings.json
-COPY efm-lsp-conf.yaml $NVIM_HOME/efm-lsp-conf.yaml
 COPY gitattributes $HOME/.gitattributes
 COPY gitconfig $HOME/.gitconfig
 COPY gitignore $HOME/.gitignore
-COPY init.vim $NVIM_HOME/init.vim
-COPY monokai.vim $NVIM_HOME/colors/monokai.vim
 COPY tmux-kube $HOME/.tmux-kube
 COPY tmux.conf $HOME/.config/tmux/tmux.conf
-COPY vintrc.yaml $HOME/.vintrc.yaml
 COPY zshrc $HOME/.zshrc
 
 ENV SHELL /usr/bin/zsh

@@ -16,9 +16,10 @@ return {
 		"nvim-treesitter/nvim-treesitter",
 		build = ":TSUpdate",
 		config = function()
-			require("nvim-treesitter").setup({
+			require("nvim-treesitter.configs").setup({
 				ensure_installed = treesitter_languages,
 				sync_install = false,
+				highlight = { enable = false },
 			})
 		end,
 	},

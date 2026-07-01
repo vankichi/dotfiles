@@ -78,7 +78,7 @@ FROM rust-base AS bottom
 RUN rustup update stable \
     && rustup default stable \
     && cargo install --force --no-default-features \
-    --git https://github.com/ClementTsang/bottom
+    --git https://github.com/ClementTsang/bottom bottom
 
 FROM scratch AS rust
 

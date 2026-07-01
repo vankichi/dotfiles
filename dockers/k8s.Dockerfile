@@ -164,9 +164,10 @@ RUN set -x; cd "$(mktemp -d)" \
 	&& ORG="GoogleContainerTools" \
 	&& BIN_NAME="skaffold" \
 	&& REPO="${ORG}/${BIN_NAME}" \
+	&& DL_URL="https://storage.googleapis.com" \
 	&& VERSION="$(curl --silent "${API_GITHUB}/${REPO}/${RELEASE_LATEST}" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | sed 's/v//g')" \
 	&& case "${TARGETARCH}" in "amd64") ARCH="amd64" ;; "arm64") ARCH="arm64";; *) echo "Unsupported TARGETARCH: ${TARGETARCH}"; exit 1 ;; esac \
-	&& curl -fsSLo "${BIN_PATH}/${BIN_NAME}" "${GITHUB}/${REPO}/${RELEASE_DL}/v${VERSION}/${BIN_NAME}-${OS}-${ARCH}" \
+	&& curl -fsSLo "${BIN_PATH}/${BIN_NAME}" "${DL_URL}/${BIN_NAME}/releases/v${VERSION}/${BIN_NAME}-${OS}-${ARCH}" \
 	&& chmod a+x "${BIN_PATH}/${BIN_NAME}" \
 	&& upx -9 "${BIN_PATH}/${BIN_NAME}"
 
