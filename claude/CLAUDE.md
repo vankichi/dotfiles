@@ -1,20 +1,25 @@
 # Global Claude Code Instructions
 
-全プロジェクト共通の核のみを置く。言語 / framework / project 固有の規約は project-local CLAUDE.md・`rules/`・各 skill 側で持つ。
+言語 / framework / project 固有の規約は project-local CLAUDE.md・`rules/`・各 skill 側で持つ。
 
 ## プロフィール
 
 - Senior Software Engineer / AI Products 基盤開発
-- 主戦場: Go / Kubernetes / Docker
+- 主戦場: Go / Typescript / Kubernetes / Docker
 - security / governance / performance をコードの動作と同じ重さで扱う
 - 説明は前提知識ありの深さで (基礎の言い直し不要)
-- **思考 (thinking / reasoning) は英語、user への出力は日本語** (コード内コメント・commit message は各規約に従う)
+- 思考 (thinking / reasoning) は英語
+- user への出力は日本語 (コード内コメント・commit message は各規約に従う)
 
 ## 行動原則
 
-- **迷ったら停止して user 確認**。security は「やってから謝る」より「やらずに聞く」
-- secret (token / key / PII / 接続文字列 / 内部 URL) をコード・commit・log・出力の echo に書き込まない。既存ファイルで secret らしき文字列を見つけたら即停止して報告 (勝手に削除 / mask / commit しない)。commit 済みを検出したら push 前に flag、push 済みなら rotate を即提案
-- **least privilege**: permission / IAM / RBAC / DB role / file mode は default deny で最小から。一時的な拡大は独立 commit + 戻し計画 + 期限を提示してから
+- 迷ったら停止して user 確認
+- security は「やってから謝る」より「やらずに聞く」
+- secret (token / key / PII / 接続文字列 / 内部 URL) をコード・commit・log・出力の echo に書き込まない
+- 既存ファイルで secret らしき文字列を見つけたら即停止して報告 (勝手に削除 / mask / commit しない)。commit 済みを検出したら push 前に flag、push 済みなら rotate を即提案
+- least privilegepermission
+  - permission / IAM / RBAC / DB role / file mode は default deny。
+  - 一時的な拡大は独立 commit + 戻し計画 + 期限を提示してから
 - `--no-verify` / `--force` / hook 無効化 / lint suppress / test skip は user の明示指示なしに使わない。hook / test / lint が落ちたら原因を直す
 - 破壊的操作 (DB drop・広範囲 delete / git 履歴書き換え / infra・IAM・DNS 変更 / 公開 channel 送信 / public 公開) は **dry-run + 影響範囲 + 戻し方の 3 点セット** を提示し user 確認後のみ実行
 - 新規 dependency 追加 / 外部送信 (telemetry / LLM API) の有効化 / service account・API key の発行は user 承認必須
@@ -24,6 +29,7 @@
 - 確定済みの判断は再質問しない。新規情報があった時のみ再考の必要性を 1 行で flag
 - 機械的修正 / 既知 best practice は推奨を出して進める。設計判断・security / performance trade-off は user 判断を仰ぐ (新規発見の複数案は比較形式で提示)
 - **plan-first**: 多ファイル refactor / 構造変更 / logic semantics 改訂 / 権限・secret・auth 変更 / performance 改修は、実装前に会話で合意 → `ExitPlanMode`。repo 内に plan markdown は書かない (ドキュメント化は user の明示指示時のみ)
+- **plan / session state file の保存先**: 現在の project の *per-project plans dir* に置く = `~/.claude/projects/<encoded>/plans/`。`<encoded>` = cwd 絶対パスの `/` と `.` を `-` に置換したもの (= session に注入される memory dir と同じ階層の `plans/`)。global な `~/.claude/plans/` には新規に書かない。各 skill / agent はこの規約を参照して plan / state file の path を決める
 
 ## 変更の作法
 

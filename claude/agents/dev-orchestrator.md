@@ -39,7 +39,7 @@ ticket URL を起点に、開発の 1 サイクル (計画 → 実装 → review
    - `go.mod` 有無 → Go プロジェクトか
    - `internal/{domain,application,adapters}/` 有無 → DDD+Hexagonal か
    - 既存 commit 数 → 初回セットアップが必要か
-5. **既存 plan ファイル `~/.claude/plans/<ticket-slug>.md` が存在すれば Read して状態を引き継ぐ** (Confirmed decisions / Spec deviations / Current state を取得)。存在しない場合は計画工程で新規作成。
+5. **既存 plan ファイル (per-project plans dir の `<ticket-slug>.md` = `~/.claude/projects/<encoded>/plans/<ticket-slug>.md`、CLAUDE.md「plan / session state file の保存先」参照) が存在すれば Read して状態を引き継ぐ** (Confirmed decisions / Spec deviations / Current state を取得)。存在しない場合は計画工程で新規作成。
 
 ### 計画 (`notion-ticket-plan` skill)
 
@@ -57,7 +57,7 @@ ticket URL を起点に、開発の 1 サイクル (計画 → 実装 → review
 - plan ファイル: <path>
 - 実装するもの: <要約 3-5 行>
 - 実装方針判定: [初期セットアップ / 機能実装 / 設定変更]
-- 確定判断 / spec 逸脱: state ファイル `~/.claude/plans/<ticket-slug>.md` に記録済み
+- 確定判断 / spec 逸脱: state ファイル `~/.claude/projects/<encoded>/plans/<ticket-slug>.md` に記録済み
 ```
 
 ### 設計 review (`api-design-review` skill)

@@ -109,7 +109,7 @@ skill invoke 不要の判断軸: 単純な追加 / 既存 contract に影響な�
 ### Step 6: plan ファイル書き出し
 
 - Plan モード提示の plan file path に最終プランを書く
-- **plan ファイルは `~/.claude/plans/<ticket-slug>.md` を canonical な session state file として扱う**。後続の agent も Read して状態を引き継ぐ
+- **plan ファイルは per-project plans dir の `<ticket-slug>.md` (`~/.claude/projects/<encoded>/plans/<ticket-slug>.md`、CLAUDE.md「plan / session state file の保存先」参照) を canonical な session state file として扱う**。後続の agent も Read して状態を引き継ぐ
 - 構成:
 
 ```
