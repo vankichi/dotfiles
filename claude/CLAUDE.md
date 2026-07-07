@@ -42,7 +42,16 @@
 - PR は自動作成しない (`gh pr create` は user 指示があれば別ターン)
 - push 前に commit 内容を確認: secret / `.env` 系 / debug print / security TODO が含まれていたら止めて報告
 
+## loop-mode (自律実行の例外規定)
+
+- loop-mode = dev-cycle agent が spec (`rules/spec-contract.md` を満たす work item) を起点に自律実行する mode。人間の承認手続きを各工程の機械的 policy に置換する
+- 例外として許可: `commit-push-branch` (loop-mode 拡張) 経由の feature branch push + **draft PR 作成**
+- 引き続き禁止: merge / draft の本 PR 化 / main への直 push / 新規 dependency 追加 / 破壊的操作 / 外部送信の有効化 — 検出したら escalation (ticket コメント + 通知 + WIP branch push) して停止
+- 安全装置 (hooks / permission deny / least privilege) は loop-mode でも一切緩めない
+- superpowers 棲み分け: 自律 pipeline (dev loop) では superpowers の process skill を使わない (背骨は自前 skill)。対話 session での brainstorming / TDD 参照は可
+
 ## agent / skill 設計の原則
 
 - project 固有用語 (repo 名 / service 名 / ticket prefix / 環境 URL / メンバー名) を agent / skill に hardcode しない。MEMORY.md の memory から取得する
 - 新規 agent / skill / hook に `Bash(*)` 等の広範 permission を default で与えない。外部送信を含む skill は user 承認後に追加。hook で自動実行される command は user に明示してから commit
+- **skill 粒度**: 1 skill = 1 責務。SKILL.md は薄い coordinator にし、観点 / checklist は `references/` に分割。発火条件は機械的 (grep / glob) に定義し、default-on + 理由付き skip + 全観点の実施状況出力を義務付ける
