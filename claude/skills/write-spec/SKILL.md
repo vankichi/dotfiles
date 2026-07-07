@@ -28,13 +28,14 @@ description: 人間の設計 draft を spec contract (rules/spec-contract.md) �
 
 - 回答を勝手に補完しない。選択肢を出す場合も「推奨」は根拠付きで 1 つまで
 - 人間が「これで良い」と確定した設計に異論を続けない (懸念は 1 回 flag して従う)
+- 提案 (DoD 案 / 制約案 等) への確認を取る時は、**提案内容を質問文の中に再掲する** (直前メッセージへの参照だけだと user に見えないことがある)
 - 全観点の実施状況 (実施 / skip + 理由) を記録し Step 5 の出力に含める
 
 ### Step 4: api-design-review の発火判定 (機械的)
 
 設計本体に以下のいずれかが含まれる場合、`api-design-review` skill を invoke し、検出された考慮漏れを Step 3 の尋問に追加する:
 
-- 新規 / 変更される API endpoint・RPC・event schema・enum・公開 interface
+- 新規 / 変更される API endpoint・RPC・event schema・enum・公開 interface (**repo 外に公開されるものが対象**。harness 内部の skill 間契約は対象外 — spec の設計本体で扱う)
 - ACL / 権限モデルの変更
 
 含まれない場合は skip し、理由を Step 5 の出力に明記する。
