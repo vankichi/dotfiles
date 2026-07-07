@@ -12,15 +12,15 @@ local treesitter_languages = {
 
 return {
 	-- Treesitter
+	-- main branch (rewrite) API: configs モジュールは廃止、install() で parser を導入する
+	-- highlight は従来どおり無効 (vim.treesitter.start() を呼ばない)
 	{
 		"nvim-treesitter/nvim-treesitter",
+		branch = "main",
+		lazy = false,
 		build = ":TSUpdate",
 		config = function()
-			require("nvim-treesitter.configs").setup({
-				ensure_installed = treesitter_languages,
-				sync_install = false,
-				highlight = { enable = false },
-			})
+			require("nvim-treesitter").install(treesitter_languages)
 		end,
 	},
 

@@ -179,6 +179,9 @@ LISTMAX=1000
 WORDCHARS="$WORDCHARS|:"
 
 # use completion
+if [ -n "$HOMEBREW_PREFIX" ] && [ -d "$HOMEBREW_PREFIX/share/zsh/functions" ]; then
+    fpath=("$HOMEBREW_PREFIX/share/zsh/functions" $fpath)
+fi
 autoload -Uz compinit -C && compinit -C
 # if [ -e /usr/local/share/zsh-completions ]; then
 #   fpath=(/usr/local/share/zsh-completions $fpath)

@@ -68,6 +68,7 @@
       "Write(**/.aws/credentials)"
     ]
   },
+  "model": "claude-fable-5[1m]",
   "hooks": {
     "PreToolUse": [
       {
@@ -101,7 +102,7 @@
     }
   },
   "effortLevel": "xhigh",
+  "tui": "fullscreen",
   "agentPushNotifEnabled": true,
-  "skipAutoPermissionPrompt": true,
-  "tui": "fullscreen"
+  "skipAutoPermissionPrompt": true
 }
