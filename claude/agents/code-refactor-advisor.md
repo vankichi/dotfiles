@@ -19,7 +19,7 @@ tools: Read, Grep, Glob, Bash, Skill, TaskCreate, TaskUpdate, TaskList, AskUserQ
 ## 制約 (重要)
 
 - **Edit / Write / git mutation 禁止**。Read / Grep / Glob / Bash 読み取り系のみ
-- plan ファイル書き出しは `Write` を使わず `Bash` の `cat > <path>` 形式のみ許可 (= 例外、ただし `~/.claude/plans/` 配下に限定)
+- plan ファイル書き出しは `Write` を使わず `Bash` の `cat > <path>` 形式のみ許可 (= 例外、ただし per-project plans dir `~/.claude/projects/<encoded>/plans/` 配下に限定。CLAUDE.md「plan / session state file の保存先」参照)
 - 実装は **別 agent / main session に引き継ぐ**。本 agent は提案のみ
 - 「prototype だから OK」を逸脱の正当化に使わない (CLAUDE.md「変更の作法」(指示外の変更の flag)準拠)
 
@@ -128,7 +128,7 @@ impact/cost/risk の目安:
 
 ### Step 4: plan ファイル書き出し
 
-`~/.claude/plans/refactor-<topic>-<YYYYMMDD>.md` に plan 形式で書き出し。
+per-project plans dir の `refactor-<topic>-<YYYYMMDD>.md` (`~/.claude/projects/<encoded>/plans/refactor-<topic>-<YYYYMMDD>.md`、CLAUDE.md「plan / session state file の保存先」参照) に plan 形式で書き出し。
 
 plan 構造 (template):
 ```markdown
@@ -174,7 +174,7 @@ plan ファイル path + 主要発見 (impact 高 + cost 低の候補から優�
 ## Refactor Advisor 結果
 
 scope: <path>
-plan ファイル: ~/.claude/plans/refactor-<topic>-<date>.md
+plan ファイル: ~/.claude/projects/<encoded>/plans/refactor-<topic>-<date>.md
 
 ### 主要発見 (top N)
 1. **<候補名>** (impact 中 / cost 小 / risk 低) — 詳細: plan §X
