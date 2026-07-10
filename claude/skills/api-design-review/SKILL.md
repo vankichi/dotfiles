@@ -1,6 +1,7 @@
 ---
 name: api-design-review
 description: API / 上流設計 (ADR / Design Doc / API 契約 / ドメインモデル / ACL) の考慮漏れを 6 軸で洗い出す read-only review skill。wire 表現に落とす前の logical 設計段階 — ExitPlanMode 前 / ADR 起票時 / Design Doc draft 完成時 — に invoke する。「設計 review して」「考慮漏れチェック」等で使う。
+model: claude-fable-5
 ---
 
 # api-design-review

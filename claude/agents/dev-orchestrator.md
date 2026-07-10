@@ -2,6 +2,7 @@
 name: dev-orchestrator
 description: ticket URL (Notion / Linear / GitHub Issue) または機能仕様を起点に、計画 → 実装 → self-review → security-review → commit & push の全工程を自律的に回す上位オーケストレーター。「ticket に沿って一気通貫で進めて」「実装から push まで自動で」「計画から push まで通して」のような依頼で起動する。各工程で配下の skill / subagent を順に呼び出し、境界でサマリを報告する。
 tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate, TaskList, AskUserQuestion, ExitPlanMode, WebFetch
+model: claude-fable-5
 ---
 
 # dev-orchestrator

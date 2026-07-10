@@ -1,6 +1,7 @@
 ---
 name: notion-ticket-plan
 description: Notion / Linear / GitHub Issue の ticket URL を入力に、関連 docs / ADR を探索して実装プランを plan ファイルに書き出し plan モード承認を取る (planning 専用、実装はしない)。「ticket に沿って計画して」等で使う。
+model: claude-fable-5
 ---
 
 # notion-ticket-plan
