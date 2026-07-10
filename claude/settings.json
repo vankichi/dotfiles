@@ -1,0 +1,109 @@
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "permissions": {
+    "deny": [
+      "Read(//Users/kiichiroyukawa/.zshrc.local)",
+      "Read(~/.zshrc.local)",
+      "Read(./.zshrc.local)",
+      "Read(.zshrc.local)",
+      "Edit(//Users/kiichiroyukawa/.zshrc.local)",
+      "Edit(~/.zshrc.local)",
+      "Edit(./.zshrc.local)",
+      "Edit(.zshrc.local)",
+      "Write(//Users/kiichiroyukawa/.zshrc.local)",
+      "Write(~/.zshrc.local)",
+      "Write(./.zshrc.local)",
+      "Write(.zshrc.local)",
+      "NotebookEdit(//Users/kiichiroyukawa/.zshrc.local)",
+      "NotebookEdit(~/.zshrc.local)",
+      "Read(**/.env)",
+      "Edit(**/.env)",
+      "Write(**/.env)",
+      "Read(**/.env.local)",
+      "Edit(**/.env.local)",
+      "Write(**/.env.local)",
+      "Read(**/.env.*.local)",
+      "Edit(**/.env.*.local)",
+      "Write(**/.env.*.local)",
+      "Read(**/*.pem)",
+      "Edit(**/*.pem)",
+      "Write(**/*.pem)",
+      "Read(**/*.key)",
+      "Edit(**/*.key)",
+      "Write(**/*.key)",
+      "Read(**/*.p12)",
+      "Edit(**/*.p12)",
+      "Write(**/*.p12)",
+      "Read(**/*.pfx)",
+      "Edit(**/*.pfx)",
+      "Write(**/*.pfx)",
+      "Read(**/id_rsa)",
+      "Edit(**/id_rsa)",
+      "Write(**/id_rsa)",
+      "Read(**/id_ed25519)",
+      "Edit(**/id_ed25519)",
+      "Write(**/id_ed25519)",
+      "Read(**/.ssh/**)",
+      "Edit(**/.ssh/**)",
+      "Write(**/.ssh/**)",
+      "Read(**/.netrc)",
+      "Edit(**/.netrc)",
+      "Write(**/.netrc)",
+      "Read(**/*.kubeconfig)",
+      "Edit(**/*.kubeconfig)",
+      "Write(**/*.kubeconfig)",
+      "Read(**/.kube/config)",
+      "Edit(**/.kube/config)",
+      "Write(**/.kube/config)",
+      "Read(**/*.tfstate)",
+      "Edit(**/*.tfstate)",
+      "Write(**/*.tfstate)",
+      "Read(**/terraform.tfvars)",
+      "Edit(**/terraform.tfvars)",
+      "Write(**/terraform.tfvars)",
+      "Read(**/.aws/credentials)",
+      "Edit(**/.aws/credentials)",
+      "Write(**/.aws/credentials)"
+    ],
+    "defaultMode": "auto"
+  },
+  "model": "opusplan",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/.claude/hooks/guard-bash.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash $HOME/.claude/statusline-command.sh"
+  },
+  "enabledPlugins": {
+    "rust-analyzer-lsp@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true,
+    "superpowers@superpowers-marketplace": true,
+    "security-guidance@claude-plugins-official": true,
+    "claude-code-setup@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "superpowers-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "obra/superpowers-marketplace"
+      }
+    }
+  },
+  "effortLevel": "xhigh",
+  "tui": "fullscreen",
+  "agentPushNotifEnabled": true,
+  "skipAutoPermissionPrompt": true
+}

@@ -13,7 +13,7 @@ version/go:
 .PHONY: verison/ngt
 ## version/ngt
 version/ngt:
-	@curl --silent https://api.github.com/repos/yahoojapan/NGT/releases/latest | grep -Po '"tag_name": "\K.*?(?=")' | sed 's/v//g' > $(ROOTDIR)/versions/NGT_VERSION
+	@curl --silent https://api.github.com/repos/NGT-labs/NGT/releases/latest | grep -Po '"tag_name": "\K.*?(?=")' | sed 's/v//g' > $(ROOTDIR)/versions/NGT_VERSION
 
 .PHONY: version/tensorflow
 ## version/tensorflow

@@ -51,6 +51,7 @@ RUN rm -f /etc/apt/apt.conf.d/docker-clean \
         upx \
         wget \
         xclip \
+        xsel \
         zsh \
     && update-alternatives --set cc $(which clang) \
     && update-alternatives --set c++ $(which clang++) \
