@@ -13,7 +13,7 @@ A skill that sets up a new Go project from scratch to the point where "`make bui
 
 - Go (assuming 1.22+, using the Toolchain Directive) is installed locally
 - The repository root doesn't yet have a `go.mod` (or it's fine to re-set-up)
-- Adopting DDD + Hexagonal (`internal/{domain,application,adapters}/`). Confirm with the user if a different layout is wanted.
+- Adopting DDD + Clean Architecture (`internal/{domain,application,adapters}/`). Confirm with the user if a different layout is wanted.
 
 ## Procedure
 

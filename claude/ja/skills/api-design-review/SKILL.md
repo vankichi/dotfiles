@@ -194,6 +194,6 @@ main agent / dev-orchestrator / Plan agent / tech-docs-writer / notion-ticket-pl
 ## 関連 artifact
 
 - 日常 check (軽量版): CLAUDE.md「判断と質問の作法」
-- 関連 skill: `tech-docs-writer` (ADR / Design Doc 起票時、本 skill を内部で通過)、`notion-ticket-plan` (ticket 解析 / plan 起票時、本 skill 通過)、`ddd-hexagonal` (層境界・依存方向、本 skill 観点 1 と関連)、`code-refactor-advisor` (実装面の refactor 候補、本 skill の implementation pass version)
+- 関連 skill: `tech-docs-writer` (ADR / Design Doc 起票時、本 skill を内部で通過)、`notion-ticket-plan` (ticket 解析 / plan 起票時、本 skill 通過)、`ddd-clean-architecture` (層境界・依存方向、本 skill 観点 1 と関連)、`code-refactor-advisor` (実装面の refactor 候補、本 skill の implementation pass version)
 - 主 agent への引き継ぎ: state-file 参照型 brief
 - agent 側組み込み: `dev-orchestrator` agent の plan phase で本 skill を通過 (組み込み済)

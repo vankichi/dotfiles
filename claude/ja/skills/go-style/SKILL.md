@@ -18,7 +18,7 @@ Go の慣用句・お作法を集めた reference skill。実装 / review / refa
 - `cmd/<bin>/main.go` でバイナリエントリ。1 バイナリ = 1 サブディレクトリ
 - `internal/` 配下は他リポジトリから import 不可。基本的にここに実装を置く
 - `pkg/` は外部 import を意図する場合のみ。reuse の見込みが無いなら `internal/` に置く
-- DDD + Hexagonal 採用時: `internal/{domain,application,interfaces,adapters}/` (層境界の詳細は `ddd-hexagonal` skill)
+- DDD + Clean Architecture 採用時: `internal/{domain,application,interfaces,adapters}/` (層境界の詳細は `ddd-clean-architecture` skill)
 - `apis/` で proto / OpenAPI / SDK 公開 surface を分離 (推奨規約)
 - 1 package = 1 責務。`util` / `common` / `helper` のような catch-all package は anti-pattern
 

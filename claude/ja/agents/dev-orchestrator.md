@@ -38,7 +38,7 @@ ticket URL を起点に、開発の 1 サイクル (計画 → 実装 → review
 3. 現在の git 状態を `git status` / `git log -1` で確認
 4. リポジトリ性質を判定:
    - `go.mod` 有無 → Go プロジェクトか
-   - `internal/{domain,application,adapters}/` 有無 → DDD+Hexagonal か
+   - `internal/{domain,application,adapters}/` 有無 → DDD+Clean Architecture か
    - 既存 commit 数 → 初回セットアップが必要か
 5. **既存 plan ファイル (per-project plans dir の `<ticket-slug>.md` = `~/.claude/projects/<encoded>/plans/<ticket-slug>.md`、CLAUDE.md「plan / session state file の保存先」参照) が存在すれば Read して状態を引き継ぐ** (Confirmed decisions / Spec deviations / Current state を取得)。存在しない場合は計画工程で新規作成。
 

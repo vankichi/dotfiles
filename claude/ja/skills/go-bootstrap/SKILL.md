@@ -11,7 +11,7 @@ description: 新規 / 既存 Go プロジェクトに動く骨格を一括セッ
 
 - Go (1.22+ 想定、Toolchain Directive 利用) がローカルに導入されている
 - リポジトリ ルートに `go.mod` がまだ無い (or 再セットアップで OK)
-- DDD + Hexagonal を採用する (`internal/{domain,application,adapters}/`)。違うレイアウトのときはユーザーに確認
+- DDD + Clean Architecture を採用する (`internal/{domain,application,adapters}/`)。違うレイアウトのときはユーザーに確認
 
 ## 手順
 

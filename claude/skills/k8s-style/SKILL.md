@@ -384,7 +384,7 @@ Always wire these into CI:
 
 - security review → `security-review-local` skill
 - docs (ADR / Runbook / Design) → `tech-docs-writer` skill
-- layer boundaries / responsibilities (app side) → `ddd-hexagonal` skill
+- layer boundaries / responsibilities (app side) → `ddd-clean-architecture` skill
 - Go app conventions → `go-style` / `go-test` skill
 
 ---

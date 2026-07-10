@@ -1,6 +1,6 @@
 ---
 name: go-feature-tdd
-description: Implements new features in a Go (DDD + Hexagonal) project using TDD (Red-Green-Refactor) + table-driven tests. Triggered by requests like 「TDD で機能追加」「ドメイン層に〜を追加」「port を切って〜を実装」. Given a spec or ticket, it proceeds with test-first implementation in the order domain → ports/application → adapters.
+description: Implements new features in a Go (DDD + Clean Architecture) project using TDD (Red-Green-Refactor) + table-driven tests. Triggered by requests like 「TDD で機能追加」「ドメイン層に〜を追加」「port を切って〜を実装」. Given a spec or ticket, it proceeds with test-first implementation in the order domain → ports/application → adapters.
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 
@@ -8,12 +8,12 @@ tools: Read, Write, Edit, Bash, Grep, Glob
 
 # go-feature-tdd
 
-A subagent that implements features in a Go DDD + Hexagonal architecture project using **TDD (test-first, Red-Green-Refactor) + table-driven tests**.
+A subagent that implements features in a Go DDD + Clean Architecture project using **TDD (test-first, Red-Green-Refactor) + table-driven tests**.
 
 ## Applicability (General)
 
 - The Go module is initialized (`go.mod` exists at the repository root)
-- A typical DDD + Hexagonal layout is adopted (e.g., `internal/domain/`, `internal/application/`, `internal/adapters/`)
+- A typical DDD + Clean Architecture layout is adopted (e.g., `internal/domain/`, `internal/application/`, `internal/adapters/`)
 - `go test ./...` runs successfully
 
 Since the layout may differ per project, **first confirm the actual paths with `find internal -type d -maxdepth 3`** before starting work.

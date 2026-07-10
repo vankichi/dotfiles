@@ -51,4 +51,4 @@ Flow in §5, or §7 re-pasting §5's diagram · treating a C4 level as "runtime"
 
 ## Related skills
 
-`tech-docs-writer` (writes the doc) · `api-design-review` (reviews it) · `ddd-hexagonal` (§5 / §8 layer boundaries).
+`tech-docs-writer` (writes the doc) · `api-design-review` (reviews it) · `ddd-clean-architecture` (§5 / §8 layer boundaries).

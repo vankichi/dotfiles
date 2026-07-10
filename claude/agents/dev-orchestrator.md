@@ -40,7 +40,7 @@ For any other language / framework, handle the implementation phase directly wit
 3. Check the current git state with `git status` / `git log -1`
 4. Determine the nature of the repository:
    - Whether `go.mod` exists → is it a Go project
-   - Whether `internal/{domain,application,adapters}/` exists → is it DDD+Hexagonal
+   - Whether `internal/{domain,application,adapters}/` exists → is it DDD+Clean Architecture
    - Number of existing commits → whether initial setup is needed
 5. **If an existing plan file (`<ticket-slug>.md` in the per-project plans dir = `~/.claude/projects/<encoded>/plans/<ticket-slug>.md`; see "Where to save plan / session state files" in CLAUDE.md) exists, Read it and carry over the state** (pick up Confirmed decisions / Spec deviations / Current state). If it doesn't exist, create a new one during the planning phase.
 
