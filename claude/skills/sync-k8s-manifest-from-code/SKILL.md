@@ -1,126 +1,128 @@
 ---
 name: sync-k8s-manifest-from-code
-description: code repo (Go application) の interface 変更 (config / env / port / probe / resources) を K8s Kustomize manifest repo に伝播する (検出 + 3 環境 Edit + git add まで。commit & push はしない)。「manifest 同期」「config / env 変えたから manifest 直して」等で起動。対象 repo 情報は MEMORY.md の reference memory から取得する。
+description: Propagates interface changes (config / env / port / probe / resources) in a code repo (Go application) to the K8s Kustomize manifest repo (through detection + edits across 3 environments + `git add`; does not commit or push). Triggered by 「manifest 同期」「config / env 変えたから manifest 直して」 etc. Target repo information is fetched from the reference memory in MEMORY.md.
 allowed-tools: Read, Edit, Grep, Glob, Bash(git status:*, git diff:*, git add:*, ls:*, find:*, cat:*)
 ---
 
+> **Source of truth:** `claude/ja/skills/sync-k8s-manifest-from-code/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
+
 # sync-k8s-manifest-from-code
 
-application code repo と K8s Kustomize manifest repo が分離されている運用で、**code → manifest 方向** の sync (検出 → Edit → stage) を半自動化する skill。逆方向 (manifest → code) は対象外。
+A skill that semi-automates **code → manifest direction** sync (detect → Edit → stage) for setups where the application code repo and the K8s Kustomize manifest repo are separate. The reverse direction (manifest → code) is out of scope.
 
-## 適用パターン
+## Applicable pattern
 
-以下に該当する project を想定:
+Assumes a project matching the following:
 
-- code repo に YAML config schema (struct) を持ち、**unknown field を起動時 reject** する設計 (= ConfigMap drift が即 crash につながる)
-- env (機密 / 非機密) を起動時に required 検証 (= env 不足で `os.Exit(1)`)
-- manifest repo は Kustomize `bases/` (= prod SoT) + `overlays/{dev, stg, ...}/` の構成
-- 1 service あたり `config/{app.yaml, config.env, sealed-secret.yaml, secret.yaml}` のような config 分離
+- The code repo has a YAML config schema (struct) with a design that **rejects unknown fields at startup** (i.e., ConfigMap drift immediately causes a crash)
+- Required env vars (both secret and non-secret) are validated at startup (i.e., missing env vars cause `os.Exit(1)`)
+- The manifest repo is structured as Kustomize `bases/` (= prod source of truth) + `overlays/{dev, stg, ...}/`
+- Each service has config split like `config/{app.yaml, config.env, sealed-secret.yaml, secret.yaml}`
 
-## 起動時の対象 project 解決 (重要)
+## Resolving the target project at startup (important)
 
-global skill なので **project 固有用語を本 SKILL.md に hardcode しない**。起動時、対象 project の以下を MEMORY.md の reference memory から取得する:
+This is a global skill, so **project-specific terms are not hardcoded into this SKILL.md**. At startup, fetch the following about the target project from the reference memory in MEMORY.md:
 
-| 取得項目 | 例 |
+| Item to fetch | Example |
 |---|---|
 | code repo path | `~/.../some-code-repo` |
 | manifest repo path + service directory | `~/.../some-mani-repo/<service-dir>` |
-| config schema 位置 | `internal/config/config.go` |
-| env 定義位置 | `internal/config/secrets.go` |
+| config schema location | `internal/config/config.go` |
+| env definition location | `internal/config/secrets.go` |
 | config example | `cmd/<binary>/config.example.yaml` |
-| binaries (sync 動作) | `[<A>: full sync, <B>: detect-warn]` |
-| overlay 構成 | `[bases, overlays/dev, overlays/stg, ...]` |
-| 制約 / 順序 | manifest 先行 → code 後追い マスト 等 |
+| binaries (sync behavior) | `[<A>: full sync, <B>: detect-warn]` |
+| overlay structure | `[bases, overlays/dev, overlays/stg, ...]` |
+| constraints / ordering | e.g., manifest-first → code-follows is mandatory |
 
-対応する reference memory が見つからない場合、user に質問して取得 → reference memory として保存する候補を提示する (即書きはしない、user 承認を取る)。
+If no corresponding reference memory is found, ask the user to obtain the information → propose it as a candidate to save as reference memory (don't write it immediately; get user approval first).
 
-参照可能な reference memory の例:
-- 例: `[[<service>-sync]]` のような reference memory
+Example of a reference memory you might refer to:
+- e.g., a reference memory like `[[<service>-sync]]`
 
-## 検出ロジック (project-agnostic)
+## Detection logic (project-agnostic)
 
-reference memory から得た位置情報を元に、code repo の以下を読む (priority 順):
+Based on the location information obtained from reference memory, read the following in the code repo (in priority order):
 
-1. **config struct (YAML schema)** の field 追加 / 変更 / 削除
-   - 反映先: 全 overlay の `config/app.yaml`
-   - unknown field reject 設計なら **manifest 先行マスト**
-2. **env 定義** (required env 追加 / rename / 削除)
-   - 反映先 (機密): `config/sealed-secret.yaml` (envFrom) の key、または `config/secret.yaml` の key
-   - 反映先 (非機密): `config/config.env`
-   - 未設定で起動失敗する設計なら **manifest 先行マスト**
-3. **config example** の値 / 構造変更
-   - 反映先: 各環境 `config/app.yaml` の対応 key
-4. **main.go の listen port / probe endpoint**
-   - 反映先: `bases/deployment.yaml` (containerPort, livenessProbe, readinessProbe) + `bases/svc.yaml` (port)
-5. **resource consumption に効く変更** (heavy lib 追加 / 大 cache / 大 buffer / 並列度変更)
-   - 反映先候補: `bases/{deployment, hpa, pdb}.yaml`
-   - **数値は user 判断必須** (skill は flag のみ、自動で決めない)
+1. Fields added / changed / removed in the **config struct (YAML schema)**
+   - Propagates to: `config/app.yaml` in all overlays
+   - If the design rejects unknown fields, **manifest-first is mandatory**
+2. **Env definitions** (required env added / renamed / removed)
+   - Propagates to (secret): the key in `config/sealed-secret.yaml` (envFrom), or the key in `config/secret.yaml`
+   - Propagates to (non-secret): `config/config.env`
+   - If the design fails to start when unset, **manifest-first is mandatory**
+3. Value / structure changes in the **config example**
+   - Propagates to: the corresponding key in `config/app.yaml` for each environment
+4. **Listen port / probe endpoint in main.go**
+   - Propagates to: `bases/deployment.yaml` (containerPort, livenessProbe, readinessProbe) + `bases/svc.yaml` (port)
+5. **Changes affecting resource consumption** (adding a heavy library / large cache / large buffer / changing parallelism)
+   - Candidate propagation targets: `bases/{deployment, hpa, pdb}.yaml`
+   - **Numeric values require user judgment** (the skill only flags; it never decides automatically)
 6. **proto / API listen port** (gRPC / REST)
-   - 反映先: `bases/{deployment, svc}.yaml` ports
-7. **`go.mod` の major dep 追加** (Redis / DB / 外部 API client 等)
-   - 反映先: NetworkPolicy (無ければ flag のみ) / Secret (新規認証情報があれば key 追加)
-8. **detect-warn 指定 binary** (reference memory で指定) の変更
-   - 検出のみ、Edit しない、warn 出力
-9. **新規 binary** (`cmd/<new>/` の新規追加)
-   - 検出のみ、新規 directory 初期化は対象外、warn 出力
+   - Propagates to: `bases/{deployment, svc}.yaml` ports
+7. **Major dependency added to `go.mod`** (Redis / DB / external API client, etc.)
+   - Propagates to: NetworkPolicy (flag only if absent) / Secret (add a key if new credentials are involved)
+8. Changes to a **binary designated detect-warn** (as specified in reference memory)
+   - Detection only, no Edit, emit a warning
+9. **New binary** (a new addition under `cmd/<new>/`)
+   - Detection only; initializing a new directory is out of scope; emit a warning
 
-## 動作フロー
+## Operation flow
 
-1. **pre-check**
-   - manifest repo の working tree が **clean** か `git status` で確認 (dirty なら停止、他作業に混ぜない)
-   - code repo の対象 ref (default = working tree HEAD) を確認
-   - reference memory から対象 project 解決
-2. **detect**
-   - 上記検出ロジックで差分を抽出
-   - 結果を要約 table (どのカテゴリ / どの値 / 反映先候補) で出力
-3. **plan-present (user 承認待ち)**
-   - 反映先候補を提示
-   - 触る overlay の選定が分岐する項目 (resource 等) は **比較形式で user 判断** を仰ぐ
-   - **manifest 先行 → code 後追いの順序** を必ず user に明示 (env / unknown field 追加時は強調)
-4. **edit**
-   - 承認された変更を manifest repo の working tree に Edit
-   - 既存 YAML / sealed-secret の indent / 順序 / コメントを保持
-   - 既存 overlay override (`bases/` の値を overlay が上書きしているもの) を尊重
-5. **stage**
-   - 触ったファイルだけ specific path で `git add` (guard-bash.sh hook が `git add -A` / `git add .` を deny)
-6. **stop**
-   - `git diff --staged` の summary を出力
-   - skill はここで停止、user が確認 → `/commit-push-branch` で別途 commit & push
+1. **Pre-check**
+   - Confirm the manifest repo's working tree is **clean** via `git status` (stop if dirty, don't mix in other work)
+   - Confirm the target ref of the code repo (default = working tree HEAD)
+   - Resolve the target project from reference memory
+2. **Detect**
+   - Extract differences using the detection logic above
+   - Output the results as a summary table (which category / which value / candidate propagation target)
+3. **Plan-present (waiting for user approval)**
+   - Present the candidate propagation targets
+   - For items where the choice of overlay to touch branches (e.g., resources), ask the **user to decide, presented in comparison form**
+   - Always make the **manifest-first → code-follows ordering** explicit to the user (emphasize it when adding env vars / unknown fields)
+4. **Edit**
+   - Edit the approved changes into the manifest repo's working tree
+   - Preserve the existing YAML / sealed-secret indentation, ordering, and comments
+   - Respect existing overlay overrides (where an overlay overrides a value from `bases/`)
+5. **Stage**
+   - `git add` only the touched files, by specific path (the guard-bash.sh hook denies `git add -A` / `git add .`)
+6. **Stop**
+   - Output a summary of `git diff --staged`
+   - The skill stops here; after the user reviews → commit & push separately via `/commit-push-branch`
 
-## 制約 / 対象外
+## Constraints / out of scope
 
-| 項目 | 扱い |
+| Item | Treatment |
 |---|---|
-| commit / push / PR 作成 | **絶対実行しない**。allowed-tools に `git push` / `gh` を含めない |
-| kubeseal (SealedSecret 値暗号化) | 対象外。key の追加までを行い、値は user が後で kubeseal |
-| 新規 binary 用 directory 初期化 | 対象外。warn のみ |
-| 逆方向 sync (manifest → code) | 別 skill 扱い (例: `.upstream-sha` 系の運用) |
-| resource 数値の自動決定 | 対象外。heuristic で flag のみ、最終値は user 決定 |
+| commit / push / PR creation | **Never executed under any circumstance.** `git push` / `gh` are not included in allowed-tools |
+| kubeseal (SealedSecret value encryption) | Out of scope. Only adds the key; the user runs kubeseal on the value later |
+| Directory initialization for a new binary | Out of scope. Warning only |
+| Reverse sync (manifest → code) | Treated as a separate skill (e.g., `.upstream-sha`-based operations) |
+| Automatically deciding resource numbers | Out of scope. Heuristic flagging only; the user decides the final values |
 
-## 検出漏れの扱い
+## Handling detection gaps
 
-検出は heuristic なので、出力末尾に **「拾えなかった可能性のある領域」** を必ず明示する:
+Detection is heuristic, so always state explicitly at the end of the output **"areas that may not have been caught"**:
 
-- 新規 volume mount / hostAlias / annotation
-- NetworkPolicy / PodSecurityContext / SecurityContext 細部
-- Sidecar / init container 追加
-- annotation ベースの動作変更 (Argo Rollouts, Linkerd, Istio 等)
+- New volume mounts / hostAlias / annotations
+- NetworkPolicy / PodSecurityContext / SecurityContext details
+- Sidecar / init container additions
+- Annotation-based behavior changes (Argo Rollouts, Linkerd, Istio, etc.)
 
-"他にも影響箇所があるかも、目視確認推奨" を 1 行で添える。
+Add a one-line note: "there may be other affected areas; a visual check is recommended."
 
-## 失敗時の停止条件 (勝手に進まない)
+## Stop conditions on failure (don't proceed unilaterally)
 
-以下を検出したら **stop + user 報告**:
+If any of the following are detected, **stop and report to the user**:
 
-- manifest repo の working tree が dirty
-- code repo / manifest repo の path が解決できない (reference memory が無い / path が変わった)
-- 反映先ファイルが存在しない (overlay 構成が想定と違う)
-- security 観点で要 user 確認の変更 (`Action: "*"` / `privileged` / `hostNetwork` / `hostPID` / public exposure 拡張 / SA に大きい role 付与)
-- SealedSecret の **値** (encrypted) 変更が必要
-- detect-warn 指定 binary 単独の変更だが、full sync 対象 binary に影響が及ぶ可能性
+- The manifest repo's working tree is dirty
+- The code repo / manifest repo path cannot be resolved (no reference memory / the path has changed)
+- The propagation target file doesn't exist (the overlay structure differs from what was expected)
+- A change requiring user confirmation on security grounds (`Action: "*"` / `privileged` / `hostNetwork` / `hostPID` / expanding public exposure / granting a broad role to a service account)
+- The SealedSecret's **value** (encrypted) needs to change
+- A change limited to a detect-warn-designated binary that could still affect a full-sync-target binary
 
-## 関連
+## Related
 
-- 対象 project の reference memory (例 `[[<service>-sync]]`) — repo path / config 位置 / binary を保持
-- `commit-push-branch` skill — 本 skill 完了後の commit & push (branch 切り + 過去スタイル踏襲)
-- `security-review-local` skill — manifest 編集後の security 観点 review (推奨併用)
+- The target project's reference memory (e.g., `[[<service>-sync]]`) — holds repo path / config location / binaries
+- `commit-push-branch` skill — commit & push after this skill completes (cutting a branch + following past style)
+- `security-review-local` skill — security-perspective review after editing the manifest (recommended to use together)

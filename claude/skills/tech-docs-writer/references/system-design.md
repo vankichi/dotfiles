@@ -1,24 +1,26 @@
-# システム設計ドキュメント (arc42 + C4 + MADR)
+# System Design Document (arc42 + C4 + MADR)
 
-システム/サブシステム全体の設計を記述する。単一の意思決定を書く場合は ADR (`adr.md`) を使うこと。
+> **Source of truth:** `claude/ja/skills/tech-docs-writer/references/system-design.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
-デファクト組み合わせ:
-- 骨格: arc42 (12セクションテンプレート)
-- 図: C4 Model (Context/Container/Component/Deployment の4層)
-- 意思決定: MADR (§9 に埋め込み or ADRファイルへのリンク)
+Describes the design of an entire system or subsystem. Use an ADR (`adr.md`) when documenting a single decision.
 
-## 必須ヒアリング項目
+De facto combination:
+- Skeleton: arc42 (12-section template)
+- Diagrams: C4 Model (4 layers: Context/Container/Component/Deployment)
+- Decisions: MADR (embedded in §9, or linked to an ADR file)
 
-- システム名
-- 目的 (解決する課題を1〜3文で)
-- 主要ステークホルダー (開発チーム/運用/Biz/外部ユーザー)
-- 主要な品質要件 (NFR) 3つ以上 — 測定可能な値で (例: P99レイテンシ100ms)
-- 主要な制約 (既存インフラ/予算/期日/規制)
-- 既に決まっている技術スタック (あれば)
+## Required interview items
 
-品質要件が測定可能な値で出てこない場合は書き始めない。「高速」「安定」だけでは検証できない。
+- System name
+- Purpose (the problem being solved, in 1-3 sentences)
+- Key stakeholders (dev team / operations / biz / external users)
+- 3 or more key quality requirements (NFRs) — as measurable values (e.g., P99 latency 100ms)
+- Key constraints (existing infrastructure / budget / deadline / regulations)
+- Technology stack already decided (if any)
 
-## テンプレート本文
+Do not start writing if quality requirements cannot be expressed as measurable values. 「高速」 (fast) or 「安定」 (stable) alone cannot be verified.
+
+## Template body
 
 ```markdown
 # <システム名> アーキテクチャ設計書
@@ -263,30 +265,30 @@ flowchart TB
 | <用語A> | <ドメイン固有の定義> |
 ```
 
-## 書き方のコツ
+## Writing tips
 
-1. §10 品質要件は必ず測定可能な値で書く。「十分なパフォーマンス」は品質要件ではない。シナリオID (P-1, A-1) を振って、後から SLO/SLI と紐付けられるようにする。
-2. §9 は ADR へのリンク集に徹する。ここで設計を議論しない。議論は別ADRで。
-3. 図は C4 の粒度を守る。Container図にクラス名を書かない(Component/Code図の仕事)。Mermaidなら `flowchart` と `sequenceDiagram` を使い分ける。
-4. §5 Building Block View は階層を守る。Level 2(Container) → Level 3(Component) の順。いきなりクラス図から始めない。
-5. Draft → In Review → Approved の Status 遷移を明記し、レビュー前/後を区別する。
+1. Always write §10 Quality Requirements as measurable values. 「十分なパフォーマンス」 (sufficient performance) is not a quality requirement. Assign scenario IDs (P-1, A-1) so they can later be tied to SLOs/SLIs.
+2. Keep §9 strictly as a collection of links to ADRs. Don't discuss the design here — discussion belongs in a separate ADR.
+3. Keep diagrams at the correct C4 granularity. Don't put class names in a Container diagram (that's the job of a Component/Code diagram). In Mermaid, use `flowchart` and `sequenceDiagram` appropriately for each purpose.
+4. Respect the hierarchy in §5 Building Block View: Level 2 (Container) → Level 3 (Component), in that order. Don't start straight from a class diagram.
+5. Clearly state the Status transition Draft → In Review → Approved, distinguishing before/after review.
 
-## ADRとの棲み分け
+## Division of labor with ADR
 
-| 書きたいもの | どこに |
+| What you want to write | Where |
 |-------------|--------|
-| 「なぜ X を選んだか」 (単一の決定) | ADR (`docs/adr/NNNN-...md`) |
-| 「このシステム全体がどう動くか」 | システム設計書 (このテンプレ) |
-| 「システム設計書に影響する新しい決定」 | まず ADR を書き、§9 にリンクして設計書を更新 |
+| 「なぜ X を選んだか」 (a single decision) | ADR (`docs/adr/NNNN-...md`) |
+| 「このシステム全体がどう動くか」 | System design document (this template) |
+| 「システム設計書に影響する新しい決定」 | First write an ADR, then link it in §9 and update the design document |
 
-## 保存先
+## Save location
 
 - `docs/design/<system-name>.md`
-- サブシステムがあれば `docs/design/<system-name>/<subsystem>.md`
+- If there are subsystems: `docs/design/<system-name>/<subsystem>.md`
 
-## 参考
+## References
 
-- arc42 公式: https://arc42.org/
-- arc42 テンプレート: https://github.com/arc42/arc42-template
+- arc42 official site: https://arc42.org/
+- arc42 template: https://github.com/arc42/arc42-template
 - C4 Model: https://c4model.com/
 - MADR: https://adr.github.io/madr/

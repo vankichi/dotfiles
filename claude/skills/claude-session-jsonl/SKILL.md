@@ -1,57 +1,59 @@
 ---
 name: claude-session-jsonl
-description: Claude Code のセッションログ (~/.claude/projects/**/*.jsonl) のスキーマ参照と、token / cost / tool 集計 tool を作るレシピ。「Claude の使用状況を観測したい」「セッションログから集計」「ccusage 相当を作る」「JSONL の中身教えて」等で使う。言語別サンプル parser は references/ にある。
+description: Schema reference for Claude Code session logs (~/.claude/projects/**/*.jsonl), plus a recipe for building token / cost / tool aggregation tools. Use for 「Claude の使用状況を観測したい」「セッションログから集計」「ccusage 相当を作る」「JSONL の中身教えて」, etc. Language-specific sample parsers live in references/.
 ---
+
+> **Source of truth:** `claude/ja/skills/claude-session-jsonl/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
 # claude-session-jsonl
 
-Claude Code がローカルに残すセッションログ (JSONL) の構造を **正確に** 知っていることを前提にした集計 tool は何度も書きたくなる (ccwatch / ccusage / cclog / ccexport ...)。毎回手で `head -1 *.jsonl | jq` から始めると時間が溶けるので、確認済みのスキーマと典型的な落とし穴を 1 箇所に固める。
+You'll find yourself wanting to write aggregation tools that assume **precise** knowledge of the structure of the session logs (JSONL) that Claude Code leaves on disk, over and over again (ccwatch / ccusage / cclog / ccexport ...). Starting from scratch each time with `head -1 *.jsonl | jq` burns time, so this consolidates the verified schema and the typical pitfalls in one place.
 
-> **Snapshot**: 2026-04 時点 / Claude Code 2.1.x が書き出す JSONL を観測してまとめたもの。
-> Claude Code がスキーマを更新したら (event type 増加、usage フィールド変更等) ここも更新。
-> 単価表は Anthropic の公式ページが原本、ここはキャッシュ。
+> **Snapshot**: As of 2026-04 / compiled by observing the JSONL that Claude Code 2.1.x writes out.
+> When Claude Code updates the schema (new event types, changed usage fields, etc.), update this too.
+> The pricing table's source of truth is Anthropic's official page; this is just a cache.
 
-## いつ使うか
+## When to use this
 
 - 「Claude の使用状況を tool 化したい」
 - 「セッション jsonl をパースして X を出したい」
 - 「ccusage / ccwatch みたいなのを別言語で作りたい」
 - 「context window 使用率を計算したい」
 
-実装言語は問わない (Rust / TypeScript / Python が主)。本 skill はスキーマ説明 + 設計判断 + 各言語の最小 parser を提供する。**実装そのものは別の手段** (`/rust-bootstrap` → `/add-rust-crate` → 実装 / TS なら手作業) に渡す。
+The implementation language doesn't matter (mainly Rust / TypeScript / Python). This skill provides the schema explanation, design decisions, and a minimal parser for each language. **The actual implementation is handed off to a separate means** (`/rust-bootstrap` → `/add-rust-crate` → implementation, or manual work for TS).
 
-## ファイル配置
+## File layout
 
 ```
 ~/.claude/projects/<encoded-cwd>/<session-uuid>.jsonl
 ```
 
-- **`<encoded-cwd>`** は `cwd` の `/` を `-` に置換した文字列。例: `/Users/foo/repo` → `-Users-foo-repo`
-- **`<session-uuid>`** は v4 UUID (例: `ec65e22c-0dab-4eff-b119-c2e2cb02aa8a`)
-- 1 ファイル = 1 セッション。`/clear` で新ファイル
-- 同 cwd で複数セッションが共存しうる (古い + 進行中)
-- ファイルは **append-only**。途中行の書き換えは原則ない (rotation は新 UUID 別ファイル化)
+- **`<encoded-cwd>`** is the `cwd` string with `/` replaced by `-`. Example: `/Users/foo/repo` → `-Users-foo-repo`
+- **`<session-uuid>`** is a v4 UUID (e.g., `ec65e22c-0dab-4eff-b119-c2e2cb02aa8a`)
+- 1 file = 1 session. `/clear` starts a new file
+- Multiple sessions can coexist for the same cwd (an old one plus one in progress)
+- Files are **append-only**. Lines already written are, in principle, never rewritten (rotation happens by creating a separate file with a new UUID)
 
-最新セッションを拾う = 「**最終更新時刻 (`mtime`) が一番新しい `*.jsonl`**」を取れば良い。
+To pick up the latest session, just take the **`*.jsonl` file with the most recent modification time (`mtime`)**.
 
-## スキーマ (event types)
+## Schema (event types)
 
-各行は 1 つの JSON オブジェクト。`type` フィールドで分岐。
+Each line is a single JSON object. It branches on the `type` field.
 
-| `type` | 用途 | 集計に使う? |
+| `type` | Purpose | Used in aggregation? |
 |---|---|---|
-| `assistant` | アシスタント発話 (token usage / tool 呼び出し / model 名がここ) | **YES (主役)** |
-| `user` | ユーザ発話 / コマンド出力 (`/`-command の caveat 含む) | 必要なら |
-| `system` | システムメッセージ (slash command の stdout 等) | 通常不要 |
-| `attachment` | 添付/イベント (deferred tool delta 等) | 通常不要 |
-| `file-history-snapshot` | ファイル履歴スナップショット (Edit のロールバック用) | 不要 |
-| `last-prompt` | 最後の user prompt (再生成用キャッシュ) | 不要 |
+| `assistant` | Assistant utterances (token usage / tool calls / model name live here) | **YES (the main one)** |
+| `user` | User utterances / command output (includes `/`-command caveats) | If needed |
+| `system` | System messages (slash command stdout, etc.) | Usually not needed |
+| `attachment` | Attachments/events (deferred tool deltas, etc.) | Usually not needed |
+| `file-history-snapshot` | File history snapshot (for Edit rollback) | Not needed |
+| `last-prompt` | The last user prompt (cache for regeneration) | Not needed |
 
-**他の type が出ても無視する** (`#[serde(other)]` / catch-all) のが正解。Claude Code の更新で新 type が増えたとき壊れない。
+**Ignoring any other type that shows up** (`#[serde(other)]` / catch-all) is the correct approach. This way things don't break when a Claude Code update adds new types.
 
-## 集計に必須: `assistant` event
+## Required for aggregation: the `assistant` event
 
-形 (一部省略):
+Shape (partially abbreviated):
 
 ```json
 {
@@ -88,28 +90,28 @@ Claude Code がローカルに残すセッションログ (JSONL) の構造を *
 }
 ```
 
-### 重要フィールド
+### Key fields
 
-| パス | 型 | 用途 |
+| Path | Type | Purpose |
 |---|---|---|
-| `message.model` | string | 例: `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`. 大文字小文字混在 (`[1m]` で 1M context variant) |
-| `message.usage.input_tokens` | u64 | このターンで billable な新規 input |
-| `message.usage.output_tokens` | u64 | アシスタント生成の output |
-| `message.usage.cache_creation_input_tokens` | u64 | キャッシュ書き込み合計 (5min + 1hr) |
-| `message.usage.cache_creation.ephemeral_5m_input_tokens` | u64 | 5min ephemeral 書き込み (1.25× input) |
-| `message.usage.cache_creation.ephemeral_1h_input_tokens` | u64 | 1hr ephemeral 書き込み (**2.00× input**) |
-| `message.usage.cache_read_input_tokens` | u64 | キャッシュヒット (最安, 0.10× input) |
-| `message.content[].type` | string | `tool_use` / `text` / `thinking` ほか |
-| `message.content[].name` | string | `tool_use` 限定。`Bash` / `Edit` / `Read` / `Grep` / `Write` / `Agent` / `WebFetch` 等 |
-| `timestamp` | RFC3339 string | レイテンシ計算 / sliding window / active 検出 |
+| `message.model` | string | Examples: `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`. Casing varies (`[1m]` marks the 1M context variant) |
+| `message.usage.input_tokens` | u64 | New billable input for this turn |
+| `message.usage.output_tokens` | u64 | Output generated by the assistant |
+| `message.usage.cache_creation_input_tokens` | u64 | Total cache writes (5min + 1hr) |
+| `message.usage.cache_creation.ephemeral_5m_input_tokens` | u64 | 5min ephemeral write (1.25× input) |
+| `message.usage.cache_creation.ephemeral_1h_input_tokens` | u64 | 1hr ephemeral write (**2.00× input**) |
+| `message.usage.cache_read_input_tokens` | u64 | Cache hit (cheapest, 0.10× input) |
+| `message.content[].type` | string | `tool_use` / `text` / `thinking`, among others |
+| `message.content[].name` | string | Only present for `tool_use`. `Bash` / `Edit` / `Read` / `Grep` / `Write` / `Agent` / `WebFetch`, etc. |
+| `timestamp` | RFC3339 string | For latency calculations / sliding window / active-session detection |
 
-> ⚠ `cache_creation_input_tokens` (top-level 合計) と `cache_creation.{5m,1h}` (内訳) の両方が出る。**コスト計算には内訳を使うこと**。Claude Code の実セッションは現在ほぼ全部 1hr ephemeral で、この差は数十%以上のコスト誤差になる。
+> ⚠ Both `cache_creation_input_tokens` (the top-level total) and `cache_creation.{5m,1h}` (the breakdown) appear. **Use the breakdown for cost calculations**. In real Claude Code sessions today, almost everything is 1hr ephemeral, and this difference produces a cost error of tens of percent or more.
 
-### 派生量 (頻出)
+### Derived quantities (frequently used)
 
 ```
 context_size       = input_tokens + cache_creation_input_tokens + cache_read_input_tokens
-context_window     = 200_000 (default) | 1_000_000 (model 名に [1m] / -1m)
+context_window     = 200_000 (default) | 1_000_000 (when the model name contains [1m] / -1m)
 context_pct        = min(context_size / context_window, 1.0)
 cache_hit_ratio    = cache_read_input_tokens / context_size
 session_cost_usd   = sum over assistants of pricing(model).cost_usd(usage)
@@ -117,9 +119,9 @@ tokens_per_minute  = (input + output + cache_creation) / elapsed_secs * 60
 cost_per_hour      = session_cost_usd / elapsed_secs * 3600
 ```
 
-## モデル別単価 (USD per million tokens, 2026-04 時点)
+## Per-model pricing (USD per million tokens, as of 2026-04)
 
-> ⚠ Anthropic のページで定期的に更新される値。tool 化したらコメントで「2026-04 時点」を残し、ハードコードを 1 箇所に集約 (例: `pricing.rs`) しておくこと。
+> ⚠ These figures are updated periodically on Anthropic's page. Once you turn this into a tool, leave a comment noting "as of 2026-04" and consolidate the hardcoded values into one place (e.g., `pricing.rs`).
 
 | family | input | output | cache_w 5min | cache_w 1hr | cache_read |
 |---|---:|---:|---:|---:|---:|
@@ -127,7 +129,7 @@ cost_per_hour      = session_cost_usd / elapsed_secs * 3600
 | Sonnet | 3.00 | 15.00 | 3.75 | 6.00 | 0.30 |
 | Haiku | 1.00 | 5.00 | 1.25 | 2.00 | 0.10 |
 
-cost 計算式:
+Cost formula:
 
 ```
 cost = input × input_rate
@@ -137,67 +139,67 @@ cost = input × input_rate
      + cache_read × cache_read_rate
 ```
 
-`cache_creation` フィールドが欠けている古いログは「全部 5min」とみなしてフォールバックすると後方互換が取れる。
+For old logs missing the `cache_creation` field, falling back to treating everything as all-5min keeps things backward compatible.
 
-未知モデル名は **Sonnet にフォールバック** が無難 (中間値・現行 default tier)。
+For unknown model names, **falling back to Sonnet** is a safe default (it's the middle value and the current default tier).
 
-## 設計判断 — 落とし穴と推奨
+## Design decisions — pitfalls and recommendations
 
-1. **ファイル監視は poll-based + reopen + seek + read_to_end + remainder buffer**。`notify` crate は append-only ログには rotation/atomic-replace でハマるので避ける。`tokio::io::BufReader::lines()` over manually-seeked file も EOF 扱いが面倒で結局再 seek が要る。**自前 200ms ポーリング + `\n` で split が最もロバスト**。
-2. **行は `\n` で確実に区切られる**。途中で UTF-8 codepoint が割れる心配は不要 (codepoint は完結状態で書き込まれる)。
-3. **ファイル shrink (≒ rotation) で offset を 0 に reset**。`/clear` 等で新ファイル化されると別 UUID なので、watcher は「新しい mtime のファイルを再選択」する設計が良い (本 skill 範囲外)。
-4. **`last-prompt` は最終 prompt のキャッシュ用**で集計には使わない (内容は user 発話と重複)。
-5. **`thinking` ブロックの token 数は `output_tokens` に含まれている** (別カウントしない)。
-6. **`iterations` 配列**は server-side の細分化情報。集計では一番外の `usage` を信用すれば十分。
-7. **model 名の判定は `to_ascii_lowercase().contains("opus" | "sonnet" | "haiku")`** で family を取る。完全一致は壊れる (`claude-opus-4-7`, `claude-opus-4-7[1m]`, `claude-3-opus-...` 等が混在)。
-8. **encoded-cwd を逆引きする必要があるか?** ある (どのリポジトリのセッションか表示する場合)。`-` を `/` に戻すだけだが、もとの cwd に `-` が含まれていた場合は不可逆 — `assistant.cwd` が原本としてイベント内に入っているのでそちらを参照するのが安全。
-9. **集計はセッション単位** が基本。「全セッション横断で today の累計コスト」を出したい場合は `<projects-dir>/**/*.jsonl` の各ファイル全行を読み、`timestamp` で当日フィルタ → usage 合算する (重め)。
+1. **File watching should be poll-based + reopen + seek + read_to_end + a remainder buffer**. Avoid the `notify` crate — it trips over rotation/atomic-replace on append-only logs. `tokio::io::BufReader::lines()` over a manually-seeked file is also a pain around EOF handling and ends up needing re-seeking anyway. **A homegrown 200ms poll + splitting on `\n` is the most robust approach**.
+2. **Lines are reliably delimited by `\n`**. No need to worry about a UTF-8 codepoint being split mid-write (codepoints are written atomically as complete units).
+3. **On file shrink (≈ rotation), reset the offset to 0**. Since operations like `/clear` create a new file under a different UUID, the watcher should be designed to "re-select the file with the newest mtime" (out of scope for this skill).
+4. **`last-prompt` is a cache of the final prompt** and isn't used for aggregation (its content duplicates the user utterance).
+5. **The token count of `thinking` blocks is included in `output_tokens`** (don't count it a second time).
+6. **The `iterations` array** is server-side breakdown information. For aggregation, trusting the outermost `usage` is sufficient.
+7. **Determine the model family via `to_ascii_lowercase().contains("opus" | "sonnet" | "haiku")`**. Exact matching breaks, since `claude-opus-4-7`, `claude-opus-4-7[1m]`, `claude-3-opus-...`, etc. all coexist.
+8. **Do you ever need to reverse the encoded-cwd?** Yes (when displaying which repository a session belongs to). It's just converting `-` back to `/`, but this is irreversible if the original cwd itself contained a `-` — since `assistant.cwd` is included in the event as the original source, referencing that is safer.
+9. **Aggregation is fundamentally per-session**. If you want to produce "cumulative cost for today across all sessions," you have to read every line of every file under `<projects-dir>/**/*.jsonl`, filter to the current day via `timestamp`, and then sum the usage (this is heavy).
 
-## 最小 parser (言語別)
+## Minimal parsers (by language)
 
-実装言語が決まったら **該当する reference だけ** Read する (全言語を読まない):
+Once you've settled on an implementation language, **Read only the matching reference** (don't read all of them):
 
-| 言語 | reference | 要点 |
+| Language | reference | Key points |
 |---|---|---|
 | Rust | `references/parser-rust.md` | serde tagged enum + `#[serde(other)]` catch-all |
 | TypeScript | `references/parser-typescript.md` | zod discriminatedUnion + catch-all |
-| Python | `references/parser-python.md` | dict ベース + dataclass Usage |
+| Python | `references/parser-python.md` | dict-based + a dataclass for Usage |
 
-## 動作確認用コマンド
+## Commands for sanity-checking behavior
 
 ```bash
-# セッションファイル一覧 (最新順)
+# List session files (newest first)
 ls -lt ~/.claude/projects/*/  | head -20
 
-# 最新ファイルの event type 分布
+# Event type distribution in the latest file
 jq -r .type < $(ls -t ~/.claude/projects/*/*.jsonl | head -1) | sort | uniq -c
 
-# 最新ファイルの usage を 1 行ずつ
+# Usage from the latest file, one line at a time
 jq -c 'select(.type=="assistant") | {model: .message.model, usage: .message.usage}' \
    < $(ls -t ~/.claude/projects/*/*.jsonl | head -1) | head -3
 
-# 当日全セッションのモデル別 output_tokens 合計
+# Total output_tokens by model, across all of today's sessions
 jq -r 'select(.type=="assistant" and .timestamp > "'$(date -u +%Y-%m-%d)'") |
        [.message.model, .message.usage.output_tokens] | @tsv' \
        ~/.claude/projects/*/*.jsonl |
   awk -F'\t' '{m[$1]+=$2} END {for (k in m) printf "%-30s %d\n", k, m[k]}'
 ```
 
-## 鉄則
+## Ironclad rules
 
-1. **未知 type は捨てる**。Claude Code の更新で増えても壊さない設計を default にする
-2. **`thinking` は output_tokens に含まれている**。二重カウントしない
-3. **モデル名判定は substring で family を取る**。完全一致しない
-4. **単価表は 1 箇所に集中**。「2026-04 時点」のコメント必須
-5. **集計はファイル単位 → セッション単位**。複数日にまたがる解析でも `timestamp` フィルタを先にかける
-6. **read-only**。本 skill のコードはセッションファイルを書き換えない (検証用 jq も読み取りのみ)
+1. **Discard unknown types**. Default to a design that doesn't break when Claude Code updates add more of them.
+2. **`thinking` is included in output_tokens**. Don't count it twice.
+3. **Determine the model family by substring**. Never rely on exact matches.
+4. **Keep the pricing table centralized in one place**. A comment noting "as of 2026-04" is mandatory.
+5. **Aggregate per-file → per-session**. Even for analysis spanning multiple days, apply the `timestamp` filter first.
+6. **Read-only**. This skill's code never rewrites session files (the verification `jq` commands are also read-only).
 
-## アンチパターン
+## Anti-patterns
 
-- **`notify` crate でログ tail**: rotation で取りこぼす
-- **`type` を完全一致で enum 解釈**: 未知 type で panic / unwrap
-- **`assistant` 以外の event の `usage` を読む**: そもそも存在しない
-- **モデル名を完全一致で hash 引き**: バージョン suffix で全部 miss
-- **`cache_*` を input_tokens に含める計算**: 単価が違う 4 種を混ぜると 5x 程度のずれが出る
-- **encoded-cwd を逆引きで cwd 復元**: `-` の曖昧さで誤動作。`assistant.cwd` を読む
-- **`read_to_string` でファイル丸ごと**: 大きなセッションでメモリ膨張。`BufReader` + line iter でストリーム
+- **Tailing the log with the `notify` crate**: drops events due to rotation
+- **Parsing `type` into an enum via exact matching**: panics / unwraps on unknown types
+- **Reading `usage` from events other than `assistant`**: it simply doesn't exist there
+- **Hashing model names via exact match**: version suffixes cause everything to miss
+- **Folding `cache_*` into the input_tokens calculation**: mixing 4 rates that differ produces roughly a 5x discrepancy
+- **Recovering cwd by reverse-decoding encoded-cwd**: malfunctions due to `-` ambiguity. Read `assistant.cwd` instead
+- **Loading the whole file with `read_to_string`**: balloons memory usage on large sessions. Stream with `BufReader` + a line iterator instead

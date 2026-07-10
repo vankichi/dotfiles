@@ -1,27 +1,29 @@
 ---
 name: add-rust-crate
-description: 既存 Rust workspace に新 crate を追加する (Cargo.toml の workspace 継承 / CLI・TUI・lib 雛形 / README 表更新 / 必要なら workspace.dependencies 追加)。「workspace に新 crate 追加」「<name> という tool を生やして」「新しい binary crate 切って」等で使う。
+description: Adds a new crate to an existing Rust workspace (workspace inheritance in Cargo.toml / CLI, TUI, and lib skeletons / README table update / adding to workspace.dependencies if needed). Used for things like 「workspace に新 crate 追加」「<name> という tool を生やして」「新しい binary crate 切って」.
 ---
 
 # add-rust-crate
 
-`rust-bootstrap` で作った workspace (or それ相当) に **新しい crate を 1 つ追加**する skill。何度でも使う。`crates/<name>/` を生やすだけのつもりでも、TUI 雛形・現代的な依存パターン・README 表更新までは決まりごとなので skill 化する。
+> **Source of truth:** `claude/ja/skills/add-rust-crate/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
-> **Snapshot**: 2026-04 / Rust 1.95 / clap 4 / ratatui 0.30 / crossterm 0.29 / tokio 1 を前提。
-> ratatui は API が比較的速く動くので、`ratatui::init` / `EventStream` / `recv_many` が
-> その時点の推奨か (book / changelog) は流用前に確認すること。
+A skill that **adds one new crate** to a workspace created by `rust-bootstrap` (or an equivalent one). Used repeatedly. Even though it might seem like just spinning up `crates/<name>/`, things like the TUI skeleton, modern dependency patterns, and README table updates are fixed conventions, so this is turned into a skill.
 
-## 適用条件
+> **Snapshot**: Assumes 2026-04 / Rust 1.95 / clap 4 / ratatui 0.30 / crossterm 0.29 / tokio 1.
+> Since ratatui's API moves relatively fast, verify (via the book / changelog) whether
+> `ratatui::init` / `EventStream` / `recv_many` are still the recommended approach at that point in time before reusing them.
 
-- ルートに `[workspace] members = ["crates/*"]` を持つ Rust workspace が既にある
-- `[workspace.package]` で edition / license / repository などが集中管理されている
-- `[workspace.dependencies]` に共通 dep が登録されている
+## Applicability
 
-未満たしなら先に `/rust-bootstrap` を呼ぶよう促す。
+- A Rust workspace already exists at the root with `[workspace] members = ["crates/*"]`
+- `edition` / `license` / `repository`, etc. are centrally managed via `[workspace.package]`
+- Common dependencies are registered in `[workspace.dependencies]`
 
-## 手順
+If these aren't met, prompt the user to call `/rust-bootstrap` first.
 
-### Step 0: 前提確認
+## Procedure
+
+### Step 0: Check prerequisites
 
 ```bash
 test -f Cargo.toml && grep -q '\[workspace\]' Cargo.toml && echo "workspace OK"
@@ -30,36 +32,36 @@ grep -A 30 '\[workspace.package\]' Cargo.toml
 grep -A 30 '\[workspace.dependencies\]' Cargo.toml
 ```
 
-`AskUserQuestion` で 1 ターンに集約:
-- crate 名 (snake_case ではなく `kebab-case` 推奨。例: `mytool`)
-- crate 種別 (`bin` / `tui` / `lib`)
-- 1 行説明 (`Cargo.toml` の `description` と README の説明に使う)
-- 追加で必要な dep があれば (`workspace.dependencies` に未登録のもの)
+Consolidate into one `AskUserQuestion` turn:
+- Crate name (recommend `kebab-case` rather than snake_case; e.g. `mytool`)
+- Crate kind (`bin` / `tui` / `lib`)
+- One-line description (used for the `description` in `Cargo.toml` and the README description)
+- Any additional dependencies needed (ones not yet registered in `workspace.dependencies`)
 
-**種別が `tui` のときは `references/tui.md` を Read してから進める** (雛形・key 処理パターン・mpsc ingest パターンが入っている)。
+**When the kind is `tui`, Read `references/tui.md` before proceeding** (it contains the skeleton, key-handling patterns, and the mpsc ingest pattern).
 
-### Step 1: 既存 crate との衝突チェック
+### Step 1: Check for conflicts with existing crates
 
 ```bash
 test -d crates/<name> && echo "ALREADY EXISTS — abort"
 grep -q "^name = \"<name>\"" crates/*/Cargo.toml && echo "NAME COLLISION — abort"
 ```
 
-衝突したら user に別名を提案。
+If there's a conflict, suggest a different name to the user.
 
-### Step 2: `workspace.dependencies` 拡張 (必要時のみ)
+### Step 2: Extend `workspace.dependencies` (only if needed)
 
-新 dep が必要なら、ルート `Cargo.toml` の `[workspace.dependencies]` に追記:
+If a new dependency is needed, append it to `[workspace.dependencies]` in the root `Cargo.toml`:
 
 ```toml
 <new-dep> = { version = "X", features = ["..."] }
 ```
 
-TUI 初導入時の追加 dep は `references/tui.md` 参照。既に登録されているなら何もしない (重複追加禁止)。
+For the additional dependencies needed when introducing TUI for the first time, see `references/tui.md`. If it's already registered, do nothing (do not add duplicates).
 
 ### Step 3: `crates/<name>/Cargo.toml`
 
-workspace から全部継承:
+Inherit everything from the workspace:
 
 ```toml
 [package]
@@ -76,14 +78,14 @@ keywords.workspace = true
 categories.workspace = true
 publish.workspace = true
 
-[[bin]]                          # bin / tui のみ
+[[bin]]                          # bin / tui only
 name = "<name>"
 path = "src/main.rs"
 
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
-# 種別に応じて追加 (下記 Step 4 参照)
+# add depending on the kind (see Step 4 below)
 
 [dev-dependencies]
 tempfile.workspace = true
@@ -92,9 +94,9 @@ tempfile.workspace = true
 workspace = true
 ```
 
-`lib` 種別なら `[[bin]]` を消し、`src/lib.rs` を作る。
+For the `lib` kind, remove `[[bin]]` and create `src/lib.rs`.
 
-### Step 4: `src/main.rs` (種別別雛形)
+### Step 4: `src/main.rs` (skeleton by kind)
 
 #### `bin` (CLI)
 
@@ -107,7 +109,7 @@ use clap::Parser;
 #[derive(Parser, Debug)]
 #[command(name = "<name>", version, about)]
 struct Cli {
-    // 引数
+    // arguments
 }
 
 fn main() -> Result<()> {
@@ -118,12 +120,12 @@ fn main() -> Result<()> {
 
 #### `tui`
 
-`references/tui.md` の雛形 (main.rs / app.rs / dependencies) を使う。ポイントだけ再掲:
-- `ratatui::init()` / `ratatui::restore()` を使い、自前で `enable_raw_mode` 等を書かない
-- key 入力は `EventStream` を `tokio::select!` に入れる (`poll(0)` 禁止)
-- キーが 3 種以上に増えたら `classify_key` enum パターンに移行 (unit test 可能になる)
+Use the skeleton in `references/tui.md` (main.rs / app.rs / dependencies). Key points restated here:
+- Use `ratatui::init()` / `ratatui::restore()`; don't write `enable_raw_mode` etc. yourself
+- For key input, put `EventStream` into `tokio::select!` (`poll(0)` is forbidden)
+- Once there are 3 or more kinds of keys, move to the `classify_key` enum pattern (this makes it unit-testable)
 
-#### `lib` (内部共有 crate)
+#### `lib` (internal shared crate)
 
 `Cargo.toml`:
 
@@ -140,9 +142,9 @@ path = "src/lib.rs"
 #![warn(missing_docs)]
 ```
 
-ライブラリは `pub` 公開を意識し、`#[must_use]` / `Debug` derive をきちんと付ける (バイナリより厳しめ)。
+For a library, be conscious of `pub` exposure, and properly attach `#[must_use]` / `Debug` derives (stricter than for a binary).
 
-### Step 5: ルート README の tools 表更新
+### Step 5: Update the tools table in the root README
 
 ```markdown
 | Crate | Description |
@@ -150,13 +152,13 @@ path = "src/lib.rs"
 | [`<name>`](crates/<name>) | <description> |
 ```
 
-既存の表に行を追加するだけ。アルファベット順を保つ。
+Just add a row to the existing table. Keep alphabetical order.
 
-### Step 6: `crates/<name>/README.md` (任意)
+### Step 6: `crates/<name>/README.md` (optional)
 
-公開予定 (`publish = true`) なら個別 README を書く。個人 toolkit ならルート README に集約でよい。
+If it's planned for publication (`publish = true`), write a dedicated README. For a personal toolkit, it's fine to consolidate into the root README.
 
-### Step 7: 動作確認
+### Step 7: Verify it works
 
 ```bash
 . "$HOME/.cargo/env"
@@ -166,37 +168,37 @@ cargo clippy -p <name> --all-targets -- -D warnings  && echo CLIPPY_OK
 cargo fmt -p <name> -- --check                       && echo FMT_OK
 ```
 
-TUI なら起動も:
+For a TUI, also launch it:
 
 ```bash
-cargo run -p <name> --release   # 'q' で終了
+cargo run -p <name> --release   # quit with 'q'
 ```
 
-### Step 8: 完了報告
+### Step 8: Completion report
 
-| 項目 | 状況 |
+| Item | Status |
 |---|---|
-| crate 名 / 種別 | <値> |
+| Crate name / kind | <value> |
 | `crates/<name>/Cargo.toml` (workspace inheritance) | ✓ |
 | `src/main.rs` (or `src/lib.rs`) | ✓ |
-| `[workspace.dependencies]` 追加 dep | <値 or なし> |
-| ルート README 表 | ✓ |
+| Additional dependencies added to `[workspace.dependencies]` | <value or none> |
+| Root README table | ✓ |
 | `cargo build` / `test` / `clippy -D warnings` / `fmt --check` | ✓ |
 
-## 鉄則
+## Golden rules
 
-1. **workspace inheritance を必ず使う**: `*.workspace = true` で version / license / lints 全部
-2. **`pub(crate)` から始める**: バイナリ crate は外部公開がない。`pub` は本当に外に出す lib のみ
-3. **TUI は `ratatui::init` / `restore` + `EventStream`**: 自前で `enable_raw_mode` / `poll(0)` を書かない
-4. **`workspace.dependencies` 重複追加禁止**: 既存があるか先に確認
-5. **`scope を守る`**: 業務ロジック実装は対象外。骨格 + 1 つの動く `main` までで止める
-6. **コミットしない**: 別 skill (`/commit-push-branch`) に委ねる
+1. **Always use workspace inheritance**: use `*.workspace = true` for version / license / lints, all of it
+2. **Start with `pub(crate)`**: binary crates have no external exposure. Use `pub` only for a lib that is genuinely exposed externally
+3. **TUI uses `ratatui::init` / `restore` + `EventStream`**: don't write `enable_raw_mode` / `poll(0)` yourself
+4. **No duplicate additions to `workspace.dependencies`**: check first whether it already exists
+5. **Stay in scope**: business logic implementation is out of scope. Stop at the skeleton plus one working `main`
+6. **Do not commit**: committing is delegated to a separate skill (`/commit-push-branch`)
 
-## アンチパターン
+## Anti-patterns
 
-- crate 側 `Cargo.toml` に `version = "..."` / `license = "..."` をベタ書き
-- TUI で `enable_raw_mode` + `EnterAlternateScreen` を自前実装 (`ratatui::init` を使う)
-- `crossterm::event::poll(Duration::from_millis(0))` を async loop に書く (`EventStream` を `tokio::select!` に入れる)
-- `mpsc::Receiver::recv` + `try_recv` ドレインの自前実装 (`recv_many(&mut buf, N)` 1 行)
-- 1 crate 追加のために workspace ルートを大改造 (それは `rust-bootstrap` の仕事)
-- README の表更新を忘れる (新 tool が discover されない)
+- Hardcoding `version = "..."` / `license = "..."` in the crate's own `Cargo.toml`
+- Implementing `enable_raw_mode` + `EnterAlternateScreen` yourself for a TUI (use `ratatui::init`)
+- Writing `crossterm::event::poll(Duration::from_millis(0))` in an async loop (put `EventStream` into `tokio::select!`)
+- Implementing your own `mpsc::Receiver::recv` + `try_recv` drain loop (use `recv_many(&mut buf, N)` in one line instead)
+- Overhauling the workspace root just to add one crate (that's `rust-bootstrap`'s job)
+- Forgetting to update the README table (the new tool won't be discovered)

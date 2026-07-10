@@ -1,133 +1,135 @@
 ---
 name: k8s-style
-description: K8s manifest / workload 設計 / RBAC / SecurityContext / NetworkPolicy / probe / resource / Kustomize / image 運用の reference skill。「K8s 的にどう」「manifest 規約」「RBAC 最小権限」「probe どう書く」等の問いで参照する。手順 skill ではない。
+description: Reference skill for K8s manifests / workload design / RBAC / SecurityContext / NetworkPolicy / probes / resources / Kustomize / image operations. Consult it for questions like 「K8s 的にどう」「manifest 規約」「RBAC 最小権限」「probe どう書く」. Not a procedural skill.
 ---
+
+> **Source of truth:** `claude/ja/skills/k8s-style/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
 # k8s-style
 
-Kubernetes 関連の慣用句・お作法を集めた reference skill。manifest 作成 / review / refactor 候補出しの判断基準として参照する。
+A reference skill collecting Kubernetes-related idioms and conventions. Consult it as a criterion for creating manifests, reviews, and identifying refactor candidates.
 
-## 適用条件
+## Applicability
 
-- K8s manifest (`*.yaml` / `*.yml` で `apiVersion` / `kind` を含む) を扱う任意の場面
-- Kustomize (`kustomization.yaml`) / Helm chart (`Chart.yaml` / `templates/` / `values.yaml`) を扱う場面
-- code-refactor-advisor agent / security-review-local skill からの参照
-- 「K8s 的にどう書く」「probe どうする」「最小権限」を尋ねられる場面
-
----
-
-## 1. Manifest の基本姿勢
-
-- 1 YAML = 1 リソース、または **論理的に 1 単位** (Deployment + Service + HPA + PDB) でまとめる
-- `kubectl apply -f` を default にする (`kubectl create` は冪等でないので CI で使わない)
-- 変更前は **必ず `kubectl diff`** で差分確認 (推奨規約)
-- production への apply は CD 経由 (GitOps: ArgoCD / Flux) を default。`kubectl apply` 直接実行は禁忌
-- imperative command (`kubectl run` / `kubectl expose` / `kubectl edit`) で作ったリソースを残さない (Git に存在しない state は禁忌)
-
-検出シグナル:
-- manifest に存在しないリソースが cluster 上にある (drift)
-- `kubectl edit` の痕跡 (annotation の `last-applied-configuration` と Git の不一致)
+- Any situation dealing with K8s manifests (`*.yaml` / `*.yml` containing `apiVersion` / `kind`)
+- Situations dealing with Kustomize (`kustomization.yaml`) / Helm charts (`Chart.yaml` / `templates/` / `values.yaml`)
+- Referenced by the code-refactor-advisor agent / security-review-local skill
+- Situations where you're asked 「K8s 的にどう書く」「probe どうする」「最小権限」
 
 ---
 
-## 2. API version / 非推奨 API
+## 1. Basic stance on manifests
 
-- 非推奨 / 削除済み API を使わない。`apiVersion` は **最新の stable** に揃える
+- 1 YAML = 1 resource, or group them as **one logical unit** (Deployment + Service + HPA + PDB)
+- Default to `kubectl apply -f` (`kubectl create` is not idempotent, so don't use it in CI)
+- **Always check the diff with `kubectl diff`** before making changes (recommended convention)
+- Default to applying to production via CD (GitOps: ArgoCD / Flux). Directly running `kubectl apply` is forbidden
+- Don't leave behind resources created with imperative commands (`kubectl run` / `kubectl expose` / `kubectl edit`) (state that doesn't exist in Git is forbidden)
+
+Detection signals:
+- Resources exist on the cluster that aren't in any manifest (drift)
+- Traces of `kubectl edit` (mismatch between the `last-applied-configuration` annotation and Git)
+
+---
+
+## 2. API version / deprecated APIs
+
+- Don't use deprecated / removed APIs. Align `apiVersion` to **the latest stable**
   - `Deployment` / `DaemonSet` / `StatefulSet` / `ReplicaSet` → `apps/v1`
   - `Job` / `CronJob` → `batch/v1`
-  - `Ingress` → `networking.k8s.io/v1` (`extensions/v1beta1` / `v1beta1` は削除済み)
+  - `Ingress` → `networking.k8s.io/v1` (`extensions/v1beta1` / `v1beta1` have been removed)
   - `HorizontalPodAutoscaler` → `autoscaling/v2`
   - `PodDisruptionBudget` → `policy/v1`
-  - `PodSecurityPolicy` は削除済み → **Pod Security Admission (PSA)** に移行
-- `pluto` で deprecated API を CI 検知
+  - `PodSecurityPolicy` has been removed → migrate to **Pod Security Admission (PSA)**
+- Detect deprecated APIs in CI with `pluto`
 
 ---
 
-## 3. 命名 / Label / Annotation
+## 3. Naming / Labels / Annotations
 
-### 命名 (resource name)
-- lowercase + `-` (RFC 1123)。`_` は不可
-- 長さは 63 文字以下 (Service / Pod の hostname になるため)
-- 環境を name に埋めない (namespace で分離)。`my-app-prod` ではなく `my-app` + namespace `prod`
+### Naming (resource name)
+- lowercase + `-` (RFC 1123). `_` is not allowed
+- Length must be 63 characters or fewer (because it becomes the Service / Pod hostname)
+- Don't embed the environment in the name (separate via namespace). Use `my-app` + namespace `prod` instead of `my-app-prod`
 
-### 推奨ラベル
-**全リソースに付ける** (`app.kubernetes.io/*` prefix):
+### Recommended labels
+**Attach to all resources** (with the `app.kubernetes.io/*` prefix):
 
-| label | 例 | 必須度 |
+| label | example | requirement level |
 |---|---|---|
-| `app.kubernetes.io/name` | `my-app` | 必須 |
-| `app.kubernetes.io/instance` | `my-app-prod` | 推奨 |
-| `app.kubernetes.io/version` | `1.2.3` | 推奨 |
-| `app.kubernetes.io/component` | `api` / `worker` | 推奨 |
-| `app.kubernetes.io/part-of` | `my-platform` | 任意 |
-| `app.kubernetes.io/managed-by` | `kustomize` / `argocd` | 推奨 |
+| `app.kubernetes.io/name` | `my-app` | Required |
+| `app.kubernetes.io/instance` | `my-app-prod` | Recommended |
+| `app.kubernetes.io/version` | `1.2.3` | Recommended |
+| `app.kubernetes.io/component` | `api` / `worker` | Recommended |
+| `app.kubernetes.io/part-of` | `my-platform` | Optional |
+| `app.kubernetes.io/managed-by` | `kustomize` / `argocd` | Recommended |
 
-### selector の label
-- Deployment の `spec.selector.matchLabels` は **immutable**。後から変えると update できなくなる
-- Service の `selector` は `app.kubernetes.io/name` + `app.kubernetes.io/instance` で安定させる
-- 環境変動する label (commit SHA / build number) は selector に入れない
+### selector labels
+- Deployment's `spec.selector.matchLabels` is **immutable**. Changing it later makes updates impossible
+- Stabilize the Service's `selector` using `app.kubernetes.io/name` + `app.kubernetes.io/instance`
+- Don't put environment-varying labels (commit SHA / build number) into the selector
 
-### annotation
-- カスタム annotation は **逆 DNS** で namespace 化 (`example.com/my-key`)
-- `kubectl.kubernetes.io/*` / `meta.helm.sh/*` 等の controller 管理 annotation は手で書かない
+### annotations
+- Namespace custom annotations using **reverse DNS** (`example.com/my-key`)
+- Don't hand-write controller-managed annotations such as `kubectl.kubernetes.io/*` / `meta.helm.sh/*`
 
-検出シグナル:
-- 名前に大文字 / underscore
-- recommended labels が無い
-- selector に rolling-deploy で変わる値が含まれる
+Detection signals:
+- Uppercase letters / underscores in names
+- Missing recommended labels
+- The selector includes a value that changes on rolling deploy
 
 ---
 
 ## 4. Resource requests / limits
 
-### 必須設定
-- **必ず `resources.requests` と `resources.limits` を設定** (推奨規約)
-- 未設定だと best-effort QoS で最初に kill される
+### Required settings
+- **Always set both `resources.requests` and `resources.limits`** (recommended convention)
+- Without them, the pod gets BestEffort QoS and is the first to be killed
 
 ### CPU vs Memory
-- **CPU limit は注意して使う**: throttling が発生する。requests のみで運用するパターンも一般的
-- **Memory limit は必ず設定**: OOM kill のほうが node 全体への巻き込みより安全
-- requests ≤ limits。`requests = limits` で **Guaranteed QoS** (重要 workload)
+- **Use CPU limits with caution**: they cause throttling. Running with requests only is also a common pattern
+- **Always set a memory limit**: an OOM kill is safer than dragging down the entire node
+- requests ≤ limits. Setting `requests = limits` gives **Guaranteed QoS** (for important workloads)
 
-### サイズ感
-- 推測で決めない。`kubectl top` / Prometheus / VPA recommender で **計測値に基づく**
-- 初期値は控えめに → 観測して調整 (over-provision はコストと scheduling 効率に響く)
-- batch / job 系は短時間 spike を見込む
+### Sizing
+- Don't guess. Base sizing **on measured values** from `kubectl top` / Prometheus / the VPA recommender
+- Start conservative → observe and adjust (over-provisioning hurts cost and scheduling efficiency)
+- For batch / job workloads, account for short-lived spikes
 
-検出シグナル:
-- `resources:` が空 / `limits` のみ / `requests` のみ
-- memory `limits` が requests の 10 倍以上 (枠の無駄)
-- CPU `limits` が 100m 未満で latency 要件あり (確実に throttle)
+Detection signals:
+- `resources:` is empty / only `limits` / only `requests`
+- memory `limits` is 10x or more the requests (wasted headroom)
+- CPU `limits` is under 100m while there's a latency requirement (guaranteed to throttle)
 
 ---
 
-## 5. Probe (liveness / readiness / startup)
+## 5. Probes (liveness / readiness / startup)
 
-3 種類を **使い分ける**。全部同じ endpoint を当てるのは anti-pattern:
+**Use the three types appropriately.** Pointing all of them at the same endpoint is an anti-pattern:
 
-| probe | 役割 | 失敗時の挙動 |
+| probe | role | behavior on failure |
 |---|---|---|
-| `startup` | 起動完了の判定。重い init (DB migration / cache warmup) があるなら必須 | 失敗で **kill して再起動** |
-| `liveness` | 死活確認。**deadlock / hang のみ拾う** | 失敗で **kill して再起動** |
-| `readiness` | trafic 受け入れ可否。依存先 (DB / cache) との接続状況 | 失敗で **Service から外す** (kill しない) |
+| `startup` | Determines whether startup is complete. Required if there's heavy init work (DB migration / cache warmup) | On failure, **kill and restart** |
+| `liveness` | Health check. **Only catches deadlocks / hangs** | On failure, **kill and restart** |
+| `readiness` | Whether traffic can be accepted. Reflects connectivity to dependencies (DB / cache) | On failure, **removed from the Service** (not killed) |
 
-### ベストプラクティス
-- **liveness は最小限**: アプリ内部状態 / 依存 DB を見ない。「process が応答するか」だけ
-  - liveness で DB を見ると、DB 障害で全 pod が再起動して悪化する
-- **readiness は依存先を含めて良い**: DB 接続 / cache 接続 / dependent service の health を反映
-- **startup probe で liveness の `initialDelaySeconds` 競争を避ける**: 起動が遅いアプリは startup で猶予を取り、liveness の `failureThreshold` を短くする
-- 各 probe 専用 endpoint を持つ (`/healthz` / `/readyz` / `/startupz`)
+### Best practices
+- **Keep liveness minimal**: don't check internal app state / dependent DBs. Only "does the process respond"
+  - If liveness checks the DB, a DB outage causes all pods to restart, making things worse
+- **readiness may include dependencies**: reflect the health of DB connections / cache connections / dependent services
+- **Use the startup probe to avoid tuning liveness's `initialDelaySeconds`**: for slow-starting apps, give it grace time via startup, and keep liveness's `failureThreshold` short
+- Have a dedicated endpoint for each probe (`/healthz` / `/readyz` / `/startupz`)
 
-検出シグナル:
-- liveness が DB を叩いている
-- 3 つの probe が同じ endpoint
-- `initialDelaySeconds` が異常に大きい (300s 等)
+Detection signals:
+- liveness hits the DB
+- All three probes use the same endpoint
+- `initialDelaySeconds` is abnormally large (e.g. 300s)
 
 ---
 
 ## 6. SecurityContext / Pod Security
 
-### Pod / Container レベルで必須
+### Required at the Pod / Container level
 
 ```yaml
 spec:
@@ -147,16 +149,16 @@ spec:
         drop: ["ALL"]
 ```
 
-### 禁忌
+### Forbidden
 - `privileged: true`
 - `hostNetwork: true` / `hostPID: true` / `hostIPC: true`
-- `hostPath` mount (特に `/` / `/etc` / `/var/run/docker.sock`)
+- `hostPath` mounts (especially `/` / `/etc` / `/var/run/docker.sock`)
 - `runAsUser: 0` (root)
 - `allowPrivilegeEscalation: true`
-- `capabilities.add: ["SYS_ADMIN"]` 等の強権限
+- Elevated capabilities such as `capabilities.add: ["SYS_ADMIN"]`
 
 ### Pod Security Admission (PSA)
-namespace label で **restricted** / **baseline** / **privileged** を強制。production / 一般 workload は `restricted`:
+Enforce **restricted** / **baseline** / **privileged** via a namespace label. Use `restricted` for production / general workloads:
 
 ```yaml
 metadata:
@@ -165,36 +167,36 @@ metadata:
     pod-security.kubernetes.io/enforce-version: latest
 ```
 
-検出シグナル:
-- `securityContext` 不在 / `hostPath` 使用 / root user 実行 / `capabilities.drop` 未指定
+Detection signals:
+- Missing `securityContext` / use of `hostPath` / running as root / `capabilities.drop` not specified
 
 ---
 
-## 7. RBAC (最小権限)
+## 7. RBAC (least privilege)
 
-### default deny から開始
-- ServiceAccount は **必ず明示** (default SA を使わない)
-- pod が K8s API を叩く必要がないなら `automountServiceAccountToken: false`
-- Role / ClusterRole は **必要な verb / resource のみ**
+### Start from default deny
+- **Always specify** a ServiceAccount explicitly (don't use the default SA)
+- If the pod doesn't need to call the K8s API, set `automountServiceAccountToken: false`
+- Role / ClusterRole should include **only the necessary verbs / resources**
 
-### 禁忌
+### Forbidden
 - `verbs: ["*"]` / `resources: ["*"]` / `apiGroups: ["*"]`
-- `cluster-admin` の bind (人にも、ましてや SA には付けない)
-- 広範な ClusterRoleBinding (Role + RoleBinding で namespace 限定にできないか先に検討)
+- Binding `cluster-admin` (don't grant it to people, let alone to SAs)
+- Broad ClusterRoleBindings (first consider whether a Role + RoleBinding scoped to a namespace would suffice)
 
-### token 自動マウント
-- 必要な場合のみ projected token (TokenRequest API) で短命化
+### Automatic token mounting
+- Only when necessary, use a short-lived projected token (TokenRequest API)
 
-検出シグナル:
-- `serviceAccountName` 未指定 (default 使用)
-- ClusterRole に wildcard verb / resource
-- RoleBinding で済むのに ClusterRoleBinding
+Detection signals:
+- `serviceAccountName` not specified (using the default)
+- Wildcard verb / resource in a ClusterRole
+- Using a ClusterRoleBinding when a RoleBinding would suffice
 
 ---
 
 ## 8. NetworkPolicy
 
-### default deny を導入
+### Introduce default deny
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -206,10 +208,10 @@ spec:
   policyTypes: ["Ingress", "Egress"]
 ```
 
-各 namespace に **default deny ingress / egress** を 1 個入れて、必要な通信を allow rule で開ける。
+Add one **default deny ingress / egress** policy per namespace, and open up necessary traffic with allow rules.
 
-### よくある落とし穴
-- **DNS (kube-dns) への egress を忘れる** → name resolution が落ちて全 pod 死亡。必ず allow:
+### Common pitfalls
+- **Forgetting egress to DNS (kube-dns)** → name resolution breaks and all pods die. Always allow it:
   ```yaml
   egress:
   - to:
@@ -220,29 +222,29 @@ spec:
     - protocol: UDP
       port: 53
   ```
-- egress を全開 (`{}`) にしてるとデータ exfiltration を防げない
-- cluster に network policy controller (Calico / Cilium 等) が居ないと NetworkPolicy は **無視される**。導入前提を確認
+- Leaving egress fully open (`{}`) can't prevent data exfiltration
+- Without a network policy controller (Calico / Cilium, etc.) in the cluster, NetworkPolicy is **ignored**. Confirm the prerequisite is in place
 
-検出シグナル:
-- NetworkPolicy が 1 つも無い namespace / 全開 egress / DNS allow 欠落
+Detection signals:
+- A namespace with no NetworkPolicy at all / fully open egress / missing DNS allow rule
 
 ---
 
-## 9. Pod / Workload 設計
+## 9. Pod / Workload design
 
 ### Deployment vs StatefulSet vs DaemonSet vs Job
 - **stateless app** → Deployment
-- **stable identity / persistent volume が必要** → StatefulSet (DB / Kafka / etcd 等)
-- **全 node に 1 pod** → DaemonSet (log collector / node exporter)
-- **1 回完結 / 定期実行** → Job / CronJob
+- **Needs stable identity / persistent volumes** → StatefulSet (DB / Kafka / etcd, etc.)
+- **One pod per node** → DaemonSet (log collector / node exporter)
+- **Runs to completion once / runs periodically** → Job / CronJob
 
-### Pod 設計
-- 1 Pod = 1 main process。複数 process を 1 container に詰めない
-- sidecar (proxy / log shipper) は **役割が明確な時のみ**。なんとなく追加しない
-- init container は **起動前にだけ必要な処理** に限定 (migration / config 取得)
+### Pod design
+- 1 Pod = 1 main process. Don't cram multiple processes into a single container
+- Only add a sidecar (proxy / log shipper) **when its role is clear**. Don't add one just because
+- Limit init containers to **work that's only needed before startup** (migrations / fetching config)
 
-### Replica / 可用性
-- production の Deployment は `replicas >= 2` + **PodDisruptionBudget**:
+### Replicas / availability
+- Production Deployments should have `replicas >= 2` + **a PodDisruptionBudget**:
 
 ```yaml
 apiVersion: policy/v1
@@ -254,150 +256,150 @@ spec:
       app.kubernetes.io/name: my-app
 ```
 
-- 複数 zone がある cluster なら **topologySpreadConstraints** で zone 分散
-- rolling 中に全 pod が同時に落ちないよう `maxUnavailable` を控えめに
+- If the cluster spans multiple zones, spread across zones with **topologySpreadConstraints**
+- Keep `maxUnavailable` conservative so all pods don't go down simultaneously during a rolling update
 
 ### Graceful shutdown
-- `terminationGracePeriodSeconds` を SIGTERM 後の cleanup 時間に合わせる (default 30s)
-- アプリ側で SIGTERM 受信時に readiness を false にしてから drain (preStop hook で sleep するパターン)
+- Match `terminationGracePeriodSeconds` to the cleanup time needed after SIGTERM (default 30s)
+- On the app side, set readiness to false upon receiving SIGTERM, then drain (a pattern of sleeping in a preStop hook)
 
-検出シグナル:
-- production で `replicas: 1` / PDB なし / preStop hook なしで in-flight request が drop
+Detection signals:
+- `replicas: 1` in production / no PDB / in-flight requests get dropped due to no preStop hook
 
 ---
 
 ## 10. ConfigMap / Secret
 
 ### ConfigMap
-- 設定値は ConfigMap、機密は Secret (混ぜない)
-- `envFrom` で一括注入すると env が肥大化 / 名前衝突する。**必要な key だけ `valueFrom`**
-- immutable ConfigMap (`immutable: true`) でホットリロード抑止 (controller 負荷低減)
+- Configuration values go in ConfigMap, secrets go in Secret (don't mix them)
+- Bulk-injecting with `envFrom` bloats the environment / causes name collisions. **Use `valueFrom` for only the keys you need**
+- Use immutable ConfigMaps (`immutable: true`) to suppress hot reload (reduces controller load)
 
 ### Secret
-- base64 は **暗号化ではない**。Secret は etcd で平文同等 (encryption-at-rest 設定なければ)
-- 本番では **External Secrets Operator / Sealed Secrets / Vault / cloud secret manager** を使う
-- Secret を環境変数で注入すると `/proc/<pid>/environ` から見える → 機微なものは **volume mount + readOnly + tmpfs** を検討
-- Secret を Git に commit しない (base64 encode 済みも同じ)
+- base64 is **not encryption**. Without encryption-at-rest configured, a Secret is effectively plaintext in etcd
+- In production, use **External Secrets Operator / Sealed Secrets / Vault / a cloud secret manager**
+- Injecting a Secret as an environment variable makes it visible via `/proc/<pid>/environ` → for sensitive values, consider **volume mount + readOnly + tmpfs**
+- Don't commit Secrets to Git (this applies even if already base64-encoded)
 
-検出シグナル:
-- ConfigMap に password / token らしき key
-- Secret が **平の YAML** で commit
-- 全環境で同じ Secret 値
+Detection signals:
+- A key that looks like a password / token in a ConfigMap
+- A Secret committed as **plain YAML**
+- The same Secret value used across all environments
 
 ---
 
 ## 11. Image / Tag / Pull policy
 
 ### Tag
-- `:latest` を **使わない** (再現性が無い / rolling で何が deploy されたか追えない)
-- semver tag (`v1.2.3`) + digest (`@sha256:...`) の併用が最安全
-- production manifest は **digest pin** を default にすると tag を上書きされても安全
+- **Don't use** `:latest` (not reproducible / can't track what was deployed during a rolling update)
+- Combining a semver tag (`v1.2.3`) with a digest (`@sha256:...`) is safest
+- Defaulting production manifests to a **digest pin** keeps them safe even if the tag gets overwritten
 
 ### Pull policy
-- tag が `:latest` だと implicit に `Always` → tag pin した時は **明示的に `IfNotPresent`** を書く
-- private レジストリは `imagePullSecrets` を明示
+- If the tag is `:latest`, it implicitly becomes `Always` → when pinning a tag, **explicitly write `IfNotPresent`**
+- Explicitly set `imagePullSecrets` for private registries
 
-### イメージサイズ / 脆弱性
-- distroless / chainguard / minimal base を default
-- multi-stage build で build deps を残さない
-- `trivy` / `grype` で CVE スキャン、SBOM を CI に組み込む
+### Image size / vulnerabilities
+- Default to a distroless / chainguard / minimal base
+- Use multi-stage builds so build dependencies aren't left behind
+- Scan for CVEs with `trivy` / `grype`, and build SBOM generation into CI
 
-検出シグナル:
+Detection signals:
 - `:latest` tag
-- pull policy 未指定 + 固定 tag
-- root user で動く image
+- pull policy not specified + a fixed tag
+- An image that runs as root
 
 ---
 
 ## 12. Kustomize (default) / Helm
 
-**default は Kustomize**。理由:
-- YAML のまま読める (template engine の癖が無い)
-- 自社アプリの環境差分用途では overlay で十分
-- 部分上書きが patch で局所的にでき、values で全穴を開ける必要がない
+**Kustomize is the default.** Reasons:
+- It reads as plain YAML (no template-engine quirks)
+- Overlays are sufficient for handling environment differences in our own apps
+- Partial overrides can be done locally via patches, without needing to expose every knob through values
 
-Helm は **OSS chart を import する時** / **配布が必要な時** に限定して使う。
+Use Helm only **when importing an OSS chart** / **when distribution is required**.
 
-### Kustomize 規約
-- `base/` + `overlays/{dev,staging,prod}/` の構造
-- overlay では **patch を最小限**。値だけなら `configMapGenerator` / `secretGenerator` で上書き
-- `kustomize build overlays/prod | kubectl diff -f -` で本番差分確認 → CI で `kustomize build` をレンダリング
-- patch は **strategic merge patch (`patches:` with `target:`)** を default。JSON Patch は強い変更のみ
-- `commonLabels` / `commonAnnotations` で全リソースに label 一括付与
-- `namePrefix` / `nameSuffix` で環境別接尾辞 (selector の immutability に注意)
-- 親 `base/` を環境固有の値で汚さない (base は環境非依存に保つ)
+### Kustomize conventions
+- A `base/` + `overlays/{dev,staging,prod}/` structure
+- Keep **patches minimal** in overlays. For plain values, override via `configMapGenerator` / `secretGenerator`
+- Check the production diff with `kustomize build overlays/prod | kubectl diff -f -` → render with `kustomize build` in CI
+- Default to **strategic merge patch (`patches:` with `target:`)**. Use JSON Patch only for more forceful changes
+- Attach labels to all resources in bulk via `commonLabels` / `commonAnnotations`
+- Use `namePrefix` / `nameSuffix` for environment-specific suffixes (watch out for selector immutability)
+- Don't pollute the parent `base/` with environment-specific values (keep base environment-agnostic)
 
-### Helm を使う場合の規約
-- `Chart.yaml` の `apiVersion: v2`
-- chart version と app version を区別 (`version` / `appVersion`)
-- values.yaml は **commented / typed** にして利用者が読める形
-- `helm template` で render → `kubectl diff` で確認してから `helm upgrade`
-- OSS chart を取り込む時も Kustomize の `helmCharts:` で values inflate → overlay patch、という構成が扱いやすい
+### Conventions when using Helm
+- `apiVersion: v2` in `Chart.yaml`
+- Distinguish chart version from app version (`version` / `appVersion`)
+- Make values.yaml **commented / typed** so users can read it
+- Render with `helm template` → check with `kubectl diff` before running `helm upgrade`
+- Even when pulling in an OSS chart, a structure where Kustomize's `helmCharts:` inflates values → overlay patch is easy to work with
 
-検出シグナル:
-- 自社アプリ用に新規 Helm chart を切ろうとしている (Kustomize で済まないか先に検討)
-- overlay で patch が肥大化 (base 設計を見直す signal)
-- base が環境値で汚れている
+Detection signals:
+- About to cut a new Helm chart for an in-house app (first consider whether Kustomize would suffice)
+- Patches bloating in an overlay (a signal to reconsider the base design)
+- base polluted with environment-specific values
 
 ---
 
 ## 13. Lint / Validation
 
-CI に必ず仕込む:
+Always wire these into CI:
 
-| tool | 役割 |
+| tool | role |
 |---|---|
-| `kubeconform` | schema validation (apiVersion / kind の整合) |
-| `kube-linter` | 設定 anti-pattern (probe 無し / privileged / no resources 等) |
-| `conftest` (OPA / Rego) | カスタムポリシー (社内規約の強制) |
-| `trivy config` | manifest の security misconfig 検出 |
-| `kustomize build` | render 可能性 + 結果を kubeconform / kube-linter に流す |
-| `pluto` | 廃止 API 検出 |
+| `kubeconform` | schema validation (consistency of apiVersion / kind) |
+| `kube-linter` | configuration anti-patterns (no probes / privileged / no resources, etc.) |
+| `conftest` (OPA / Rego) | custom policies (enforcing internal conventions) |
+| `trivy config` | detects security misconfigurations in manifests |
+| `kustomize build` | renderability + feeds the result into kubeconform / kube-linter |
+| `pluto` | detects deprecated APIs |
 
-**最低限**: `kubeconform` + `kube-linter` + `trivy config` の 3 つは入れる。`kustomize build` の出力を CI でこれらに流すのが定番フロー。
+**At minimum**, include `kubeconform` + `kube-linter` + `trivy config`. Feeding the output of `kustomize build` into these in CI is the standard flow.
 
 ---
 
 ## 14. Observability
 
-- 全 workload に **metrics endpoint** (`/metrics` Prometheus format) を生やす
-- pod に `prometheus.io/scrape` annotation か、ServiceMonitor (Prometheus Operator) で配線
-- log は stdout / stderr に **構造化 JSON で出す**。file には書かない (ephemeral container は消える)
-- trace は OpenTelemetry SDK + sidecar / DaemonSet collector → backend (Tempo / Jaeger)
-- 重要 SLI は **Recording Rule** で事前計算 (request 時の計算重を避ける)
-- 高 cardinality な label / tag を metrics に入れない (時系列 DB を破壊する)
+- Expose a **metrics endpoint** (`/metrics` in Prometheus format) on every workload
+- Wire it up via a `prometheus.io/scrape` annotation on the pod, or a ServiceMonitor (Prometheus Operator)
+- Emit logs to stdout / stderr **as structured JSON**. Don't write to files (ephemeral containers disappear)
+- For traces, use the OpenTelemetry SDK + a sidecar / DaemonSet collector → backend (Tempo / Jaeger)
+- Precompute important SLIs with a **Recording Rule** (avoid heavy computation at request time)
+- Don't put high-cardinality labels / tags into metrics (it will break the time-series DB)
 
 ---
 
-## 15. Cost / 効率
+## 15. Cost / efficiency
 
-- 不要な resources requests = 隠れたコスト。VPA recommender で計測値ベースに
-- HorizontalPodAutoscaler (`autoscaling/v2`) で **負荷追従**。CPU だけでなく custom metrics も検討
-- Cluster Autoscaler / Karpenter で node 自動増減
-- Spot / Preemptible node を batch / dev に活用 (production の stateless にも条件付きで)
+- Unnecessary resource requests are a hidden cost. Base them on measured values from the VPA recommender
+- Use HorizontalPodAutoscaler (`autoscaling/v2`) to **track load**. Consider custom metrics in addition to CPU
+- Use Cluster Autoscaler / Karpenter for automatic node scaling
+- Use Spot / Preemptible nodes for batch / dev (also conditionally for stateless production workloads)
 
 ---
 
-## 16. 関連 skill / agent
+## 16. Related skills / agents
 
-- security レビュー → `security-review-local` skill
+- security review → `security-review-local` skill
 - docs (ADR / Runbook / Design) → `tech-docs-writer` skill
-- 層境界 / 責務 (アプリ側) → `ddd-hexagonal` skill
-- Go アプリ規約 → `go-style` / `go-test` skill
+- layer boundaries / responsibilities (app side) → `ddd-hexagonal` skill
+- Go app conventions → `go-style` / `go-test` skill
 
 ---
 
-## チェックリスト (manifest review 時)
+## Checklist (for manifest review)
 
-- [ ] `apiVersion` は stable / 非推奨でない
-- [ ] recommended labels (`app.kubernetes.io/*`) が全 resource に揃っている
-- [ ] `resources.requests` / `limits` が設定されている (memory limit 必須)
-- [ ] `liveness` / `readiness` / `startup` を使い分けている (liveness は依存先を見ない)
-- [ ] `securityContext` で `runAsNonRoot` / `readOnlyRootFilesystem` / `capabilities.drop: ["ALL"]`
-- [ ] `serviceAccountName` 明示 + 必要最小の RBAC + `automountServiceAccountToken: false` (不要なら)
-- [ ] NetworkPolicy で default deny + 必要な allow (DNS allow 忘れに注意)
+- [ ] `apiVersion` is stable / not deprecated
+- [ ] recommended labels (`app.kubernetes.io/*`) are present on all resources
+- [ ] `resources.requests` / `limits` are set (memory limit required)
+- [ ] `liveness` / `readiness` / `startup` are used appropriately (liveness doesn't check dependencies)
+- [ ] `securityContext` sets `runAsNonRoot` / `readOnlyRootFilesystem` / `capabilities.drop: ["ALL"]`
+- [ ] `serviceAccountName` is explicit + RBAC is minimal + `automountServiceAccountToken: false` (if not needed)
+- [ ] NetworkPolicy has default deny + necessary allows (watch out for forgetting the DNS allow)
 - [ ] production `replicas >= 2` + PDB + topologySpreadConstraints
-- [ ] image tag pin (digest 推奨) + `pullPolicy` 明示 + distroless 系 base
-- [ ] Secret が平文で commit されていない (External Secrets / Sealed Secrets / Vault)
-- [ ] Kustomize の base が環境非依存 / overlay patch が最小
-- [ ] `kubeconform` / `kube-linter` / `trivy config` を CI で通している
+- [ ] image tag is pinned (digest recommended) + `pullPolicy` is explicit + distroless-based image
+- [ ] Secrets are not committed in plaintext (External Secrets / Sealed Secrets / Vault)
+- [ ] Kustomize's base is environment-agnostic / overlay patches are minimal
+- [ ] `kubeconform` / `kube-linter` / `trivy config` are run in CI

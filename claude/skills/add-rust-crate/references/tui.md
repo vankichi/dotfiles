@@ -1,8 +1,10 @@
-# TUI 雛形 (ratatui + tokio + crossterm EventStream)
+> **Source of truth:** `claude/ja/skills/add-rust-crate/references/tui.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
-crate 種別が `tui` のときだけ読む。
+# TUI skeleton (ratatui + tokio + crossterm EventStream)
 
-## workspace.dependencies (未登録なら追加)
+Read this only when the crate kind is `tui`.
+
+## workspace.dependencies (add if not already registered)
 
 ```toml
 crossterm = { version = "0.28", features = ["event-stream"] }
@@ -10,7 +12,7 @@ ratatui = "0.29"
 futures = "0.3"
 ```
 
-## `crates/<name>/Cargo.toml` の `[dependencies]` に追加
+## Add to `[dependencies]` in `crates/<name>/Cargo.toml`
 
 ```toml
 crossterm.workspace = true
@@ -81,11 +83,11 @@ fn view(f: &mut Frame<'_>) {
 }
 ```
 
-`ratatui::init()` が **panic hook + raw mode + alt screen** を一括処理するので自前で `enable_raw_mode` 等は書かない。`crossterm::event::poll(0)` も `EventStream` で置換。
+`ratatui::init()` handles **the panic hook + raw mode + alt screen** all at once, so don't write `enable_raw_mode` etc. yourself. Also replace `crossterm::event::poll(0)` with `EventStream`.
 
-## スケールしてきた時のパターン (2 種類以上のキー処理がある TUI)
+## Pattern for when things scale up (a TUI with 2 or more kinds of key handling)
 
-最初の version で q だけなら上記で十分。**3 種以上のキー** や **destructive 系**(reset / delete) が出てきたら、event loop に直接 match を書かず **enum で意図を取り出す**:
+If the first version only handles 'q', the above is sufficient. Once **3 or more kinds of keys** or **destructive operations** (reset / delete) show up, don't write `match` directly in the event loop — instead **extract intent via an enum**:
 
 ```rust
 #[derive(Debug, PartialEq, Eq)]
@@ -106,7 +108,7 @@ fn classify_key(code: KeyCode) -> KeyAction {
     }
 }
 
-// Loop 内:
+// Inside the loop:
 match classify_key(k.code) {
     KeyAction::Quit => return Ok(()),
     KeyAction::Reset => state.reset(),
@@ -115,11 +117,11 @@ match classify_key(k.code) {
 }
 ```
 
-利点: `classify_key` を unit test できる。loop 内が「意図名の match」で読みやすい。workspace 内に既存 TUI crate があれば、その classify_key 実装を先に参照して流儀を揃える。
+Benefit: `classify_key` can be unit tested. The loop reads clearly because it's a "match on intent name". If there's already an existing TUI crate in the workspace, reference its `classify_key` implementation first to keep the style consistent.
 
-## tokio mpsc を ingest source に使うとき
+## When using tokio mpsc as an ingest source
 
-外部スレッドからイベント (file watcher / websocket / etc.) を流すなら `recv_many` でドレインするのが効率的:
+If events are streamed in from an external thread (file watcher / websocket / etc.), draining with `recv_many` is efficient:
 
 ```rust
 let mut event_buf = Vec::with_capacity(64);
@@ -136,4 +138,4 @@ loop {
 }
 ```
 
-`try_recv` を while ループで叩くより 1 回の syscall で済む。
+This takes a single syscall, compared to hammering `try_recv` in a while loop.

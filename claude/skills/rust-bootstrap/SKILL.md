@@ -1,67 +1,69 @@
 ---
 name: rust-bootstrap
-description: 新規 / 既存ディレクトリに Rust workspace の動く骨格を一括セットアップする (crates/* レイアウト、lints 集中管理、Makefile、deny.toml、CI、rustup 導入まで。task runner は make のみ)。「Rust の workspace 切って」「Rust プロジェクトのセットアップ」「複数 tool 入れる Rust リポジトリにして」等で使う。
+description: Sets up a working skeleton for a Rust workspace in a new or existing directory in one shot (crates/* layout, centralized lints, Makefile, deny.toml, CI, all the way through installing rustup. The only task runner is make). Used for things like 「Rust の workspace 切って」「Rust プロジェクトのセットアップ」「複数 tool 入れる Rust リポジトリにして」.
 ---
+
+> **Source of truth:** `claude/ja/skills/rust-bootstrap/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
 # rust-bootstrap
 
-Rust workspace をゼロから「`make ci` (fmt-check + clippy -D warnings + test) が pass する状態」までセットアップする skill。1 リポジトリにつき 1 回しか使わない想定。
+A skill that sets up a Rust workspace from scratch to the point where "`make ci` (fmt-check + clippy -D warnings + test) passes". Intended to be used only once per repository.
 
-**ファイルテンプレートは `references/templates.md` に全部ある。Step 2 に着手する前に 1 回 Read し、placeholder を Step 0 の確認値で置換して使う。**
+**All the file templates are in `references/templates.md`. Read it once before starting Step 2, and use it by replacing the placeholders with the values confirmed in Step 0.**
 
-> **Snapshot**: 2026-04 / Rust 1.95 stable / edition 2024 / resolver 3 を前提に書かれてる。
-> 半年以上経った場合、Cargo.toml テンプレや CI workflow のバージョン (dtolnay/rust-toolchain, Swatinem/rust-cache, EmbarkStudios/cargo-deny-action 等) は確認してから流用すること。
+> **Snapshot**: Written assuming 2026-04 / Rust 1.95 stable / edition 2024 / resolver 3.
+> If more than six months have passed, verify the versions used in the Cargo.toml template and CI workflow (dtolnay/rust-toolchain, Swatinem/rust-cache, EmbarkStudios/cargo-deny-action, etc.) before reusing them.
 
-## 適用条件
+## Applicability
 
-- バイナリツール群を束ねる workspace を想定 (ライブラリ公開ではない)
-- Rust 1.90+ / edition 2024 / resolver 3 を採用
-- レイアウトは `crates/<name>/` に複数 crate (将来追加前提)。違うレイアウトのときはユーザーに確認
+- Assumes a workspace that bundles a set of binary tools (not a published library)
+- Adopts Rust 1.90+ / edition 2024 / resolver 3
+- Layout is multiple crates under `crates/<name>/` (assuming future additions). If a different layout is needed, confirm with the user
 
-## 手順
+## Procedure
 
-### Step 0: 前提確認
+### Step 0: Check prerequisites
 
 ```bash
-which cargo && cargo --version && rustc --version    # 未導入なら Step 1 で rustup
-ls -la                                               # 既存ファイル把握
-test -f Cargo.toml && cat Cargo.toml                 # 既存 manifest 確認
+which cargo && cargo --version && rustc --version    # if not installed, rustup in Step 1
+ls -la                                               # grasp existing files
+test -f Cargo.toml && cat Cargo.toml                 # check existing manifest
 ```
 
-確認事項 (AskUserQuestion で 1 ターンに集約):
-- workspace 名 (= リポジトリ名でよいか)
-- ライセンス (`MIT` / `Apache-2.0` / `MIT OR Apache-2.0` のどれか — エコシステム慣習は dual)
-- 最初の crate 名 (例: `mytool`)
-- repository URL (`https://github.com/<user>/<repo>`)
-- バイナリの主用途 (CLI / TUI / daemon — TUI なら ratatui 雛形)
+Items to confirm (consolidate into one AskUserQuestion turn):
+- Workspace name (= is it fine to use the repository name)
+- License (one of `MIT` / `Apache-2.0` / `MIT OR Apache-2.0` — dual licensing is the ecosystem convention)
+- Name of the first crate (e.g. `mytool`)
+- Repository URL (`https://github.com/<user>/<repo>`)
+- Primary purpose of the binary (CLI / TUI / daemon — if TUI, use the ratatui skeleton)
 
-### Step 1: rustup インストール (未導入時のみ)
+### Step 1: Install rustup (only if not already installed)
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile default
 . "$HOME/.cargo/env"
 ```
 
-`. "$HOME/.cargo/env"` を以降の Bash 呼び出し前に挟むこと (PATH を継承させるため)。
+Insert `. "$HOME/.cargo/env"` before subsequent Bash calls (to inherit the PATH).
 
-### Step 2〜9: ファイル生成 (テンプレは `references/templates.md`)
+### Steps 2-9: Generate files (templates are in `references/templates.md`)
 
-| Step | ファイル | 要点 |
+| Step | File | Key points |
 |---|---|---|
-| 2 | ルート `Cargo.toml` | virtual workspace。`[workspace.package]` でメタ集中管理 / `[workspace.dependencies]` / lints / distribution-grade release profile。TUI なら crossterm + ratatui + futures を dependencies に追加 |
-| 3 | `rust-toolchain.toml` | stable + rustfmt + clippy (CI と手元のズレ防止) |
-| 4 | `crates/<name>/` | Cargo.toml は全部 workspace 継承 (`*.workspace = true`)、main.rs は clap + anyhow の最小 CLI |
+| 2 | Root `Cargo.toml` | Virtual workspace. Centralize metadata with `[workspace.package]` / `[workspace.dependencies]` / lints / a distribution-grade release profile. For TUI, add crossterm + ratatui + futures to dependencies |
+| 3 | `rust-toolchain.toml` | stable + rustfmt + clippy (prevents drift between CI and local) |
+| 4 | `crates/<name>/` | Cargo.toml inherits everything from the workspace (`*.workspace = true`); main.rs is a minimal CLI with clap + anyhow |
 | 5 | `rustfmt.toml` | edition 2024 / max_width 100 |
 | 6 | `Makefile` | help / build / release / test / clippy / fmt / check / deny / ci / install / uninstall / clean / update |
-| 7 | `deny.toml` | advisories + licenses allow-list + bans + sources (supply-chain 監査) |
-| 8 | `.cargo/config.toml` | Windows static CRT + `cargo ci` / `cargo xclippy` alias |
-| 9 | `.github/workflows/ci.yml` | lint (fmt + clippy) / test (3 OS matrix) / deny の 3 job |
+| 7 | `deny.toml` | advisories + licenses allow-list + bans + sources (supply-chain audit) |
+| 8 | `.cargo/config.toml` | Windows static CRT + `cargo ci` / `cargo xclippy` aliases |
+| 9 | `.github/workflows/ci.yml` | 3 jobs: lint (fmt + clippy) / test (3-OS matrix) / deny |
 
-**install 戦略 (Step 6 の設計判断)**: `cargo install --path` は毎回 release build がトリガーされるが、`make install` は workspace 一括の release build を 1 回走らせて `cp` で配るので、複数 binary の workspace では速い。default の `PREFIX = ~/.local/bin` は sudo 不要 + XDG 標準。`/opt/homebrew/bin` は Homebrew 管理外のバイナリを混ぜると update 時に混乱の素なので避ける。
+**Install strategy (design decision for Step 6)**: `cargo install --path` triggers a release build every time, but `make install` runs a single release build for the whole workspace and distributes binaries via `cp`, which is faster for workspaces with multiple binaries. The default `PREFIX = ~/.local/bin` requires no sudo and follows the XDG standard. `/opt/homebrew/bin` is avoided because mixing in binaries that aren't managed by Homebrew causes confusion during updates.
 
 ### Step 10: `LICENSE`
 
-選んだライセンスに応じて配置。`MIT OR Apache-2.0` なら `LICENSE-MIT` と `LICENSE-APACHE` 両方。MIT のみなら `LICENSE`。
+Place it according to the chosen license. For `MIT OR Apache-2.0`, place both `LICENSE-MIT` and `LICENSE-APACHE`. For MIT only, place `LICENSE`.
 
 ### Step 11: `.gitignore`
 
@@ -71,17 +73,17 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --defaul
 .DS_Store
 ```
 
-`Cargo.lock` は **コミットする** (binary workspace の慣習)。`.gitignore` に入れない。
+`Cargo.lock` **is committed** (the convention for binary workspaces). Do not add it to `.gitignore`.
 
-### Step 12: ルート `README.md`
+### Step 12: Root `README.md`
 
-tools 表 + `make help` / `make ci` / `make install` の説明 (テンプレは `references/templates.md`)。
+A tools table + explanation of `make help` / `make ci` / `make install` (template is in `references/templates.md`).
 
-### Step 13: CLAUDE.md / 既存 README 同期
+### Step 13: Sync CLAUDE.md / existing README
 
-`CLAUDE.md` があれば「## 開発コマンド」を追記 (追記分のテンプレは `references/templates.md`)。既存 README は上書きせず追記。
+If `CLAUDE.md` exists, append a "## Development commands" section (the template for the appended content is in `references/templates.md`). For an existing README, append rather than overwrite.
 
-### Step 14: 動作確認
+### Step 14: Verify it works
 
 ```bash
 . "$HOME/.cargo/env"
@@ -91,39 +93,39 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings && echo CLI
 cargo fmt --all -- --check             && echo FMT_OK
 ```
 
-`make ci` で同じ 3 つを一括実行できる。
+`make ci` can run the same three checks together.
 
-### Step 15: 完了報告
+### Step 15: Completion report
 
-| 項目 | 状況 |
+| Item | Status |
 |---|---|
 | `cargo build --workspace` | ✓ |
 | `cargo test` / `cargo clippy -D warnings` / `cargo fmt --check` | ✓ |
-| workspace 名 / 最初の crate | <確認値> |
-| ライセンス | <確認値> |
+| Workspace name / first crate | <confirmed value> |
+| License | <confirmed value> |
 | `Cargo.toml` (workspace.package + dependencies + lints + profile) | ✓ |
 | `rust-toolchain.toml` / `rustfmt.toml` / `Makefile` / `deny.toml` / `.cargo/config.toml` | ✓ |
 | `.github/workflows/ci.yml` | ✓ |
 | LICENSE / README.md | ✓ |
 
-## 鉄則
+## Golden rules
 
-1. **既存ファイル尊重**: 既存 `.gitignore` / `CLAUDE.md` / `README.md` は上書きせず追記
-2. **コメントは英語**: Rust ファイルのコメントは英語 (`//`, `///`, `//!`)
-3. **`Cargo.lock` はコミットする**: バイナリ workspace の現代的慣習
-4. **scope を守る**: 機能実装 (TUI イベントループ・サーバ実装等) は対象外。次の skill (`add-rust-crate`) や手作業に渡す
-5. **コミットしない**: コミットは別 skill (`/commit-push-branch`) に委ねる
-6. **`pub` より `pub(crate)`**: バイナリ crate は外部公開がないので可視性は最小から始める
-7. **task runner は `make` のみ**: `make` は macOS / Linux 標準同梱で追加 dep ゼロ。`just` / `task` / `xtask` などは新規 dep なので default では入れない (ユーザーが明示的に希望した場合のみ)。Makefile に対する利点は cross-platform / 引数 / `--list` 程度で、追加 dep を払うほど大きくない
+1. **Respect existing files**: for existing `.gitignore` / `CLAUDE.md` / `README.md`, append rather than overwrite
+2. **Comments in English**: comments in Rust files are in English (`//`, `///`, `//!`)
+3. **Commit `Cargo.lock`**: the modern convention for binary workspaces
+4. **Stay in scope**: feature implementation (TUI event loops, server implementation, etc.) is out of scope. Hand off to the next skill (`add-rust-crate`) or manual work
+5. **Do not commit**: committing is delegated to a separate skill (`/commit-push-branch`)
+6. **Prefer `pub(crate)` over `pub`**: since binary crates have no external exposure, start with minimal visibility
+7. **`make` is the only task runner**: `make` ships standard with macOS / Linux at zero added dependency cost. `just` / `task` / `xtask`, etc. are new dependencies and are not added by default (only if the user explicitly wants them). Their advantages over a Makefile — cross-platform support, arguments, `--list` — aren't large enough to justify the added dependency
 
-## アンチパターン
+## Anti-patterns
 
-- `Cargo.toml` に各 crate ごとの version/license/repo をベタ書き (workspace inheritance を使わない)
-- `[profile.release]` を crate 側 Cargo.toml に書く (Cargo は workspace ルートしか見ない)
-- `.gitignore` に `Cargo.lock` を入れる (library crate の慣習を binary に持ち込まない)
-- `resolver = "2"` のまま放置 (edition 2024 + Rust 1.84+ なら 3 を選ぶ)
-- `pedantic` clippy を allow なしで有効化 (`cast_precision_loss` など意図的なものは workspace lints で allow + 理由コメント)
-- ライブラリ公開向けの `#[non_exhaustive]` / `C-CRATE-DOC` を全 type に強制 (binary crate には過剰)
-- `rust-toolchain.toml` を作らない (CI と手元の toolchain ズレの温床)
-- `cargo-dist` を最初から仕込む (個人 toolkit には過剰、リリースを手で作るタイミングで導入)
-- 「`just` がデファクト / 現代的」のような研究エージェントの **印象論** を鵜呑みにして新規 dep を入れる (実態は ripgrep / fd / bat / cargo / rustc / uv / ruff いずれも `just` を使っていない)
+- Hardcoding each crate's version/license/repo in its own `Cargo.toml` (not using workspace inheritance)
+- Writing `[profile.release]` in a crate's own `Cargo.toml` (Cargo only looks at the workspace root)
+- Adding `Cargo.lock` to `.gitignore` (don't bring the library-crate convention into a binary project)
+- Leaving `resolver = "2"` unchanged (choose 3 when using edition 2024 + Rust 1.84+)
+- Enabling `pedantic` clippy without any allows (for intentional cases like `cast_precision_loss`, allow them in the workspace lints with a reason comment)
+- Forcing library-publishing conventions like `#[non_exhaustive]` / `C-CRATE-DOC` onto every type (excessive for a binary crate)
+- Not creating `rust-toolchain.toml` (a breeding ground for drift between CI and local toolchains)
+- Setting up `cargo-dist` from the very start (excessive for a personal toolkit; introduce it when you actually start cutting releases by hand)
+- Blindly trusting a research agent's **unsubstantiated impression** that "`just` is the de facto standard / the modern choice" and adding it as a new dependency (in reality, none of ripgrep, fd, bat, cargo, rustc, uv, or ruff use `just`)

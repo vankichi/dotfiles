@@ -1,10 +1,12 @@
+> **Source of truth:** `claude/ja/skills/rust-bootstrap/references/templates.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
+
 # rust-bootstrap file templates
 
-SKILL.md の Step 番号に対応するファイルテンプレート集。placeholder (`<name>` / `<license>` / `<repo-url>` / `<user>` / `<one-line>`) は Step 0 の確認値で置換する。
+A collection of file templates corresponding to the step numbers in SKILL.md. Replace the placeholders (`<name>` / `<license>` / `<repo-url>` / `<user>` / `<one-line>`) with the values confirmed in Step 0.
 
 ## Step 2: workspace `Cargo.toml`
 
-ルートに virtual workspace (`[package]` なし)。`[workspace.package]` で全 crate のメタを集中管理:
+A virtual workspace at the root (no `[package]`). Centralize metadata for all crates with `[workspace.package]`:
 
 ```toml
 [workspace]
@@ -14,13 +16,13 @@ members = ["crates/*"]
 [workspace.package]
 edition = "2024"
 rust-version = "1.90"
-license = "<license>"            # 例: "MIT" or "MIT OR Apache-2.0"
+license = "<license>"            # e.g., "MIT" or "MIT OR Apache-2.0"
 authors = ["<user>"]
 repository = "<repo-url>"
 homepage = "<repo-url>"
 keywords = ["cli"]
 categories = ["command-line-utilities"]
-publish = false                  # crates.io 公開しない
+publish = false                  # do not publish to crates.io
 
 [workspace.dependencies]
 anyhow = "1"
@@ -53,7 +55,7 @@ incremental = false
 inherits = "release"
 ```
 
-**TUI を作るなら** `[workspace.dependencies]` に追加:
+**If building a TUI**, add to `[workspace.dependencies]`:
 
 ```toml
 crossterm = { version = "0.28", features = ["event-stream"] }
@@ -69,7 +71,7 @@ channel = "stable"
 components = ["rustfmt", "clippy"]
 ```
 
-## Step 4: 最初の crate (`crates/<name>/`)
+## Step 4: The first crate (`crates/<name>/`)
 
 `crates/<name>/Cargo.toml`:
 
@@ -140,37 +142,37 @@ PREFIX ?= $(HOME)/.local/bin
 
 .PHONY: help build release test clippy fmt-check fmt check deny ci install uninstall clean update
 
-help: ## このヘルプを表示
+help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-build: ## デバッグビルド (workspace 全 crate)
+build: ## Debug build (all crates in the workspace)
 	cargo build --workspace --all-targets
 
-release: ## リリースビルド (lto=fat / panic=abort)
+release: ## Release build (lto=fat / panic=abort)
 	cargo build --workspace --release --locked
 
-test: ## テスト実行 (workspace 全 crate)
+test: ## Run tests (all crates in the workspace)
 	cargo test --workspace --all-targets --locked
 
 clippy: ## clippy (-D warnings)
 	cargo clippy --workspace --all-targets --all-features -- -D warnings
 
-fmt-check: ## フォーマット確認
+fmt-check: ## Check formatting
 	cargo fmt --all -- --check
 
-fmt: ## フォーマット適用
+fmt: ## Apply formatting
 	cargo fmt --all
 
-check: ## コンパイル確認のみ
+check: ## Compile check only
 	cargo check --workspace --all-targets --locked
 
-deny: ## supply-chain 監査 (要 cargo-deny)
+deny: ## Supply-chain audit (requires cargo-deny)
 	cargo deny check
 
-ci: fmt-check clippy test ## fmt-check + clippy + test 一括
+ci: fmt-check clippy test ## fmt-check + clippy + test all at once
 
-install: release ## release build → $(PREFIX) にコピー (default: ~/.local/bin)
+install: release ## Release build → copy to $(PREFIX) (default: ~/.local/bin)
 	@mkdir -p $(PREFIX)
 	@for crate in crates/*/; do \
 		name=$$(basename $$crate); \
@@ -181,17 +183,17 @@ install: release ## release build → $(PREFIX) にコピー (default: ~/.local/
 		echo "installed $$name -> $(PREFIX)/$$name"; \
 	done
 
-uninstall: ## $(PREFIX) からバイナリ削除
+uninstall: ## Remove binaries from $(PREFIX)
 	@for crate in crates/*/; do \
 		name=$$(basename $$crate); \
 		rm -f $(PREFIX)/$$name; \
 		echo "removed $(PREFIX)/$$name"; \
 	done
 
-clean: ## ビルド成果物削除
+clean: ## Remove build artifacts
 	cargo clean
 
-update: ## Cargo.lock 更新
+update: ## Update Cargo.lock
 	cargo update
 ```
 
@@ -282,9 +284,9 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@v2
 ```
 
-## Step 12: ルート `README.md`
+## Step 12: Root `README.md`
 
-tools 表を含む簡易版:
+A simplified version including a tools table:
 
 ```markdown
 # <repo>
@@ -300,37 +302,37 @@ A Cargo workspace of small terminal tools.
 ## Build & install
 
 \```sh
-make help                # 全レシピ
+make help                # all recipes
 make ci                  # fmt-check + clippy + test
 make install             # release build → ~/.local/bin/
 make install PREFIX=/opt/homebrew/bin
 make uninstall
 \```
 
-`~/.local/bin` が PATH に通っていない場合は `~/.zshrc` 等に
-`export PATH="$HOME/.local/bin:$PATH"` を追加。
+If `~/.local/bin` is not on your PATH, add
+`export PATH="$HOME/.local/bin:$PATH"` to `~/.zshrc` or similar.
 
 ## Adding a new tool
 
 1. Create `crates/<new-name>/Cargo.toml` inheriting from workspace
 2. Add a row to the table above
-3. `make ci` が通ることを確認
+3. Confirm that `make ci` passes
 ```
 
-## Step 13: CLAUDE.md「開発コマンド」追記分
+## Step 13: Content appended to CLAUDE.md's "Development commands" section
 
 ```markdown
-## 開発コマンド
+## Development commands
 
-| コマンド | 用途 |
+| Command | Purpose |
 |---|---|
-| `make` (= `make help`) | レシピ一覧 |
+| `make` (= `make help`) | List of recipes |
 | `make ci` | fmt-check + clippy + test |
-| `make release` | release ビルド (`lto = "fat"`, `panic = "abort"`) |
-| `make install` | 全 crate を `$(PREFIX)` へコピー (default: `~/.local/bin`) |
-| `make install PREFIX=/opt/homebrew/bin` | install 先を変更 |
-| `make uninstall` | install したバイナリを削除 |
-| `make deny` | supply-chain audit (`cargo deny check`、要 `cargo install cargo-deny`) |
+| `make release` | Release build (`lto = "fat"`, `panic = "abort"`) |
+| `make install` | Copy all crates to `$(PREFIX)` (default: `~/.local/bin`) |
+| `make install PREFIX=/opt/homebrew/bin` | Change the install destination |
+| `make uninstall` | Remove the installed binaries |
+| `make deny` | Supply-chain audit (`cargo deny check`, requires `cargo install cargo-deny`) |
 
-新 crate を追加するときは `/add-rust-crate` skill を使う。
+When adding a new crate, use the `/add-rust-crate` skill.
 ```

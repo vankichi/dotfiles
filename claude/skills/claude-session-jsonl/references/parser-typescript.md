@@ -1,6 +1,8 @@
-# 最小 parser (TypeScript)
+> **Source of truth:** `claude/ja/skills/claude-session-jsonl/references/parser-typescript.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
-zod の discriminatedUnion + `.or(z.object({ type: z.string() }))` catch-all で未知 type を安全に無視する。
+# Minimal parser (TypeScript)
+
+Use zod's discriminatedUnion plus a `.or(z.object({ type: z.string() }))` catch-all to safely ignore unknown types.
 
 ```ts
 import { z } from "zod";

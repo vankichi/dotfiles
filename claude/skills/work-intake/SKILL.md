@@ -1,60 +1,62 @@
 ---
 name: work-intake
-description: Notion の ready ticket を拾い、spec contract (rules/spec-contract.md) を検証して正規化 work item を返す Dev loop の入口 skill。「次の work 拾って」「ready ticket ある?」「work-intake」等で使う。contract を満たさない ticket は skip + 理由コメント。watch 対象 DB は memory reference から取得。
+description: Entry-point skill for the dev loop that picks up a ready ticket from Notion, validates it against the spec contract (rules/spec-contract.md), and returns a normalized work item. Use for "次の work 拾って" ("grab the next work item"), "ready ticket ある?" ("any ready tickets?"), "work-intake", etc. Tickets that fail the contract are skipped with a reason comment. The watched DB is resolved from a memory reference.
 ---
+
+> **Source of truth:** `claude/ja/skills/work-intake/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
 # work-intake
 
-Dev loop の入口。ready な ticket を 1 件選び、dev-cycle が自律実装できる work item に正規化する。
-**ticket 内容の修正・補完はしない** (直すのは人間 + write-spec)。
+The entry point of the dev loop. Picks a single ready ticket and normalizes it into a work item that dev-cycle can implement autonomously.
+**Does not fix or fill in ticket content** (that's for humans + write-spec to handle).
 
-## 手順
+## Procedure
 
-### Step 1: 設定解決 (hardcode 禁止)
+### Step 1: Resolve configuration (no hardcoding)
 
-- `MEMORY.md` の reference memory から watch 対象 Notion DB / ready flag / 「進行中」status の表現を取得する
-- 見つからない場合は「memory reference 未登録」と明示して停止する (user に登録を依頼)
-- option: 引数に ticket URL が渡された場合は Step 2 の列挙を skip し、その ticket だけを対象にする
+- Get the watched Notion DB / ready flag / "in progress" status representation from the reference memory in `MEMORY.md`
+- If not found, explicitly state "memory reference not registered" and stop (ask the user to register it)
+- Option: if a ticket URL is passed as an argument, skip the enumeration in Step 2 and target only that ticket
 
-### Step 2: ready ticket 列挙
+### Step 2: Enumerate ready tickets
 
-- `references/notion-adapter.md` の手順で ready 状態の ticket を列挙する
-- 0 件なら「該当なし」と明示して正常終了する
+- Enumerate tickets in the ready state following the procedure in `references/notion-adapter.md`
+- If there are 0, explicitly state "none found" and exit normally
 
-### Step 3: contract 検証 (全項目判定を出力)
+### Step 3: Contract validation (output judgment for every item)
 
-- 各 ticket に `~/.claude/rules/spec-contract.md` の検証 checklist を適用する
-- **全項目の判定 (満たす / 満たさない + 理由) を必ず出力する** (黙った skip 禁止)
-- 満たさない ticket: skip し、不備理由を ticket にコメントする (本文は編集しない)
+- Apply the validation checklist from `~/.claude/rules/spec-contract.md` to each ticket
+- **Always output the judgment (satisfied / not satisfied + reason) for every item** (no silent skipping)
+- For tickets that don't satisfy it: skip and post a comment on the ticket with the reason for the deficiency (do not edit the body)
 
-### Step 4: 選択と状態遷移
+### Step 4: Selection and state transition
 
-- contract 充足 ticket から優先度順 (同優先度は古い順) に **1 件**選択する
-- 選択 ticket の status を「進行中」相当に更新する (二度拾い防止。状態は source 側に置き、本 skill は状態を持たない)
+- Select **exactly one** ticket from the contract-satisfying ones, in priority order (oldest first for equal priority)
+- Update the selected ticket's status to the "in progress" equivalent (to prevent double-pickup. State lives on the source side; this skill holds no state of its own)
 
-### Step 5: work item 出力
+### Step 5: Work item output
 
 ```
 ## work item
 - source: notion
 - id: <ticket id>
 - url: <ticket URL>
-- 対象 repo: <spec メタから>
-- 優先度: <spec メタから>
-- 残り ready 件数: <N> (参考)
+- target repo: <from spec meta>
+- priority: <from spec meta>
+- remaining ready count: <N> (for reference)
 
 ### spec
-<目的 / スコープ・non-goals / 設計本体 / DoD / 制約 / メタ の全セクション>
+<all sections: purpose / scope & non-goals / design body / DoD / constraints / meta>
 ```
 
-## 障害時
+## On failure
 
-- Notion MCP 不達 / auth 切れ: retry せず「Notion に到達できない」を明示して異常終了する (通知は呼び出し側の責務)
+- Notion MCP unreachable / auth expired: do not retry; explicitly state "cannot reach Notion" and exit abnormally (notification is the caller's responsibility)
 
-## 鉄則
+## Iron rules
 
-1. ticket 内容の修正・補完をしない (non-goal)
-2. contract 検証は全項目判定を出力する (黙った skip 禁止)
-3. write は status 更新 + コメント追加のみ (ticket 本文の編集はしない)
-4. ticket 本文を log / insights に丸ごと転記しない (参照は id / URL で)
-5. DB 情報を skill に hardcode しない (memory reference が SoT)
+1. Do not fix or fill in ticket content (non-goal)
+2. Contract validation must output a judgment for every item (no silent skipping)
+3. Writes are status updates + comment additions only (never edit the ticket body)
+4. Never transcribe the full ticket body into logs / insights (reference by id / URL only)
+5. Do not hardcode DB information into the skill (the memory reference is the source of truth)

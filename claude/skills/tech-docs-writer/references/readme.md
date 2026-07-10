@@ -1,29 +1,31 @@
-# README / ガイドテンプレート (Diataxis 準拠)
+# README / Guide Template (Diataxis compliant)
 
-Diataxis は Tutorial / How-to / Reference / Explanation の4象限で文書を分類する。
-READMEはこの4種を1ファイルに詰め込まない。リポジトリ直下 `README.md` は「入口」に徹し、詳細は `docs/readme/` 配下に分離する。
+> **Source of truth:** `claude/ja/skills/tech-docs-writer/references/readme.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
-## 種別判定
+Diataxis classifies documents into four quadrants: Tutorial / How-to / Reference / Explanation.
+A README should not cram all four types into one file. The repository root `README.md` should function purely as an "entry point," with the details separated out under `docs/readme/`.
 
-| 何を書きたいか | 象限 | 想定読者 |
+## Type determination
+
+| What you want to write | Quadrant | Intended reader |
 |---------------|------|---------|
-| 初めて触る人が動くところまで | Tutorial | 新規オンボーディング |
-| 特定の課題の解き方 | How-to | 既にプロジェクトを知っている開発者 |
-| 設定項目・コマンド一覧 | Reference | 実装中に辞書的に引く開発者 |
-| 背景・アーキテクチャの説明 | Explanation | アーキテクチャを理解したい人 |
+| Getting a first-time user to something working | Tutorial | New onboarding |
+| How to solve a specific problem | How-to | Developers who already know the project |
+| List of configuration items / commands | Reference | Developers who look things up like a dictionary while implementing |
+| Explanation of background / architecture | Explanation | People who want to understand the architecture |
 
-1つのドキュメントに2種以上を混在させない。「チュートリアルの途中で突然Reference表が挟まる」構成は読みにくい。
+Do not mix two or more types within a single document. A structure where 「チュートリアルの途中で突然Reference表が挟まる」 (a Reference table suddenly appears midway through a tutorial) is hard to read.
 
-## 必須ヒアリング項目
+## Required interview items
 
-- 対象読者 (新規オンボーディング / 既存開発者 / 運用担当)
-- どの象限を書くか
-- プロジェクト名・リポジトリURL
-- 前提環境 (言語バージョン / OS / 依存サービス)
-- Tutorial/How-to の場合: 達成したい最終状態 (動くアプリ / 出力されるファイル)
-- Reference の場合: 列挙する対象 (CLIコマンド / 設定キー / 環境変数)
+- Target audience (new onboarding / existing developers / operations staff)
+- Which quadrant to write
+- Project name and repository URL
+- Assumed environment (language version / OS / dependent services)
+- For Tutorial/How-to: the final state to achieve (a working app / output files)
+- For Reference: what to enumerate (CLI commands / configuration keys / environment variables)
 
-## Root README.md のテンプレート (入口用)
+## Root README.md template (entry point)
 
 ```markdown
 # <プロジェクト名>
@@ -66,7 +68,7 @@ make run
 <license-name>
 ```
 
-## Tutorial テンプレート (初心者向けの学習)
+## Tutorial template (learning for beginners)
 
 ```markdown
 # <プロジェクト名> セットアップガイド
@@ -101,7 +103,7 @@ $ command
 <よくあるつまずきポイント2〜3つ>
 ```
 
-## How-to テンプレート (特定タスクの手順)
+## How-to template (steps for a specific task)
 
 ```markdown
 # <動詞ではじまるタイトル: 例「新しいAPIエンドポイントを追加する」>
@@ -125,7 +127,7 @@ $ command
 - <関連するHow-to、参照ドキュメント>
 ```
 
-## Reference テンプレート (事実の列挙)
+## Reference template (enumeration of facts)
 
 ```markdown
 # <対象の名前> リファレンス
@@ -154,7 +156,7 @@ $ command
 | `--bar` | int | 10 | <説明> |
 ```
 
-## Explanation テンプレート (理解のための解説)
+## Explanation template (explanation for understanding)
 
 ```markdown
 # <概念/アーキテクチャのタイトル>
@@ -183,18 +185,18 @@ $ command
 - <論文、書籍、ブログ>
 ```
 
-## 書き方のコツ
+## Writing tips
 
-1. Tutorial は"読んで覚える"ではなく"手を動かす"。段階ごとに確認ポイントを置く。
-2. How-to は動詞ではじめるタイトル。「データベースに接続するには」ではなく「データベースに接続する」。
-3. Reference は網羅性優先。説明を足しすぎると Explanation に寄って引きにくくなる。
-4. Explanation は図を必ず入れる。テキストだけだと伝わらない。
+1. A Tutorial is about "doing," not "reading to memorize." Place a confirmation point at each step.
+2. Start How-to titles with a verb: use 「データベースに接続する」 rather than 「データベースに接続するには」.
+3. Reference should prioritize completeness. Adding too much explanation drifts it toward Explanation and makes it harder to look things up.
+4. Always include a diagram in Explanation. Text alone doesn't get the point across.
 
-## 保存先
+## Save location
 
-- リポジトリ直下 `README.md` (入口)
-- 詳細: `docs/readme/<topic>.md` (Tutorial/How-to/Reference/Explanation ごとに分割)
+- Repository root `README.md` (entry point)
+- Details: `docs/readme/<topic>.md` (split per Tutorial/How-to/Reference/Explanation)
 
-## 参考
+## References
 
-- Diataxis 公式: https://diataxis.fr/
+- Diataxis official site: https://diataxis.fr/

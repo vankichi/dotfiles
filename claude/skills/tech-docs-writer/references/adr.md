@@ -1,20 +1,22 @@
-# ADR / Design Doc テンプレート (MADR v3 準拠)
+# ADR / Design Doc Template (MADR v3 compliant)
 
-ADRは「決定の記録」、Design Docは「提案〜決定のプロセス」を書く。テンプレートは共通で、Design Docの場合は `Status: Proposed` で書き始め、合意後に `Accepted` に更新する。
+> **Source of truth:** `claude/ja/skills/tech-docs-writer/references/adr.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
-## 必須ヒアリング項目
+An ADR writes 「決定の記録」 (a record of the decision); a Design Doc writes 「提案〜決定のプロセス」 (the process from proposal to decision). The template is shared: for a Design Doc, start writing with `Status: Proposed`, then update it to `Accepted` once agreement is reached.
 
-- 決定のタイトル (例: 「ベクトル検索エンジンにValdを採用する」)
+## Required interview items
+
+- Decision title (e.g., 「ベクトル検索エンジンにValdを採用する」)
 - Status (`Proposed` / `Accepted` / `Rejected` / `Deprecated` / `Superseded by [ADR-xxxx]`)
-- 意思決定者 (個人名/チーム名)
-- 背景 (なぜ今この決定が必要か)
-- 検討した選択肢 (最低2つ以上。1つしかないなら"決定"ではない)
-- 選定基準 (パフォーマンス/運用コスト/既存スタックとの整合性 など)
-- 予期される帰結 (ポジティブ/ネガティブ両方)
+- Decision maker(s) (individual name / team name)
+- Background (why this decision is needed now)
+- Options considered (at least 2 — if there's only one, it isn't a "decision")
+- Selection criteria (performance / operational cost / consistency with the existing stack, etc.)
+- Expected consequences (both positive and negative)
 
-必須項目が埋まらない場合は作成しない。特に「検討した選択肢」が1つしかない場合は、ADRではなく実装メモに分類すべきかを確認する。
+Do not create the document if the required items cannot be filled in. In particular, if there is only one entry under 「検討した選択肢」 (options considered), confirm whether it should be classified as an implementation memo rather than an ADR.
 
-## テンプレート本文
+## Template body
 
 ```markdown
 # ADR-NNNN: <決定のタイトル>
@@ -86,20 +88,20 @@ ADRは「決定の記録」、Design Docは「提案〜決定のプロセス」�
 <参考リンク、関連ADR、補足資料>
 ```
 
-## 書き方のコツ
+## Writing tips
 
-1. Context は"事実"を書く。「良いライブラリがない」ではなく「現行の X は Y の機能をサポートしていない」のように検証可能な形で。
-2. Consequences は両面書く。Good だけ並ぶADRは疑わしい。Bad が思いつかないなら決定の影響範囲を理解できていない可能性がある。
-3. Design Doc 用途では "Open Questions" セクションを `## More Information` の前に追加する。合意取得前の論点を可視化するため。
-4. Mermaid図は Context か Decision Outcome に配置する。Before/After のアーキテクチャ図が特に有効。
+1. Write "facts" in Context. Instead of phrasing it like 「良いライブラリがない」, write it in a verifiable form such as 「現行の X は Y の機能をサポートしていない」.
+2. Write Consequences from both sides. An ADR that lists only Good items is suspicious. If you can't think of any Bad items, you may not have fully understood the decision's scope of impact.
+3. For Design Doc use, add an "Open Questions" section before `## More Information`, to surface the points still under discussion before consensus is reached.
+4. Place Mermaid diagrams in Context or Decision Outcome. Before/After architecture diagrams are especially effective.
 
-## ファイル名と連番
+## File name and sequence number
 
-- パス: `docs/adr/NNNN-<kebab-case-slug>.md`
-- 連番: `docs/adr/` 配下の既存最大番号 + 1 (ゼロ埋め4桁)
-- slug: タイトルを英語kebab-caseに変換 (例: `0012-adopt-vald-for-vector-search.md`)
+- Path: `docs/adr/NNNN-<kebab-case-slug>.md`
+- Sequence number: existing max number under `docs/adr/` + 1 (zero-padded to 4 digits)
+- Slug: convert the title to English kebab-case (e.g., `0012-adopt-vald-for-vector-search.md`)
 
-## 参考
+## References
 
-- MADR 公式: https://adr.github.io/madr/
+- MADR official site: https://adr.github.io/madr/
 - GitHub: https://github.com/adr/madr

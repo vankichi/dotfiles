@@ -1,49 +1,51 @@
-# 尋問観点 checklist (write-spec Step 3)
+> **Source of truth:** `claude/ja/skills/write-spec/references/interrogation.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
-各観点の発火条件を満たす場合に該当質問を 1 問ずつ AskUserQuestion で確認する。
-全観点の実施状況 (実施 / skip + 理由) を Step 5 の検証出力に含める (黙った skip 禁止)。
+# Interrogation perspective checklist (write-spec Step 3)
 
-## 常時 on (全 spec で実施)
+Whenever a perspective's trigger condition is met, confirm the corresponding question one at a time via AskUserQuestion.
+Include the implementation status of every perspective (done / skipped + reason) in the Step 5 validation output (no silent skipping).
 
-### 1. 目的の具体性
+## Always on (applied to every spec)
 
-- 「この変更が入った翌日、何がどう変わっていれば成功?」
-- 目的が手段 (「X を導入する」) で書かれていたら、その先の価値を聞く
+### 1. Concreteness of the purpose
 
-### 2. スコープ境界
+- "The day after this change ships, what will be visibly different, to count as success?"
+- If the purpose is phrased as a means (e.g., "introduce X"), ask about the value beyond that
 
-- 設計本体に登場する周辺要素を列挙し「Y は今回触る? 触らない?」を確認する
-- non-goals が空なら「やりたくなりそうだが今回は我慢すること」を最低 1 つ引き出す
+### 2. Scope boundaries
 
-### 3. DoD の機械検証可能性
+- Enumerate the peripheral elements that appear in the design body and confirm "will Y be touched this time, or not?"
+- If non-goals is empty, draw out at least one "thing we'll probably want to do but are holding off on this time"
 
-- 各 DoD 項目に「どのコマンド / 手順で検証する?」を紐付ける
-- 「〜が正しく動く」→「どの入力で何が返れば正しい?」に具体化する
+### 3. Machine-verifiability of the DoD
 
-### 4. 制約の明示
+- Tie each DoD item to "which command / procedure will verify this?"
+- Turn "X works correctly" into something concrete: "given what input, what output counts as correct?"
 
-- 新規依存の追加は可か (可なら条件)
-- performance 目標 / 劣化許容はあるか (なければ「なし」と明記してもらう)
-- secret / PII を扱うか
+### 4. Explicitness of constraints
 
-## 条件付き (設計本体の内容で発火)
+- Is adding a new dependency allowed (and under what conditions if so)?
+- Is there a performance target / acceptable degradation (if none, have them state "none" explicitly)?
+- Does it handle secrets / PII?
 
-### 5. 外部 interface
+## Conditional (triggered by the content of the design body)
 
-- 発火条件: API / RPC / event schema / enum / 公開 interface の新規・変更を含む
-- → SKILL.md Step 4 で api-design-review に委譲する (ここでは重複尋問しない)
+### 5. External interfaces
 
-### 6. データ / 状態
+- Trigger condition: includes a new or changed API / RPC / event schema / enum / public interface
+- → Delegate to api-design-review in SKILL.md Step 4 (do not duplicate the interrogation here)
 
-- 発火条件: 永続化 / migration / データモデル変更を含む
-- 後方互換: 既存データはどうなる? rollback 手順は?
+### 6. Data / state
 
-### 7. 障害時挙動
+- Trigger condition: includes persistence / migration / data model changes
+- Backward compatibility: what happens to existing data? What's the rollback procedure?
 
-- 発火条件: 外部サービス呼び出し / 非同期処理を含む
-- 失敗時に retry するか、諦めるか、失敗は誰にどう見えるか
+### 7. Failure-mode behavior
 
-### 8. 運用
+- Trigger condition: includes calls to external services / asynchronous processing
+- On failure, does it retry or give up, and who sees the failure, and how?
 
-- 発火条件: 常駐 process / 定期実行 / 新規 service を含む
-- 動いていることをどう観測するか (log / metric / alert)
+### 8. Operations
+
+- Trigger condition: includes a long-running process / scheduled execution / new service
+- How is "it's running" observed (logs / metrics / alerts)?

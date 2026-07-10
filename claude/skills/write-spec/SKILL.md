@@ -1,59 +1,61 @@
 ---
 name: write-spec
-description: 人間の設計 draft を spec contract (rules/spec-contract.md) を満たす spec に仕上げる補佐 skill。設計判断はせず、穴の尋問・整形・contract 検証のみ行う。「spec にして」「spec 書くの手伝って」「設計を spec 化」等で使う。ready flag を立てるのは人間。
+description: Assistant skill that polishes a human's design draft into a spec that satisfies the spec contract (rules/spec-contract.md). Makes no design decisions itself — only interrogates gaps, formats, and validates against the contract. Use for "spec にして" ("turn this into a spec"), "spec 書くの手伝って" ("help me write a spec"), "設計を spec 化" ("formalize this design into a spec"), etc. Only a human may set the ready flag.
 ---
+
+> **Source of truth:** `claude/ja/skills/write-spec/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
 # write-spec
 
-人間が主導して書いた設計を、agent (dev-cycle) が自律実装できる spec に仕上げる。
-**設計判断はしない。実装計画も作らない。** 穴を見つけて聞き、埋まったら整形して検証するだけ。
+Polishes a design that a human has written and led into a spec that an agent (dev-cycle) can implement autonomously.
+**Makes no design decisions. Does not create an implementation plan either.** Only finds gaps, asks about them, and once they're filled in, formats and validates.
 
-## 入力
+## Input
 
-会話中の設計説明 / ローカル file / Notion page URL のいずれか。
+Any of: a design explanation from the conversation / a local file / a Notion page URL.
 
-## 手順
+## Procedure
 
-### Step 1: contract を読む
+### Step 1: Read the contract
 
-`~/.claude/rules/spec-contract.md` を Read する (必須セクション / 検証 checklist / ready の意味)。
+Read `~/.claude/rules/spec-contract.md` (required sections / validation checklist / meaning of ready).
 
-### Step 2: draft を template にマップ
+### Step 2: Map the draft onto the template
 
-入力を必須セクション 1-6 に振り分け、埋まっていない・曖昧なセクションを列挙して user に提示する。
+Sort the input into required sections 1-6, and present the user with a list of sections that are unfilled or ambiguous.
 
-### Step 3: 尋問 (1 問ずつ)
+### Step 3: Interrogation (one question at a time)
 
-`references/interrogation.md` の観点で、埋まっていない箇所を AskUserQuestion で 1 問ずつ確認する。
+Using the perspectives in `references/interrogation.md`, confirm unfilled spots one question at a time via AskUserQuestion.
 
-- 回答を勝手に補完しない。選択肢を出す場合も「推奨」は根拠付きで 1 つまで
-- 人間が「これで良い」と確定した設計に異論を続けない (懸念は 1 回 flag して従う)
-- 提案 (DoD 案 / 制約案 等) への確認を取る時は、**提案内容を質問文の中に再掲する** (直前メッセージへの参照だけだと user に見えないことがある)
-- **未設計領域への escape hatch**: 穴埋めではなくセクション丸ごと設計が存在しないと判明したら、`grill-me` skill に委譲して深掘りし、結果を持って本 Step に戻る。委譲時は args で scope を縛る (例: 「contract セクション 3 (設計本体) の障害時挙動に限定」)。open-ended に走らせない
-- 全観点の実施状況 (実施 / skip + 理由) を記録し Step 5 の出力に含める
+- Do not fill in answers on your own. When offering choices, limit any "recommended" option to one, with a stated rationale
+- Do not keep raising objections to a design the human has confirmed as "good as is" (flag a concern once, then follow their decision)
+- When confirming a proposal (a candidate DoD / a candidate constraint, etc.), **restate the proposal's content inside the question itself** (a reference to the preceding message alone may not be visible to the user)
+- **Escape hatch for undesigned areas**: if it turns out that an entire section has no design at all — not just a gap to fill — delegate to the `grill-me` skill for deeper exploration, then return to this step with the result. When delegating, constrain the scope via args (e.g., "Limit to failure-mode behavior in contract section 3 (design body)"). Do not let it run open-ended
+- Record the status of every perspective (done / skipped + reason) and include it in the Step 5 output
 
-### Step 4: api-design-review の発火判定 (機械的)
+### Step 4: Trigger check for api-design-review (mechanical)
 
-設計本体に以下のいずれかが含まれる場合、`api-design-review` skill を invoke し、検出された考慮漏れを Step 3 の尋問に追加する:
+If the design body includes any of the following, invoke the `api-design-review` skill and add any detected gaps to the Step 3 interrogation:
 
-- 新規 / 変更される API endpoint・RPC・event schema・enum・公開 interface (**repo 外に公開されるものが対象**。harness 内部の skill 間契約は対象外 — spec の設計本体で扱う)
-- ACL / 権限モデルの変更
+- A new or changed API endpoint, RPC, event schema, enum, or public interface (**applies only to things exposed outside the repo**. Skill-to-skill contracts internal to the harness are out of scope — handle those in the design body of the spec)
+- A change to the ACL / permission model
 
-含まれない場合は skip し、理由を Step 5 の出力に明記する。
+If none apply, skip and note the reason in the Step 5 output.
 
-### Step 5: 整形と検証
+### Step 5: Formatting and validation
 
-spec を markdown で組み立て、contract の検証 checklist **全項目の判定を出力する** (満たす / 満たさない + 理由)。満たさない項目が残る場合は Step 3 に戻る。
+Assemble the spec in markdown, and output the judgment for **every item** of the contract's validation checklist (satisfied / not satisfied + reason). If any unsatisfied items remain, return to Step 3.
 
-### Step 6: 出力
+### Step 6: Output
 
-- 完成 spec を提示する (Notion に貼れる markdown)
-- Notion への書き込みは user の明示指示があった場合のみ (MCP 経由)
-- **ready flag は立てない** — 「ready にするのは人間」と明記して終了する
+- Present the finished spec (markdown that can be pasted into Notion)
+- Only write to Notion if the user explicitly instructs it (via MCP)
+- **Do not set the ready flag** — end by stating explicitly that "setting it to ready is for the human to do"
 
-## 鉄則
+## Iron rules
 
-1. 設計判断・実装計画の代行をしない (補佐に徹する)
-2. 検証 checklist と尋問観点は全項目の判定 / 実施状況を必ず出力する (黙った skip 禁止)
-3. 尋問は 1 問ずつ (multiple choice 優先)
-4. project 固有情報 (Notion DB 等) は hardcode せず MEMORY.md の reference から取得する
+1. Do not make design decisions or implementation plans on the human's behalf (stay strictly in an assisting role)
+2. Always output the judgment for every item of the validation checklist and the implementation status of every interrogation perspective (no silent skipping)
+3. Interrogate one question at a time (prefer multiple choice)
+4. Do not hardcode project-specific information (e.g., the Notion DB); get it from the reference in `MEMORY.md`

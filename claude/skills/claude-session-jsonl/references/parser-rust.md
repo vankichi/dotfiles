@@ -1,6 +1,8 @@
-# 最小 parser (Rust)
+> **Source of truth:** `claude/ja/skills/claude-session-jsonl/references/parser-rust.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
-serde の tagged enum + `#[serde(other)]` catch-all で未知 type を安全に無視する。
+# Minimal parser (Rust)
+
+Use serde's tagged enum plus a `#[serde(other)]` catch-all to safely ignore unknown types.
 
 ```rust
 use serde::Deserialize;
@@ -36,7 +38,7 @@ pub(crate) enum ContentBlock {
 pub(crate) struct Usage {
     #[serde(default)] pub input_tokens: u64,
     #[serde(default)] pub output_tokens: u64,
-    #[serde(default)] pub cache_creation_input_tokens: u64,  // 5min + 1hr 合計
+    #[serde(default)] pub cache_creation_input_tokens: u64,  // 5min + 1hr total
     #[serde(default)] pub cache_read_input_tokens: u64,
     #[serde(default)] pub cache_creation: Option<CacheCreation>,
 }

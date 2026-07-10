@@ -1,20 +1,22 @@
-# Runbook テンプレート (Google SRE Playbook スタイル)
+# Runbook Template (Google SRE Playbook style)
 
-Runbookはオンコール当番が深夜3時に読む前提で書く。冗長な背景説明は不要で、判断と操作がすぐ取れる構造にする。
+> **Source of truth:** `claude/ja/skills/tech-docs-writer/references/runbook.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
-## 必須ヒアリング項目
+Write the Runbook assuming the on-call engineer reads it at 3am. Verbose background explanations are unnecessary; structure it so decisions and actions can be taken immediately.
 
-- アラート名 / 症状 (Symptom)
-- 重大度 (SEV / P1〜P5 など社内基準)
-- 影響範囲 (ユーザー影響 / 内部影響のみ)
-- 確認すべきダッシュボード / ログクエリのURL
-- 暫定対応 (Mitigation) の候補
-- 根本対応 (Resolution) のオーナー
-- エスカレーション先 (チーム/個人/Slack channel)
+## Required interview items
 
-Mitigation が1つも決まっていない状態でRunbookは書かない。「とりあえず再起動」も立派なMitigationなので、ヒアリングで必ず引き出す。
+- Alert name / symptom
+- Severity (SEV / P1-P5, or your internal standard)
+- Scope of impact (user-facing impact / internal impact only)
+- Dashboard / log query URLs to check
+- Candidate mitigations
+- Owner of the root-cause resolution
+- Escalation target (team / individual / Slack channel)
 
-## テンプレート本文
+Do not write a Runbook with zero mitigations decided. Even 「とりあえず再起動」 (just restart it for now) counts as a legitimate mitigation, so make sure to draw one out during the interview.
+
+## Template body
 
 ```markdown
 # Runbook: <アラート名 or 症状>
@@ -114,28 +116,28 @@ kubectl rollout restart deployment/<name> -n <ns>
 | YYYY-MM-DD | 初版 | <name> |
 ```
 
-## 書き方のコツ
+## Writing tips
 
-1. Diagnosis は"上から順にやれば切り分く"順序で書く。思考の遠回りを作らない。
-2. コマンドは実行可能な形で貼る。`<name>` プレースホルダがあってもよいが、何を入れるかは直前に書く。
-3. Mitigation には副作用を必ず書く。副作用不明な操作を深夜に打たせない。
-4. Resolution と Mitigation を混同しない。Mitigation は止血、Resolution は根治。
-5. 更新を怠らない。Alertmanagerのルール名変更、K8s namespace変更などで陳腐化する。アラート発火のたびに差分を反映するくらいで丁度よい。
+1. Write Diagnosis in an order such that "working through it top to bottom narrows down the cause." Don't create mental detours.
+2. Paste commands in an executable form. It's fine to have `<name>` placeholders, but state what to fill in immediately before the command.
+3. Always document side effects for each Mitigation. Don't make someone run an operation with unknown side effects in the middle of the night.
+4. Don't conflate Resolution with Mitigation. Mitigation stops the bleeding; Resolution cures the underlying cause.
+5. Don't neglect updates. Renaming Alertmanager rules, changing K8s namespaces, and similar changes make a Runbook stale. Reflecting the diff every time the alert fires is about the right cadence.
 
-## アラートルールからの自動起こし
+## Auto-drafting from alert rules
 
-`PrometheusRule` などから出発する場合、以下を `Symptom` と `Diagnosis` の初期案にする:
+When starting from a `PrometheusRule` or similar, use the following as the initial draft for `Symptom` and `Diagnosis`:
 
-- `alert:` 値 → Runbookタイトル
-- `expr:` → Diagnosis の「メトリクス確認」ステップの基礎
-- `annotations.summary` / `description` → Symptom 本文
-- `annotations.runbook_url` が空なら、このRunbookのURLを埋める提案を行う
+- `alert:` value → Runbook title
+- `expr:` → basis for the Diagnosis "check metrics" step
+- `annotations.summary` / `description` → Symptom body text
+- If `annotations.runbook_url` is empty, propose filling it in with this Runbook's URL
 
-## 保存先
+## Save location
 
 - `docs/runbook/<alertname-or-topic>.md`
-- アラートルールと1対1対応が望ましい (大きくなってきたらグループ化)
+- A 1:1 correspondence with the alert rule is preferable (group them once things grow large)
 
-## 参考
+## References
 
 - Google SRE Workbook - On-Call: https://sre.google/workbook/on-call/

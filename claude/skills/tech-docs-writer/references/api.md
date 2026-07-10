@@ -1,21 +1,23 @@
-# API仕様書テンプレート (OpenAPI 3.1 の考え方に基づく Markdown)
+# API Specification Template (Markdown based on OpenAPI 3.1 concepts)
 
-OpenAPIのYAML/JSONをそのまま出力するのではなく、人間が読める日本語のMarkdown API仕様書を作る。ただし情報粒度は OpenAPI 3.1 に揃えることで、必要になったときに機械可読形式へ変換しやすくする。
+> **Source of truth:** `claude/ja/skills/tech-docs-writer/references/api.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
-## 必須ヒアリング項目
+Rather than outputting OpenAPI YAML/JSON directly, this produces a human-readable Japanese Markdown API specification. However, the granularity of information is aligned with OpenAPI 3.1, making it easy to convert to a machine-readable format when needed.
 
-- APIの種類 (REST / gRPC / GraphQL)
-- サービス名・バージョン
-- Base URL (環境ごと: 開発/ステージング/本番)
-- 認証方式 (Bearer Token / API Key / mTLS / OAuth2 / なし)
-- 対象エンドポイント一覧 (最低1つ)
-- 各エンドポイントのパラメータ/リクエスト/レスポンスの形
-- エラー体系 (共通エラーレスポンス形式、ステータスコード方針)
-- レート制限の有無
+## Required interview items
 
-不明点が多い場合はまずエンドポイント1本を完成させ、テンプレートを示してから残りを埋めるアプローチを提案する。
+- API type (REST / gRPC / GraphQL)
+- Service name and version
+- Base URL (per environment: development / staging / production)
+- Authentication method (Bearer Token / API Key / mTLS / OAuth2 / none)
+- List of target endpoints (at least 1)
+- Parameter / request / response shape for each endpoint
+- Error scheme (common error response format, status code policy)
+- Whether rate limiting applies
 
-## テンプレート本文
+If many points are unclear, propose an approach where you first complete one endpoint, show the template, and then fill in the rest.
+
+## Template body
 
 ```markdown
 # <サービス名> API 仕様書
@@ -149,18 +151,18 @@ Content-Type: application/json
 | YYYY-MM-DD | v1.0.0 | 初版 |
 ```
 
-## 書き方のコツ
+## Writing tips
 
-1. エラーは"起こりうるもの"に絞って列挙。`500` を全エンドポイントに列挙するのは情報量ゼロ。そのエンドポイント固有のエラー条件を書く。
-2. リクエスト/レスポンスは必ず具体例(JSON)を併記する。スキーマ表だけだと誤読される。
-3. 日時は RFC3339 / タイムゾーンを必ず明示。`2026-04-21T12:00:00Z` のように。
-4. gRPCの場合は `.proto` のservice/method単位で見出しを切り、リクエスト/レスポンスのmessage定義を併記する。
+1. List only errors that "can actually occur." Listing `500` for every endpoint carries zero information. Write the error conditions specific to that endpoint.
+2. Always include a concrete example (JSON) alongside the request/response. A schema table alone is easily misread.
+3. Always specify date-times in RFC3339 with an explicit timezone, e.g., `2026-04-21T12:00:00Z`.
+4. For gRPC, break headings down by `.proto` service/method, and include the request/response message definitions alongside them.
 
-## 保存先
+## Save location
 
-- REST: `docs/api/<service-name>.md` または `docs/api/<resource>.md`
-- 複数エンドポイントがある場合は `docs/api/<service>/<resource>.md` と階層化
+- REST: `docs/api/<service-name>.md` or `docs/api/<resource>.md`
+- If there are multiple endpoints, organize hierarchically as `docs/api/<service>/<resource>.md`
 
-## 参考
+## References
 
-- OpenAPI 3.1 仕様: https://spec.openapis.org/oas/v3.1.0
+- OpenAPI 3.1 specification: https://spec.openapis.org/oas/v3.1.0

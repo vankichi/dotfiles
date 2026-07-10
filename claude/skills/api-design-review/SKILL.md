@@ -1,199 +1,201 @@
 ---
 name: api-design-review
-description: API / 上流設計 (ADR / Design Doc / API 契約 / ドメインモデル / ACL) の考慮漏れを 6 軸で洗い出す read-only review skill。wire 表現に落とす前の logical 設計段階 — ExitPlanMode 前 / ADR 起票時 / Design Doc draft 完成時 — に invoke する。「設計 review して」「考慮漏れチェック」等で使う。
+description: A read-only review skill that surfaces overlooked considerations in API / upstream design (ADR / Design Doc / API contracts / domain models / ACL) across 6 axes. Invoke it at the logical design stage, before it's committed to a wire representation — before ExitPlanMode / when drafting an ADR / when a Design Doc draft is complete. Used for things like 「設計 review して」「考慮漏れチェック」.
 model: claude-fable-5
 ---
 
+> **Source of truth:** `claude/ja/skills/api-design-review/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
+
 # api-design-review
 
-API / システム上流設計の **turn を跨いだ段階的発覚を防ぐ** ための系統的レビュー skill。read-only (Edit / Write しない、Bash で grep のみ可)。
+A systematic review skill for API / upstream system design that **prevents issues from surfacing piecemeal across turns**. Read-only (no Edit / Write; only grep via Bash is allowed).
 
-考慮漏れの源泉は wire 表現 (proto / OpenAPI) ではなく、その **前段のドメイン設計 / use case 分析 / ACL モデル / API 体験設計** にあるため、proto を書き始める **前** に通すのが最も効果的。proto を触り始めてからの review は補完用。
+The source of overlooked considerations isn't the wire representation (proto / OpenAPI) but the **domain design / use-case analysis / ACL model / API experience design that precedes it** — so running this **before** starting to write proto is most effective. Reviewing after proto work has already begun is only supplementary.
 
-## 適用条件
+## Applicability
 
-以下のいずれかで invoke:
+Invoke in any of the following cases:
 
-### 上流設計時 (主用途)
-- 新 ADR を起票する **前** または draft 完成時 (MADR v3、`docs/adr/`)
-- Design Doc / System Design (arc42 / C4) の新規作成 / 章追加時 (`docs/design/`)
-- 新 API 契約 (proto / OpenAPI / GraphQL schema) の logical 設計時、wire に落とす前
-- ドメインモデル / Aggregate / Bounded Context の新規 / 改訂時
-- use case / user story 分析時、特に CRUD 以外の動詞が含まれる場合
-- ACL / authorization / 多 tenant 分離モデルの設計時
+### During upstream design (primary use)
+- **Before** drafting a new ADR, or when the draft is complete (MADR v3, `docs/adr/`)
+- When newly creating a Design Doc / System Design (arc42 / C4) or adding a section (`docs/design/`)
+- During the logical design of a new API contract (proto / OpenAPI / GraphQL schema), before committing it to wire form
+- When newly creating or revising a domain model / Aggregate / Bounded Context
+- During use-case / user-story analysis, especially when verbs other than CRUD are involved
+- When designing an ACL / authorization / multi-tenant isolation model
 
-### 下流補完 (proto / OpenAPI 触り始め後)
-- 既存 message / enum の構造変更 (sub-message 切り出し / field rename / enum 値追加) 前
-- SDK surface の改修時 (TypeScript / Go 等)
-- 多 file refactor の plan-first 適用時、ExitPlanMode 前
+### Downstream supplement (after starting to touch proto / OpenAPI)
+- Before a structural change to an existing message / enum (extracting a sub-message / renaming a field / adding an enum value)
+- When revising the SDK surface (TypeScript / Go, etc.)
+- When applying plan-first to a multi-file refactor, before ExitPlanMode
 
-### invoke しないとき
-- バグ fix / typo / format / lint fix
-- 既存 contract への影響なしの内部 refactor
-- documentation のみの軽微更新
+### When not to invoke
+- Bug fixes / typos / formatting / lint fixes
+- Internal refactors with no impact on an existing contract
+- Minor documentation-only updates
 
-軽微な変更では CLAUDE.md「判断と質問の作法」の日常 check で足りる (本 skill は **重い分析専用**)。
+For minor changes, the everyday checks in CLAUDE.md's 「判断と質問の作法」section suffice (this skill is **reserved for heavyweight analysis**).
 
-## 進め方 (1 周 = 20-40 分目安、上流ほど時間を取る)
+## Approach (one pass ≈ 20-40 minutes; allow more time the further upstream you are)
 
-設計対象を確認 (ADR draft / Design Doc / proto / 関連 docs を Read) してから、以下 6 観点で **1 つずつ書き出す**。各観点で「該当なし」も明示する (空欄 = 未検討 = 漏れ)。
+After reviewing the design target (Read the ADR draft / Design Doc / proto / related docs), **work through the following 6 perspectives one at a time, writing each down**. For each perspective, explicitly state "not applicable" where relevant (a blank = not considered = an oversight).
 
-### 1. client 抽象 vs server 展開の分離
+### 1. Separating client abstraction from server-side expansion
 
-設計対象に登場する concept / 概念 / field / enum 値 / RPC parameter を列挙し、それぞれ:
+Enumerate the concepts / fields / enum values / RPC parameters that appear in the design target, and for each:
 
-- (a) **client / caller / 外部 user が直接認識・導出できる値**か (自分の id、user 入力、自社内設定値)
-- (b) **server / platform が文脈から導出する値**か (他 tenant id、認証情報、内部 resource id、role / claims、cross-tenant fan-out 対象)
-- (c) (b) を wire / 契約 / 公開 surface に置いている箇所がないか
+- (a) Is it **a value the client / caller / external user can directly know or derive** (their own id, user input, in-house configuration values)?
+- (b) Is it **a value the server / platform derives from context** (other tenants' ids, authentication info, internal resource ids, role / claims, cross-tenant fan-out targets)?
+- (c) Are there any places where (b) has been placed on the wire / contract / public surface?
 
-(c) が見つかったら、wire から外して server-side concept に移す。SDK example も併せて check。
+If (c) is found, remove it from the wire and move it to a server-side concept. Also check the SDK examples.
 
-**check phrasing**: 「この概念を client がどう知るのか」「client が知っていてはいけない情報を contract に出していないか」
+**Check phrasing**: "How would the client come to know this concept?" / "Does the contract expose information the client shouldn't know?"
 
-**過去事例**: `repeated string product_ids` を proto に置く案 → client は他 product_id を知らない (情報漏洩 + ACL bypass)、wire から外して server-side concept (collection-level config / access_group 等) に移した
+**Past case**: a proposal to put `repeated string product_ids` in the proto → the client doesn't know other product_ids (information leak + ACL bypass); it was removed from the wire and moved to a server-side concept (collection-level config / access_group, etc.)
 
-### 2. ACL の読み / 書き 両側
+### 2. Both the read and write sides of ACL
 
-ACL / 可視性 / アクセス制御が絡む場合 (絡まない場合は「該当なし」と明記):
+When ACL / visibility / access control is involved (state "not applicable" explicitly when it isn't):
 
-- (a) **読み (search filter / fetch / row-level / collection ACL)** の表現と server 側挙動
-- (b) **書き (visibility / scope 別の許可主体 / write authorization / role-based gating)** の表現と server 側挙動
-- (c) 同 visibility でも内部投入 vs 外部投入 / admin vs regular で許可 role が違うケースを想定
-- (d) 認可失敗の挙動 (403 vs 404 / 情報漏洩リスク)
+- (a) The representation and server-side behavior of **reads** (search filter / fetch / row-level / collection ACL)
+- (b) The representation and server-side behavior of **writes** (who's authorized per visibility / scope / write authorization / role-based gating)
+- (c) Consider cases where, even for the same visibility, the authorized role differs between internal vs external submission, or admin vs regular
+- (d) Behavior on authorization failure (403 vs 404 / information leak risk)
 
-書き許可は wire field ではなく ACL ドメイン層 (ReBAC / ABAC 等) で判定すべき (proto field に焼くと spoofable)。endpoint 分離 (`/v1/upsert` vs `/v1/admin/upsert`) は wire surface に権限境界を出す選択肢。
+Write authorization should be determined by the ACL domain layer (ReBAC / ABAC, etc.), not a wire field (baking it into a proto field makes it spoofable). Splitting endpoints (`/v1/upsert` vs `/v1/admin/upsert`) is an option for exposing the authorization boundary on the wire surface.
 
-**check phrasing**: 「この visibility / scope を **誰が書ける** か」「個別 caller が広い visibility を書けるリスクは」
+**Check phrasing**: "**Who can write** this visibility / scope?" / "What's the risk of an individual caller writing a broad visibility?"
 
-**過去事例**: PRODUCT_WIDE を個別 product client が書けるリスクの議論不在 → ACL の書き側を別 ADR (ReBAC/ABAC) で扱う方針に確定
+**Past case**: the risk of an individual product client being able to write PRODUCT_WIDE went undiscussed → it was decided to handle the write side of ACL in a separate ADR (ReBAC/ABAC)
 
-### 3. forward-compat の系統的確認
+### 3. Systematic forward-compat check
 
-設計対象が将来どう拡張されうるか、非破壊で対応可能か:
+How the design target might be extended in the future, and whether it can be handled non-breaking:
 
-- enum 値追加 (proto3 で non-breaking、OpenAPI でも append OK)
-- field 追加 (新 field number / property、proto3 / OpenAPI で non-breaking)
-- 新 RPC / 新 endpoint / 新 service 追加
-- 新 message / 新 schema 追加
-- ADR 改訂 / 撤回時の互換性
+- Adding an enum value (non-breaking in proto3; appending is fine in OpenAPI too)
+- Adding a field (a new field number / property; non-breaking in proto3 / OpenAPI)
+- Adding a new RPC / new endpoint / new service
+- Adding a new message / new schema
+- Compatibility when an ADR is revised / withdrawn
 
-将来予見される拡張 (cross-tenant / admin / batch / streaming / role / scope group / pre-signed URL / async worker / VLM / 多 region 等) を 3-5 件挙げ、それぞれ非破壊拡張で対応できるか確認。breaking 必要なケースは Phase 内で完結させる。
+List 3-5 foreseeable future extensions (cross-tenant / admin / batch / streaming / role / scope group / pre-signed URL / async worker / VLM / multi-region, etc.) and check whether each can be handled with a non-breaking extension. Cases that require a breaking change should be completed within the current Phase.
 
-**check phrasing**: 「将来 X が来た時、契約をどう拡張するか」を各拡張ケースで 1-3 行記述
+**Check phrasing**: for each extension case, write 1-3 lines answering "When X arrives in the future, how would the contract be extended?"
 
-**過去事例**: 一過性のラベル (組織名 = academy 等) を enum / field に焼く設計が組織変更で rot、組織名フリーの命名 (CURATED / BOOK 等) に変更
+**Past case**: a design that baked a transient label (e.g. an organization name like "academy") into an enum / field rotted when the organization changed; it was changed to organization-name-free naming (CURATED / BOOK, etc.)
 
-### 4. edge case 列挙 ("こういう時どうするの?")
+### 4. Enumerating edge cases ("what happens when...?")
 
-設計対象に対して以下のドメイン質問を **5-10 件書き出し、1 つずつ答える**:
+**Write out 5-10** of the following domain questions against the design target **and answer each one**:
 
-- **同 ID 再投入 / 重複 / 冪等性** (Upsert: 上書き / `AlreadyExists` / version / soft delete / version vector)
-- **empty / unspecified / null / zero value** (各 field でどう扱うか、validation で reject か defaulting か)
-- **集合操作** (cross-tenant / cross-company / global wildcard `*` / 部分集合 / 全選択)
-- **境界値** (max payload / max array length / pagination / rate limit / timeout / retry policy)
-- **timezone / locale / encoding** (UTF-8 / multi-byte / collation / 日本語固有事情)
-- **partial failure** (batch operation の途中失敗、idempotency / 補償 transaction)
-- **順序 / 重複 / 冪等性 / 並行性**
-- **認証 / 認可失敗の挙動** (403 vs 404 / 情報漏洩リスク)
-- **形式変換 / 推測** (mime_type の auto-inference / explicit / fallback / 推測失敗時)
-- **依存サービス障害時の挙動** (degraded / circuit breaker / fallback)
+- **Resubmitting the same ID / duplicates / idempotency** (Upsert: overwrite / `AlreadyExists` / version / soft delete / version vector)
+- **empty / unspecified / null / zero value** (how each field handles it — reject via validation, or default it)
+- **Set operations** (cross-tenant / cross-company / global wildcard `*` / subset / select-all)
+- **Boundary values** (max payload / max array length / pagination / rate limit / timeout / retry policy)
+- **timezone / locale / encoding** (UTF-8 / multi-byte / collation / Japanese-specific concerns)
+- **Partial failure** (a batch operation failing partway through; idempotency / compensating transactions)
+- **Ordering / duplication / idempotency / concurrency**
+- **Authentication / authorization failure behavior** (403 vs 404 / information leak risk)
+- **Format conversion / inference** (mime_type auto-inference / explicit / fallback / when inference fails)
+- **Behavior when a dependent service fails** (degraded / circuit breaker / fallback)
 
-**check phrasing**: ドメイン寄りに「X でこういう時どうするの?」を 5-10 件出す。回答が「未検討」「将来検討」になった場合は、design phase で答えを出すべき領域
+**Check phrasing**: from a domain angle, come up with 5-10 instances of "what happens with X in this situation?" If the answer comes out as "not considered" or "to be considered later," that's an area where the design phase should produce an answer
 
-**過去事例**: source_type の「組織が消えたらどうする?」「内部 FAQ vs 外部 FAQ をどう分ける?」が turn 4 で発覚 → 分類軸を format に絞る判断に
+**Past case**: for source_type, the questions "what happens if the organization is deleted?" and "how do we separate internal FAQ vs external FAQ?" surfaced at turn 4 → led to the decision to narrow the classification axis to format
 
-### 5. 既存 SoT との整合 (grep-first)
+### 5. Consistency with the existing source of truth (grep-first)
 
-新命名 / 新構造を出す **前** に既存 SoT を全 grep:
+**Before** introducing new naming / new structures, grep the entire existing source of truth:
 
-- 旧 field 名 / 旧 method 名 / 旧 enum 値 / 旧 ADR 番号 / 旧 design doc 用語が docs / api.md / metadata literal / SDK example / proto / Go code / Markdown notes に残っていないか
-- 修正範囲を **全 file 一気に** 把握 (turn を跨いだ段階的発覚を防ぐ)
-- design 完了時に grep 検証条件を 5-10 件用意 (`grep -nE "..."` の literal、PR description / commit description / ADR appendix で記録)
+- Whether old field names / old method names / old enum values / old ADR numbers / old design-doc terminology still remain in docs / api.md / metadata literals / SDK examples / proto / Go code / Markdown notes
+- Grasp the scope of changes **across all files at once** (to prevent issues from surfacing piecemeal across turns)
+- When design is complete, prepare 5-10 grep verification conditions (the literal `grep -nE "..."` command, recorded in the PR description / commit description / ADR appendix)
 
-Bash で:
+Via Bash:
 ```bash
 grep -rnE "<old-name-pattern>" docs/ apis/ internal/ cmd/ cli/
 ```
 
-の hit list を design 結果に含めて、修正範囲を確定させる。
+Include the resulting hit list in the design output to finalize the scope of changes.
 
-**check phrasing**: 「旧名 を grep して 0 hits になる条件は何か」「新名 が何箇所追加されるか」
+**Check phrasing**: "What condition makes grepping for the old name return 0 hits?" / "How many places will the new name be added to?"
 
-**過去事例**: `accessScopes` 旧 surface が docs §11.2 SDK example に残置、turn 4 で発覚 → 設計時 grep で先に全箇所把握すべきだった
+**Past case**: the old `accessScopes` surface was left behind in the docs §11.2 SDK example, discovered at turn 4 → should have grepped during design to grasp every location up front
 
-### 6. memory 規約準拠 (毎回チェック)
+### 6. Compliance with memory conventions (check every time)
 
-設計対象が以下 規約 のいずれにも違反していないか 1 周 review (SoT は CLAUDE.md / 各 skill):
+Do one review pass to check the design target doesn't violate any of the following conventions (the source of truth is CLAUDE.md / each skill):
 
-| 規約 | 違反しがちな箇所 |
+| Convention | Common places it's violated |
 |---|---|
-| Phase / ticket をコメントに残さない | proto / Go コメントに Phase / ticket / PR 参照 |
-| commit title は簡潔 (1 行) | commit title が長文 |
-| コード系コメントは英語 | *.go / proto / Makefile / shell コメントが日本語 |
-| push は user 明示指示後 (CLAUDE.md) | push 提案が user 確認なし |
-| test 内 inline コメント不可 | test 内 inline コメント |
-| docs 冒頭に前提節を立てない | docs 冒頭の scope 前提節 |
-| 個別 ticket plan を repo に置かない | docs/plan/ に個別 ticket plan |
-| コメントは原文 literal 範囲 (推測 mapping 禁止) | コメントで原文 literal 範囲を超えた推測 mapping |
-| 多 file 改修は plan-first (CLAUDE.md) | 多 file 改修なのに plan 飛ばし |
-| spec 逸脱は明示・承認・記録 (CLAUDE.md) | spec literal 逸脱が plan に書かれていない |
-| substantive edit は subagent 経由 | 主体 agent が直接 Edit (substantive) |
-| PR は自動作成しない (CLAUDE.md) | PR 自動作成 |
-| subagent brief は state-file 参照型 | subagent brief に context 反復 |
-| 設計 phase checklist の遵守 | 本 checklist 自体の準拠漏れ |
-| プロダクト用語の正確性 | プロダクト名・用語の誤称 |
-| アーキ前提の遵守 | アーキテクチャ前提に反する用語混入 |
+| Don't leave Phase / ticket references in comments | Phase / ticket / PR references in proto / Go comments |
+| Commit titles are concise (1 line) | Commit title is a long sentence |
+| Code comments are in English | *.go / proto / Makefile / shell comments in Japanese |
+| Push only after explicit user instruction (CLAUDE.md) | A push proposal without user confirmation |
+| No inline comments inside tests | Inline comments inside a test |
+| Don't open docs with a preamble/assumptions section | A scope/preamble section at the top of docs |
+| Don't put individual ticket plans in the repo | An individual ticket plan under docs/plan/ |
+| Comments stay within the literal scope of the source text (no speculative mapping) | A comment with speculative mapping that goes beyond the literal scope of the source text |
+| Multi-file changes are plan-first (CLAUDE.md) | Skipping the plan despite a multi-file change |
+| Deviations from spec are stated explicitly, approved, and recorded (CLAUDE.md) | A literal deviation from spec not written into the plan |
+| Substantive edits go through a subagent | The primary agent directly makes a substantive Edit |
+| PRs are not auto-created (CLAUDE.md) | Auto-creating a PR |
+| Subagent briefs reference a state file | Repeating context inline in a subagent brief |
+| Adherence to the design-phase checklist | Failing to comply with this very checklist |
+| Accuracy of product terminology | Misnaming a product or term |
+| Adherence to architectural assumptions | Terminology creeping in that contradicts architectural assumptions |
 
-unused import / 機械的整合の漏れも本観点で check。
+Also check for things like unused imports / mechanical consistency gaps under this perspective.
 
-## 出力フォーマット
+## Output format
 
-skill 完了時、以下を成果物として user に提示:
+When the skill completes, present the following to the user as the deliverable:
 
 ```markdown
-# api-design-review 結果
+# api-design-review results
 
-## 設計対象
-<対象 ADR / Design Doc / proto / API spec / domain model の path or 名前>
+## Design target
+<path or name of the target ADR / Design Doc / proto / API spec / domain model>
 
-## 観点別レビュー
+## Review by perspective
 
-### 1. client 抽象 vs server 展開
-- 検出: <内容、または「該当なし」>
-- 対応案: <提案、または「現状で OK」>
+### 1. Client abstraction vs server-side expansion
+- Findings: <content, or "not applicable">
+- Proposed fix: <proposal, or "fine as-is">
 
-### 2. ACL 読み書き両側
-- 検出: ...
+### 2. Both sides of ACL read/write
+- Findings: ...
 
 ### 3. forward-compat
-- 検出: ...
+- Findings: ...
 
-### 4. edge case 列挙
-質問形式で 5-10 件、回答付き
+### 4. Edge case enumeration
+5-10 items in question form, each with an answer
 
-### 5. 既存 SoT 整合 (grep 結果)
+### 5. Consistency with the existing source of truth (grep results)
 - `grep -rnE "..."` → hit list
 
-### 6. memory 規約準拠
-- 違反候補: <内容、または「クリア」>
+### 6. Compliance with memory conventions
+- Potential violations: <content, or "clear">
 
-## まとめ
-- 設計を進めて OK (該当箇所なし): ◯
-- 修正必要 (具体箇所): X 件 → ...
-- user 判断要 (trade-off 提示): Y 件 → ...
+## Summary
+- OK to proceed with the design (nothing found): ◯
+- Fixes needed (specific locations): X items → ...
+- Requires user judgment (trade-offs presented): Y items → ...
 ```
 
-main agent / dev-orchestrator / Plan agent / tech-docs-writer / notion-ticket-plan に引き継ぐ場合、上記を state-file に書き出すと subagent 再起動時の brief が薄くなる (state-file 参照型 brief)。
+When handing off to the main agent / dev-orchestrator / Plan agent / tech-docs-writer / notion-ticket-plan, writing the above out to a state file keeps the brief lightweight when a subagent restarts (a state-file-referencing brief).
 
-## 適用しないこと
+## What this skill does not do
 
-- 実装 / Edit / Write は行わない (read-only review)
-- git mutation / push / PR 作成しない
-- skill 内で AskUserQuestion しない (結果を main agent に返し、main agent が user 判断を仰ぐ)
+- Does not implement / Edit / Write (read-only review)
+- Does not perform git mutations / push / create PRs
+- Does not call AskUserQuestion within the skill (returns results to the main agent, which defers to the user's judgment)
 
-## 関連 artifact
+## Related artifacts
 
-- 日常 check (軽量版): CLAUDE.md「判断と質問の作法」
-- 関連 skill: `tech-docs-writer` (ADR / Design Doc 起票時、本 skill を内部で通過)、`notion-ticket-plan` (ticket 解析 / plan 起票時、本 skill 通過)、`ddd-hexagonal` (層境界・依存方向、本 skill 観点 1 と関連)、`code-refactor-advisor` (実装面の refactor 候補、本 skill の implementation pass version)
-- 主 agent への引き継ぎ: state-file 参照型 brief
-- agent 側組み込み: `dev-orchestrator` agent の plan phase で本 skill を通過 (組み込み済)
+- Everyday check (lightweight version): CLAUDE.md's 「判断と質問の作法」section
+- Related skills: `tech-docs-writer` (passes through this skill internally when drafting an ADR / Design Doc), `notion-ticket-plan` (passes through this skill when analyzing a ticket / drafting a plan), `ddd-hexagonal` (layer boundaries / dependency direction, related to this skill's perspective 1), `code-refactor-advisor` (implementation-facing refactor candidates, the implementation-pass version of this skill)
+- Handoff to the main agent: a state-file-referencing brief
+- Built into the agent side: the `dev-orchestrator` agent's plan phase passes through this skill (already integrated)

@@ -1,33 +1,35 @@
 ---
 name: ddd-hexagonal
-description: DDD + Hexagonal architecture の reference skill。layer 境界 / 依存方向 / Port-Adapter / ACL / Aggregate / Repository / DTO 変換 / cross-cutting を扱う。「層曖昧」「責務違反」「port の切り方」等の問いや設計 review 時に参照する。手順 skill ではない。
+description: Reference skill for DDD + Hexagonal architecture. Covers layer boundaries / dependency direction / Port-Adapter / ACL / Aggregate / Repository / DTO conversion / cross-cutting concerns. Consult it for questions like 「層曖昧」「責務違反」「port の切り方」or during design review. Not a procedural skill.
 ---
+
+> **Source of truth:** `claude/ja/skills/ddd-hexagonal/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
 # ddd-hexagonal
 
-DDD + Hexagonal architecture の慣用句・原則を集めた reference skill。設計判断 / review / refactor 候補出しの判断基準として参照する。
+A reference skill collecting the idioms and principles of DDD + Hexagonal architecture. Consult it as a criterion for design decisions, reviews, and identifying refactor candidates.
 
-## 適用条件
+## Applicability
 
-- DDD + Hexagonal を採用したプロジェクト (`internal/{domain,application,interfaces,adapters}/` レイアウト)
-- code-refactor-advisor agent からの参照
-- 層境界 / port 設計 / adapter 切り方の判断場面
+- Projects that adopt DDD + Hexagonal (`internal/{domain,application,interfaces,adapters}/` layout)
+- Referenced by the code-refactor-advisor agent
+- Situations involving decisions about layer boundaries / port design / how to split adapters
 
-## 1. Layer 定義
+## 1. Layer definitions
 
-| Layer | path | 責務 | 依存可能な内側 layer |
+| Layer | path | Responsibility | Inner layers it may depend on |
 |---|---|---|---|
-| **Domain** | `internal/domain/` | Entity / Value Object / Aggregate / Domain Service / Domain Event / sentinel error。**外部に対する依存は持たない** (純粋ロジック) | (最内側、依存先なし) |
-| **Application** | `internal/application/` | Use Case orchestration / Application Service / Port (interface 定義) / DTO | Domain |
-| **Interfaces** | `internal/interfaces/` | Inbound adapter (gRPC handler / HTTP handler / CLI / interceptors / wire shape ⇄ application DTO 変換) | Application + Domain |
-| **Adapters** | `internal/adapters/` | Outbound adapter (DB / vendor SDK / external API 実装、Port を実装) | Application (Port 実装のため) + Domain (型参照のため) |
+| **Domain** | `internal/domain/` | Entity / Value Object / Aggregate / Domain Service / Domain Event / sentinel errors. **Has no external dependencies** (pure logic) | (innermost layer, no dependencies) |
+| **Application** | `internal/application/` | Use case orchestration / Application Service / Port (interface definitions) / DTO | Domain |
+| **Interfaces** | `internal/interfaces/` | Inbound adapters (gRPC handler / HTTP handler / CLI / interceptors / wire shape ⇄ application DTO conversion) | Application + Domain |
+| **Adapters** | `internal/adapters/` | Outbound adapters (DB / vendor SDK / external API implementations, implement Ports) | Application (to implement Ports) + Domain (to reference types) |
 
-検出シグナル:
-- domain が adapter / application を import している (依存方向違反)
-- adapter が interfaces を import している (横方向依存、reuse 不可)
-- application が adapter を直接 import (= port 抽象化欠如)
+Detection signals:
+- Domain imports adapter / application (dependency direction violation)
+- Adapter imports interfaces (lateral dependency, prevents reuse)
+- Application directly imports an adapter (= missing port abstraction)
 
-## 2. 依存方向 (内向き原則)
+## 2. Dependency direction (the inward-pointing principle)
 
 ```
 Interfaces ──┐                                  ┌── Adapters
@@ -35,123 +37,123 @@ Interfaces ──┐                                  ┌── Adapters
              └─────────────────────────────────┘
 ```
 
-- **依存は常に内向き** (外側 → 内側)。内側 (Domain) は外側 (Application / Adapters) を知らない
-- 外側との通信は **Port (interface)** 経由。Application が Port を定義、Adapter が実装
-- 内側 → 外側の通信が必要な場合は **Domain Event + 外側で subscribe** などの仕組みで反転
+- **Dependencies always point inward** (outer → inner). The inner layer (Domain) knows nothing about the outer layers (Application / Adapters)
+- Communication with the outside happens via a **Port (interface)**. Application defines the Port, Adapter implements it
+- When inner → outer communication is needed, invert it with a mechanism such as **Domain Event + subscription on the outside**
 
-検出シグナル:
-- Domain code 内に `import ".../adapters/..."` / `import ".../interfaces/..."`
-- Application code 内に `import ".../adapters/concrete-vendor"` (= concrete adapter 直 import、port 経由でない)
+Detection signals:
+- `import ".../adapters/..."` / `import ".../interfaces/..."` inside Domain code
+- `import ".../adapters/concrete-vendor"` inside Application code (= direct import of a concrete adapter, bypassing the port)
 
 ## 3. Port-Adapter pattern
 
-- **Port** = interface (Application 層に定義)。例: `EmbeddingPort` / `VectorStorePort`
-- **Adapter** = Port の実装 (Adapters 層)。例: `openai.Adapter` (= `EmbeddingPort` 実装) / `pinecone.Adapter` (= `VectorStorePort` 実装)
-- Port は **vendor-neutral**。SDK 固有型を漏らさない (e.g. `[]float32` を渡す、`openai.EmbeddingResponse` は port shape に登場させない)
-- Port の signature には **必要最小限のメソッド**。adapter で使わない method は port に入れない (`I` 接尾辞 / `xxxer` 命名で 1 method port も OK)
+- **Port** = an interface (defined in the Application layer). Example: `EmbeddingPort` / `VectorStorePort`
+- **Adapter** = an implementation of a Port (in the Adapters layer). Example: `openai.Adapter` (= implements `EmbeddingPort`) / `pinecone.Adapter` (= implements `VectorStorePort`)
+- Ports are **vendor-neutral**. They must not leak SDK-specific types (e.g. pass `[]float32`; never let `openai.EmbeddingResponse` appear in a port shape)
+- A Port's signature should have **only the minimum necessary methods**. Don't add methods to the port that the adapter doesn't use (a single-method port named with an `I` suffix or `xxxer` naming is fine)
 
-例:
+Example:
 ```go
-// Application 層: port 定義
+// Application layer: port definition
 type EmbeddingPort interface {
     Embed(ctx context.Context, req EmbedRequest) (*EmbedResult, error)
 }
 
-// Adapter 層: port 実装
+// Adapter layer: port implementation
 package openai
 type Adapter struct { ... }
 func (a *Adapter) Embed(ctx context.Context, req ports.EmbedRequest) (*ports.EmbedResult, error) {
-    // SDK 固有 logic は adapter 内に閉じる
+    // SDK-specific logic stays contained within the adapter
 }
 ```
 
-検出シグナル:
-- Port shape に SDK 固有型が登場 (`*openai.EmbeddingResponse` / `*pinecone.QueryResponse` 等)
-- Adapter が Port を実装していない (= adapter として位置付け不明、ad-hoc 直接 import される)
-- Application code が adapter を concrete type で受け取っている (= mock 不可、test で fake 注入できない)
+Detection signals:
+- SDK-specific types appear in a Port shape (`*openai.EmbeddingResponse` / `*pinecone.QueryResponse`, etc.)
+- An Adapter does not implement a Port (= its role as an adapter is unclear, gets imported ad hoc and directly)
+- Application code receives an adapter as a concrete type (= cannot be mocked, a fake cannot be injected in tests)
 
 ## 4. Anti-Corruption Layer (ACL)
 
-- 外部 system / vendor との境界で **語彙 / 型 / 例外モデル** を変換する変換層
-- adapter 内の boundary で **vendor 固有 → port-neutral** 変換 + **vendor 固有 error → port sentinel error** wrap
-- 反対方向 (interface → application) も同じ。wire shape (proto / JSON) → application DTO 変換
+- A translation layer that converts **vocabulary / types / exception models** at the boundary with external systems / vendors
+- At the boundary inside the adapter, convert **vendor-specific → port-neutral** and wrap **vendor-specific errors → port sentinel errors**
+- The same applies in the opposite direction (interface → application): convert wire shape (proto / JSON) → application DTO
 
-例:
+Example:
 ```go
-// Adapter 内 ACL
+// ACL inside the adapter
 func (a *Adapter) Embed(ctx context.Context, req ports.EmbedRequest) (*ports.EmbedResult, error) {
     sdkResp, err := a.client.Embeddings.New(ctx, openai.EmbeddingNewParams{...})
     if err != nil {
         return nil, fmt.Errorf("openai: %w: %w", ports.ErrEmbeddingProviderUnavailable, err)
     }
-    // sdkResp.Data → []ports.Vector への変換
+    // convert sdkResp.Data → []ports.Vector
     return toPortResult(sdkResp), nil
 }
 ```
 
-検出シグナル:
-- handler が SDK 型を引数 / 戻り値で扱っている (= ACL 欠如、application が vendor lock-in)
-- Application 層が `pinecone.Client` を受け取っている (Port 経由でない)
-- vendor 固有 error が application 層 / handler に直接漏れている (sentinel wrap なし)
+Detection signals:
+- A handler takes/returns SDK types as arguments/return values (= missing ACL, application becomes vendor lock-in)
+- The Application layer receives a `pinecone.Client` directly (not via a Port)
+- Vendor-specific errors leak directly into the application layer / handler (no sentinel wrap)
 
 ## 5. Ubiquitous Language (UL)
 
-- domain 用語は **business / docs / code で同じ語彙**を使う
-- 例: docs で「ナレッジチャンク」と呼ぶなら code も `Chunk` (`Document` / `Item` 等の別名混在を避ける)
-- wire shape (proto field 名 / JSON key) も UL に揃える
-- 部署 / 関係者で語彙が割れている場合 → docs 側で先に統一する (ADR で語彙確定)
+- Domain terminology must use **the same vocabulary across business / docs / code**
+- Example: if the docs call it a 「ナレッジチャンク」(knowledge chunk), the code should also use `Chunk` (avoid mixing aliases such as `Document` / `Item`)
+- Align wire shapes (proto field names / JSON keys) with the UL as well
+- If departments / stakeholders have diverging vocabulary → unify it in the docs first (fix the vocabulary via an ADR)
 
-検出シグナル:
-- 同じ概念に対して package ごとに異なる名前 (`User` / `Member` / `Account` / `Principal` 混在)
-- proto field 名と Go struct field 名が異なる (`product_ids` ⇔ `ProductIDList`)
-- docs と code で用語が違う (docs: 「コレクション」 / code: `Index` `Collection` 混在)
+Detection signals:
+- Different names for the same concept across packages (`User` / `Member` / `Account` / `Principal` mixed together)
+- proto field names differ from Go struct field names (`product_ids` ⇔ `ProductIDList`)
+- Terminology differs between docs and code (docs: 「コレクション」("collection") / code: `Index` and `Collection` mixed)
 
 ## 6. Aggregate / Entity / Value Object
 
-- **Entity**: identity (ID) を持つ object。`Chunk{ID, Text, ...}` 等
-- **Value Object**: identity なし、value の equality で判断。`Vector []float32` / `EmbedRequest{Inputs []string}` 等
-- **Aggregate**: 整合性境界。Aggregate Root を経由してのみ内部 entity を操作する
-- Aggregate Root は **business invariant を保護**。例: `Document` を root とすれば `Document.AddChunk(c)` で chunk_sequence の連続性を保証
+- **Entity**: an object that has an identity (ID). E.g. `Chunk{ID, Text, ...}`
+- **Value Object**: has no identity, judged by value equality. E.g. `Vector []float32` / `EmbedRequest{Inputs []string}`
+- **Aggregate**: a consistency boundary. Internal entities are only manipulated via the Aggregate Root
+- The Aggregate Root **protects business invariants**. Example: if `Document` is the root, `Document.AddChunk(c)` guarantees the continuity of chunk_sequence
 
-注意:
-- 過剰な Aggregate / Value Object 化は YAGNI。**business rule が無い simple data** は plain struct で十分
-- Phase 1 prototype 期は `Hit{ChunkID, Text, ...}` のような plain struct で start、business rule が出てきたら昇格
+Note:
+- Over-applying Aggregate / Value Object modeling is YAGNI. **Simple data with no business rules** is fine as a plain struct
+- During the Phase 1 prototype period, start with a plain struct like `Hit{ChunkID, Text, ...}` and promote it once business rules emerge
 
-検出シグナル:
-- Entity と Value Object の区別が無い (= 全部 plain struct、ID 比較で identity 扱いされていない)
-- Aggregate Root を skip して内部 entity が外部から直接編集されている
+Detection signals:
+- No distinction between Entity and Value Object (= everything is a plain struct, identity isn't handled via ID comparison)
+- Internal entities are edited directly from the outside, skipping the Aggregate Root
 
 ## 7. Application Service vs Domain Service
 
-- **Application Service**: use case 単位の orchestration。複数 port / domain entity を呼び出して 1 つの business operation を達成
-- **Domain Service**: 単一 entity に閉じない domain logic (entity 同士の演算 / domain rule 検証)
-- 両方 stateless。Application Service は dependency 注入 (port 群 + logger)、Domain Service は domain object のみ受け取る
+- **Application Service**: orchestration at the use-case level. Achieves one business operation by calling multiple ports / domain entities
+- **Domain Service**: domain logic that doesn't fit inside a single entity (operations between entities / domain rule validation)
+- Both are stateless. Application Service receives injected dependencies (a set of ports + logger); Domain Service only receives domain objects
 
-例:
+Example:
 ```go
-// Application Service (推奨 pattern)
+// Application Service (recommended pattern)
 type Service struct {
     embedding   ports.EmbeddingPort
     vectorStore ports.VectorStorePort
 }
 func (s *Service) Search(ctx, in SearchInput) (*SearchOutput, error) {
-    // Embed → vector search → hit 変換 (use case orchestration)
+    // Embed → vector search → convert to hits (use case orchestration)
 }
 ```
 
-検出シグナル:
-- Domain Service が port を import (依存方向違反)
-- Application Service が validation だけしている (= business orchestration が無い、handler に統合できる)
-- Application Service が 1 method しかない (= use case 1 つだけ、struct にする意義が薄い場合あり)
+Detection signals:
+- Domain Service imports a port (dependency direction violation)
+- Application Service only does validation (= no business orchestration, could be folded into the handler)
+- Application Service has only one method (= only a single use case; sometimes there's little value in making it a struct)
 
 ## 8. Repository pattern
 
-- DB / persistent store への抽象は **Repository** (port の特殊形)
-- entity 単位で粒度を切る: `ChunkRepository` (CRUD on Chunk) / `DocumentRepository`
-- 検索専用 / read model は別 Repository に切ることもある (`ChunkSearchRepository`)
-- **Vendor-neutral**。SQL / 表名 / SDK 詳細を漏らさない
+- Abstraction over DB / persistent stores is the **Repository** (a specialized form of port)
+- Split granularity per entity: `ChunkRepository` (CRUD on Chunk) / `DocumentRepository`
+- Search-only / read models are sometimes split into a separate Repository (`ChunkSearchRepository`)
+- **Vendor-neutral**. Must not leak SQL / table names / SDK details
 
-例:
+Example:
 ```go
 type ChunkRepository interface {
     Save(ctx context.Context, c Chunk) error
@@ -160,109 +162,109 @@ type ChunkRepository interface {
 }
 ```
 
-検出シグナル:
-- Repository に SQL string が引数 / 戻り値に登場
-- Repository が CRUD ではなく business logic を含む (= Application Service と責務混同)
+Detection signals:
+- SQL strings appear as arguments/return values on a Repository
+- A Repository contains business logic instead of CRUD (= responsibility confusion with Application Service)
 
 ## 9. DTO / wire shape vs domain shape
 
-- 各層境界で **DTO 変換**を挟む:
-  - `Interfaces` 境界: wire shape (proto message / JSON request) ⇄ Application DTO (`SearchInput` / `SearchOutput`)
-  - `Application` 境界: Application DTO ⇄ Domain entity / Value Object
-  - `Adapters` 境界: Domain ⇄ vendor SDK shape (Anti-Corruption Layer)
-- DTO 変換 helper は境界 layer に置く (`internal/interfaces/grpc/search_handler.go` 内 `toProtoResponse` 等)
-- DTO 変換は pure function 推奨 (test 容易)
+- Insert a **DTO conversion** at each layer boundary:
+  - `Interfaces` boundary: wire shape (proto message / JSON request) ⇄ Application DTO (`SearchInput` / `SearchOutput`)
+  - `Application` boundary: Application DTO ⇄ Domain entity / Value Object
+  - `Adapters` boundary: Domain ⇄ vendor SDK shape (Anti-Corruption Layer)
+- Place DTO conversion helpers at the boundary layer (e.g. `toProtoResponse` inside `internal/interfaces/grpc/search_handler.go`)
+- DTO conversion should preferably be a pure function (easy to test)
 
-検出シグナル:
-- Domain entity が proto field tag を持つ / JSON tag を持つ (= wire shape と domain shape が混在)
-- Wire shape のまま application 層を流れている (= DTO 変換欠如)
+Detection signals:
+- A Domain entity has proto field tags / JSON tags (= wire shape and domain shape are mixed together)
+- Wire shape flows through the application layer unconverted (= missing DTO conversion)
 
 ## 10. Cross-cutting concerns
 
-- **Logging / Tracing / Auth / Rate Limit / Recovery** は cross-cutting で、**interfaces / adapters 境界に置く**
+- **Logging / Tracing / Auth / Rate Limit / Recovery** are cross-cutting concerns; **place them at the interfaces / adapters boundary**
 - gRPC: `UnaryServerInterceptor` / HTTP: middleware
-- Application / Domain layer に直接 import しない (= business logic と分離)
-- 例: `internal/observability/` に context key / logger factory を置き、各 interceptor が consume
+- Do not import them directly into the Application / Domain layer (= keep them separate from business logic)
+- Example: place context keys / logger factories in `internal/observability/`, and have each interceptor consume them
 
-検出シグナル:
-- Application Service / Domain Service の中で `slog.Info(...)` が直接呼ばれている (= cross-cutting がbusiness logic に混入)
-- auth check が handler 内 inline で書かれている (= interceptor / middleware に切り出すべき)
+Detection signals:
+- `slog.Info(...)` is called directly inside an Application Service / Domain Service (= cross-cutting concern leaking into business logic)
+- An auth check is written inline inside a handler (= should be factored out into an interceptor / middleware)
 
 ## 11. Domain Event (optional)
 
-- aggregate 内の状態変化を event として publish、外側 layer で subscribe
-- 反対方向依存を回避するため: domain は event を発行するのみ、subscribe は application / adapter
-- 過剰導入注意: Phase 1 prototype 期は不要、Phase 2 で audit / metrics / 連携が増えてきたら検討
+- Publish state changes within an aggregate as events, and subscribe to them from an outer layer
+- To avoid a reverse-direction dependency: the domain only publishes events; subscribing happens in application / adapter
+- Watch out for over-introducing this: unnecessary during the Phase 1 prototype period; consider it in Phase 2 once audit / metrics / integrations increase
 
-## 12. 検出シグナル総括 (refactor 候補洗い出し用)
+## 12. Summary of detection signals (for identifying refactor candidates)
 
-agent から呼ばれたとき、以下の grep パターンで違反を検出:
+When called from an agent, detect violations with the following grep patterns:
 
-| 違反 | 検出 grep |
+| Violation | Detection grep |
 |---|---|
-| Domain → 外側 import | `grep -r 'import.*adapters\|import.*interfaces' internal/domain/` |
+| Domain → outer-layer import | `grep -r 'import.*adapters\|import.*interfaces' internal/domain/` |
 | Application → concrete adapter import | `grep -r 'import.*adapters/[a-z]\+/' internal/application/ \| grep -v 'application/ports'` |
 | Adapter → interfaces import | `grep -r 'import.*interfaces' internal/adapters/` |
-| Port shape に SDK 固有型 | `grep -rn 'pineconego\.\|openaigo\.\|aws\.' internal/application/ports/` |
-| Application Service 内 logger 直接呼び | `grep -rn 'slog\.Info\|slog\.Error' internal/application/ \| grep -v 'logger\.'` |
-| handler / service 内に SDK 型直 import | `grep -rn 'pineconego\|openaigo' internal/interfaces/ internal/application/` |
-| Repository に SQL string | `grep -rn 'SELECT\|INSERT\|UPDATE\|DELETE' internal/application/ports/` |
+| SDK-specific type in a Port shape | `grep -rn 'pineconego\.\|openaigo\.\|aws\.' internal/application/ports/` |
+| Direct logger call inside Application Service | `grep -rn 'slog\.Info\|slog\.Error' internal/application/ \| grep -v 'logger\.'` |
+| Direct SDK type import inside handler / service | `grep -rn 'pineconego\|openaigo' internal/interfaces/ internal/application/` |
+| SQL string in Repository | `grep -rn 'SELECT\|INSERT\|UPDATE\|DELETE' internal/application/ports/` |
 
 ## 13. Configuration injection (functional option + ConfigMap)
 
-設定値の override は **3 段階** で expose する:
+Expose configuration overrides in **three tiers**:
 
-| Priority | 経路 | 用途 |
+| Priority | Path | Purpose |
 |---|---|---|
-| 1 | **default const** (`defaultXxx`、code hardcode) | Phase 1 動作確認、安全な base value |
-| 2 | **functional option** (`WithXxx(...)` constructor 時 inject) | deployment 単位 override、global 設定の wiring path |
-| 3 | **proto field** (request 単位 inject) | **例外**、「どうしても個別対応必要」レベル (user 承認必須) |
+| 1 | **default const** (`defaultXxx`, hardcoded in code) | Phase 1 verification, a safe base value |
+| 2 | **functional option** (injected via `WithXxx(...)` at construction time) | per-deployment override, the wiring path for global config |
+| 3 | **proto field** (injected per request) | **Exception**, only when individual per-request handling is truly unavoidable (requires user approval) |
 
-通常運用は (1) + (2)。proto 拡張は last resort。
+Normal operation uses (1) + (2). Extending the proto is a last resort.
 
-例:
+Example:
 ```go
 const defaultRenderDPI = 150
 func WithDPI(dpi int) PDFOption { return func(pp *PDFParser) { pp.dpi = dpi } }
 
 // cmd/api-server/main.go (wiring)
-parser := adapters.NewPDFParser(vlm, adapters.WithDPI(cfg.Parser.DPI)) // ConfigMap 値
+parser := adapters.NewPDFParser(vlm, adapters.WithDPI(cfg.Parser.DPI)) // ConfigMap value
 ```
 
-検出シグナル (refactor 候補):
-- adapter / service に `defaultXxx` const なし → 数値リテラルが code 内に散在
-- `WithXxx(...)` Option が export されていない → cmd 側で値を override 不可
-- adapter struct field が public → caller 直接代入で immutable 性破綻
-- proto field に adapter internal 値が露出 → wire surface 膨張
+Detection signals (refactor candidates):
+- No `defaultXxx` const in the adapter / service → numeric literals scattered throughout the code
+- `WithXxx(...)` Option is not exported → the value cannot be overridden from the cmd side
+- An adapter struct field is public → direct assignment by the caller breaks immutability
+- Adapter-internal values are exposed via a proto field → wire surface bloats
 
-project に functional option 採用の ADR があればそちらも参照。
+If the project has an ADR adopting functional options, refer to that as well.
 
 ---
 
-## False positive 判定基準
+## False positive criteria
 
-以下に該当する場合は本 skill の検出シグナルがヒットしても **違反扱いしない**:
+In the following cases, do not treat a hit on this skill's detection signals as a violation:
 
-- **生成コード由来**: protoc / buf / openapi-generator / `go generate` などで生成された symbol / file (典型: ファイル冒頭に `Code generated by ... DO NOT EDIT.` 行を含む)。生成元の schema 側で改善されるべきで、生成後の Go コードを手で直さない
-- **言語 / library の慣用 pattern**: `func(...) (resp any, err error)` の named return + defer-recover、`http.Handler` などの固定 signature、`context.Context` を第一引数で取る規約等は本 skill の規則より優先
-- **意図的設計の例外**: コード / docs で意図が明示されている設計上の決定 (例: shutdown context を signal-aware ctx から detach するための `context.Background()` の library 内使用)
-- **public API 互換性**: 後方互換のため変えられない exported symbol (改名提案より移行戦略の提案を優先)
+- **Generated-code origin**: symbols / files generated by protoc / buf / openapi-generator / `go generate`, etc. (typically: the file starts with a `Code generated by ... DO NOT EDIT.` line). These should be fixed at the source schema, not by hand-editing the generated Go code
+- **Language / library idiomatic patterns**: things like named returns with defer-recover in `func(...) (resp any, err error)`, fixed signatures such as `http.Handler`, or the convention of taking `context.Context` as the first argument take priority over this skill's rules
+- **Intentional design exceptions**: design decisions whose intent is explicitly stated in code / docs (e.g. using `context.Background()` inside a library to detach a shutdown context from a signal-aware ctx)
+- **Public API compatibility**: exported symbols that cannot be changed for backward compatibility (prefer proposing a migration strategy over a rename)
 
-疑わしい場合は除外せず、output で「false positive 候補」として flag し user 判断を仰ぐ。
+When in doubt, don't exclude it — flag it in the output as a "false positive candidate" and defer to the user's judgment.
 
-## このスキルが出力すべきもの
+## What this skill should output
 
-code-refactor-advisor agent から呼ばれた場合:
-- 対象 codebase に対する **層別 責務マップ** (file × layer × 責務)
-- **層境界 / 依存方向違反** list (file:line + 違反内容)
-- **Port / Adapter / ACL 欠如** の指摘
-- **Ubiquitous Language drift** の指摘
-- 修正方針 (層移動 / port 抽出 / DTO 変換層追加 / etc.)
+When called from the code-refactor-advisor agent:
+- A **per-layer responsibility map** for the target codebase (file × layer × responsibility)
+- A list of **layer boundary / dependency direction violations** (file:line + description of the violation)
+- Pointing out **missing Port / Adapter / ACL**
+- Pointing out **Ubiquitous Language drift**
+- A remediation approach (moving to a different layer / extracting a port / adding a DTO conversion layer / etc.)
 
-## 参照
+## References
 
 - Eric Evans, "Domain-Driven Design"
 - Vaughn Vernon, "Implementing Domain-Driven Design"
 - Alistair Cockburn, "Hexagonal architecture": https://alistair.cockburn.us/hexagonal-architecture/
-- Mark Seemann, "Dependency Injection in .NET" (依存方向の議論)
-- project の ADR (DDD + Hexagonal 採用判断) があれば参照
+- Mark Seemann, "Dependency Injection in .NET" (discussion of dependency direction)
+- Refer to the project's ADR (the decision to adopt DDD + Hexagonal) if one exists

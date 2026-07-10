@@ -1,59 +1,61 @@
 ---
 name: retrospect
-description: dev cycle / 作業 session の最後に、詰まった点・やり直し・新規判明した規約や環境の癖を insights として 1 件記録する軽量 skill。「retrospect して」「振り返り記録して」等で使う。分析・集約・改善 PR 化はしない (improve-harness の責務)。
+description: Lightweight skill for recording one insight at the end of a dev cycle / work session — a sticking point, a redo, or a newly discovered convention or environment quirk. Use for "retrospect して" ("do a retrospective"), "振り返り記録して" ("record a retrospective"), etc. Does not analyze, aggregate, or turn findings into improvement PRs (that's improve-harness's responsibility).
 ---
+
+> **Source of truth:** `claude/ja/skills/retrospect/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
 # retrospect
 
-cycle 末の軽量記録。**1 分で書ける粒度を守る**。分析・集約・改善 PR 化は improve-harness の責務で、本 skill は記録のみ。
+Lightweight recording at the end of a cycle. **Keep it to a granularity you can write in one minute.** Analysis, aggregation, and turning findings into improvement PRs are improve-harness's responsibility; this skill only records.
 
-## 手順
+## Procedure
 
-### Step 1: 要点収集
+### Step 1: Gather key points
 
-直前の cycle / 作業から以下を洗い出す (該当なしなら記録せず終了してよい):
+Identify the following from the preceding cycle / work (if none apply, it's fine to finish without recording anything):
 
-- 詰まった点 / やり直したこと
-- user からの訂正・指摘
-- 新規に判明した規約・環境の癖
-- skill / agent / rules の欠陥や不足
+- Sticking points / things that had to be redone
+- Corrections or feedback from the user
+- Newly discovered conventions or environment quirks
+- Deficiencies or gaps in skills / agents / rules
 
-### Step 2: category 判定
+### Step 2: Determine the category
 
-| category | 意味 |
+| category | meaning |
 |---|---|
-| skill-gap | skill の手順・観点の不足や欠陥 |
-| rule-gap | CLAUDE.md / rules/ の規約不足・曖昧さ |
-| env-quirk | 環境・tool の癖 (再現する挙動) |
-| spec-gap | spec contract / spec 内容の不備 |
+| skill-gap | a gap or defect in a skill's procedure or perspectives |
+| rule-gap | a gap or ambiguity in CLAUDE.md / rules/ |
+| env-quirk | an environment / tool quirk (reproducible behavior) |
+| spec-gap | a deficiency in the spec contract or spec content |
 
-### Step 3: insights ファイルに記録
+### Step 3: Record it in an insights file
 
-対象 project の per-project dir に **1 insight = 1 ファイル**で書く:
+Write **one insight per file** in the per-project dir for the target project:
 
 - path: `~/.claude/projects/<encoded>/insights/<YYYYMMDD>-<slug>.md`
-- `<encoded>` = cwd 絶対パスの `/` と `.` を `-` に置換 (CLAUDE.md「plan / session state file の保存先」と同じ規約)
+- `<encoded>` = the cwd's absolute path with `/` and `.` replaced by `-` (same convention as "Where to store plan / session state files" in CLAUDE.md)
 
 ```markdown
 ---
 date: <YYYY-MM-DD>
 category: skill-gap | rule-gap | env-quirk | spec-gap
-ticket: <ticket URL / id / なし>
-target: <対象の skill / agent / rules ファイル (あれば)>
+ticket: <ticket URL / id / none>
+target: <the relevant skill / agent / rules file, if any>
 ---
 
-## 事象
+## What happened
 
-<何が起きたか 1-3 行>
+<1-3 lines describing what happened>
 
-## 提案
+## Proposal
 
-<どう直すべきか 1-3 行 (不明なら「未定」)>
+<1-3 lines on how it should be fixed (write "undecided" if unclear)>
 ```
 
-## 鉄則
+## Iron rules
 
-1. 記録のみ。分析・修正・PR 化はしない
-2. 1 insight = 1 ファイル。まとめ書きしない
-3. secret / ticket 本文の丸ごと転記をしない (参照は id / URL)
-4. 該当なしの cycle は無理に書かない (ノイズを溜めない)
+1. Recording only. Do not analyze, fix, or turn it into a PR
+2. One insight = one file. Do not batch multiple into one write
+3. Do not transcribe secrets or the full ticket body (reference by id / URL only)
+4. Do not force a write when a cycle has nothing to report (don't accumulate noise)

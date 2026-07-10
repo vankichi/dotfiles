@@ -1,30 +1,32 @@
 ---
 name: self-review-changes
-description: 直前の編集差分 (作業ツリー or staged) を self-review し、正確性 / 整合性 / best practice / memory feedback との整合をチェックする。修正方針を提示し user 承認後に Edit する。「self review して」「review して」「修正箇所ないか確認して」等で使う。
+description: Self-review of the most recent diff (working tree or staged), checking accuracy, consistency, best practices, and alignment with memory feedback. Presents a fix plan and only Edits after user approval. Used for 「self review して」「review して」「修正箇所ないか確認して」 etc.
 ---
+
+> **Source of truth:** `claude/ja/skills/self-review-changes/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
 # self-review-changes
 
-直前の編集差分を再走査し、修正候補を洗い出して承認を取ってから直す skill。**4 Phase**: Mindset → Observation → Analysis → Action。
+Re-scans the most recent diff, surfaces fix candidates, and only applies fixes after approval. **4 phases**: Mindset → Observation → Analysis → Action.
 
-> **plugin との使い分け**: `/code-review`・`/simplify` plugin は diff の bug / 簡素化に特化。本 skill はそれに加えて **設定の正確性 / docs 整合 / memory feedback 整合 / Copilot 11-category** まで含む広域 self-review。コードの bug だけなら `/code-review`、変更全体を規約込みで見直すなら本 skill。
+> **Division of labor with plugins**: the `/code-review` and `/simplify` plugins specialize in diff bugs / simplification. This skill additionally covers a broader self-review including **configuration accuracy, doc consistency, memory feedback alignment, and the Copilot 11-category checklist**. Use `/code-review` for bugs in the code alone, and this skill for reviewing the whole change against conventions.
 
-## 適用条件
+## Applicability
 
-- 何らかのファイル編集が直前ターンで行われている (commit 前 or 直近 commit 後)
-- 修正対象範囲が明確 (`git diff` で見える範囲)
-
----
-
-## Phase 0: Mindset shift (実装者 → 外部 reviewer)
-
-self-review の最大バイアスは「自分の intent が見えて actual gap が見えない」こと。 Phase 1 以降に進む前に **「初めてこの code を見た外部 reviewer」** として読む宣言を内面で立てる。 コメントは binding contract と扱い、 「私はこう意図した」「typical input では起きない」「内部 caller だから OK」 は禁句。 wire form / nil / empty / 境界値 / 異常 tokenizer output / cancellation 中 / 不正 spec などを adversarial に想定する。 Phase 2、 特に 2.6-2.9 でこの mindset を maintain。
+- Some file edit happened in the immediately preceding turn (before committing or right after the most recent commit)
+- The scope of the fix target is clear (visible in `git diff`)
 
 ---
 
-## Phase 1: Observation (差分把握 + 関連情報取得)
+## Phase 0: Mindset shift (implementer → external reviewer)
 
-### 1.1 差分把握
+The biggest bias in self-review is that "you can see your own intent but not the actual gap." Before moving on to Phase 1, internally declare that you will read the code as **"an external reviewer seeing this code for the first time."** Treat comments as a binding contract; phrases like "I meant it this way," "that doesn't happen with typical input," or "it's fine because it's an internal caller" are forbidden. Adversarially assume wire-format input, nil / empty / boundary values, malformed tokenizer output, mid-cancellation state, and invalid specs. Maintain this mindset through Phase 2, especially 2.6-2.9.
+
+---
+
+## Phase 1: Observation (grasp the diff + gather related information)
+
+### 1.1 Grasp the diff
 
 ```bash
 git status
@@ -33,120 +35,120 @@ git diff [--cached]
 git show HEAD --stat && git show HEAD  # 直近 commit 後
 ```
 
-### 1.2 全変更 file を Read で並列確認
+### 1.2 Read all changed files in parallel
 
-各 file を Read tool で並列読み込み (Bash の `cat` ではなく)。
+Read each changed file in parallel with the Read tool (not `cat` via Bash).
 
-### 1.3 関連 memory を Read
+### 1.3 Read related memory
 
-- `MEMORY.md` index を Read、編集内容に関連する feedback / project entry を判定して中身まで read
-- **毎回必読**:
-  - 本 skill Phase 2.1 / 2.1.1 (Copilot 頻出 11 category + Rebut パターン)、Phase 2.6-2.9 で機械的 check
-  - CLAUDE.md「変更の作法」(指示外の変更の flag) (Phase 2.3)
-  - 推測 mapping 禁止 (原文 literal の範囲だけ / Phase 2.5)
-
----
-
-## Phase 2: Analysis (観点別 check)
-
-### 2.1 設計観点 — Copilot 頻出 11 category (最重要)
-
-Copilot review で頻出する 11 category (PR #26 + PR #30 の累計 26 件 review 分析より集約)。 以下に展開する。
-
-**PR #26 由来 (5 category)**:
-
-| # | Category | 重要観点 |
-|---|---|---|
-| 1 | **Documentation accuracy** | helper / API rename したら関連 docs を全 grep / sample の `_` error drop / doc comment と実装の挙動一致 |
-| 2 | **Input validation** | public API (`WithXxx` / `NewXxx` / handler arg) で 0 / 負値 / nil / empty / traversal を check、validation 配置は constructor 末尾 |
-| 3 | **Edge case** | wire form parameters 付き (MIME `mime.ParseMediaType`) / `strings.TrimSpace` empty check / batch 全要素 fail / empty 出力 catch |
-| 4 | **Concurrency / cancellation** | `ctx.Deadline` 尊重 / goroutine spawn 避け / `ctx.Err()` 都度 check / **ctx を最深部まで伝播** (pre-processing loop も含む) |
-| 5 | **Error contract** | sentinel 意味契約 (transient vs permanent) / 4xx は retry なし / boundary error の port-level wrap |
-
-**PR #30 由来の拡張 (6 category)**:
-
-| # | Category | 重要観点 |
-|---|---|---|
-| 6 | **Symmetric constructor defense** | constructor 1 つに guard 追加したら、 `grep "^func New"` で同 PR 内の他 constructor も同じ guard を持つか確認 (Phase 2.6 で機械的 check) |
-| 7 | **Doc/impl literal drift** | strong claim ("strictly", "preserves", "Returns X") を含む comment を impl と byte-level で照合 (Phase 2.9 で機械的 check) |
-| 8 | **Sentinel-on-error 漏洩** | 依存 interface が 0 / "" / nil / -1 を error 経路で返す契約か godoc 確認、 consumer 側で defense (Phase 2.7 で機械的 check) |
-| 9 | **Exported function type contract** | `type X func(...) error` を export、 docstring が "all options X" と claim → custom 実装も同じ contract を満たすか、 factory で wrap (Phase 2.7 で機械的 check) |
-| 10 | **Test assertion trivially passes** | repeated fixture content / loose `Contains` / nil-only check が「実装が壊れていても通る」シナリオ (Phase 2.8 で機械的 check) |
-| 11 | **Slice OOB / panic guard (test)** | test 内 `slice[len-N:]` の N 直前に `len >= N` guard、 input が短い時の panic |
-
-### 2.1.1 Rebut パターン (false positive を識別)
-
-以下は project context 上「適用不可」と判断して reply で resolve する Rebut パターン:
-
-- **Go 1.22+ loop variable shadow**: `go.mod` の go directive が 1.22+ なら shadow 不要
-- **internal port boundary defense 再提案**: SD で撤回した場合、 PR description を referenced して resolve
-- **同じ警告の重複投稿**: 別 test に同 pattern が当てはまらない場合は false positive と明示
-
-### 2.2 file type 別の機械的 check
-
-- **Go (`*.go`)**: `gofmt` / `goimports` / godoc 規約 (`// Package <name>` / `// FuncName ...`) / `fmt.Errorf("...: %w", err)` / context arg 最初 / 不要 export
-- **設定 (`.golangci.yaml` / `Makefile` / `*.yaml` / `*.json`)**: 形式バージョン (e.g. golangci-lint v1 vs v2) / regex glob (`gen` 中間一致 vs `^gen/` ルート限定) / インデント
-- **Markdown / Docs**: 相対 link / コードブロック言語指定 / 表セル数一貫性 / heading 階層
-- **Shell / Makefile / Dockerfile**: shell injection (`$VAR` クォート) / 危険コマンド (`rm -rf`, `curl | sh`)
-- **Proto (`.proto`)**: package / option / field number / 後方互換性 (`buf breaking`)
-
-### 2.3 spec literal 整合 (spec doc を扱う作業のみ)
-
-spec (`docs/adr/*.md`, `docs/design/*.md`, OpenAPI, Proto) を扱う場合:
-
-1. spec 中の literal (型名 / enum / field / file name) を grep で列挙
-2. 実装側の同 surface を grep で列挙
-3. **逸脱項目** を明文化、各逸脱に「理由」「是正方針 (a) 仕様に合わせる / (b) 仕様 update / (c) 別 ADR」を添えて user 提示
-
-「prototype だから OK」を暗黙正当化に使わない。明示・承認・記録の 3 点セット (CLAUDE.md「変更の作法」(指示外の変更の flag))。
-
-### 2.4 memory 規約整合
-
-Phase 1.3 で把握した関連 memory に対して、編集差分が違反していないか check:
-
-- 用語規約 (memory の用語規約に準拠)
-- 文書スタイル (前提節を立てない、prototype 期の緩和)
-- コメント言語 (`*.go` / Makefile / proto / shell の英語)
-- コメント内に Phase / ticket ID 表記の混入
-- commit message スタイル (短く、変更内容のみ)
-
-### 2.5 cross-reference / forbidden tokens grep
-
-変更 file 全体に grep:
-
-- **一時情報の混入**: `ticket`, `in a later`, `future ticket`, `see (commit|PR) #`, ticket ID 形式 (`#?\d+`, `[A-Z]+-\d+`)。検査 pattern の literal は project の `MEMORY.md` feedback から取得、skill 側 hardcode しない
-- **cross-reference 実在確認**: コメント内 section 参照 (`§[0-9]+\.[0-9]+` 等) の引用語彙が原文と一致しているか
-- **推測 mapping**: 原文に書かれていない対応関係をコメントで補完していないか
-
-### 2.6 対称性 audit (Symmetric defense check)
-
-差分で追加した guard / validation / nil check と同種の対称対象 (`grep "^func New" $(git diff --name-only)` で同 PR 内 constructor 全列挙、 `opts ...Option` を受ける関数も grep) が同じ guard を持つか確認、 欠落があれば flag。
-
-例: PR #30 C9 — `ports.NewChunkSpec` に nil opt reject を入れたら `chunker.New` の opts も同じ guard が必要 (1 箇所 fix で他を見逃した教訓)。
-
-### 2.7 Interface 契約 trace (Sentinel / Exported type)
-
-変更 file 内で使った external interface の godoc を再 read、 **戻り値の sentinel ケース** (0 / "" / nil / -1 / 特定 error sentinel) と consumer 側の分岐 (`if x <= X`, `errors.Is(...)`) で flow が一致するか確認。 exported function type を export しているなら、 docstring の "all" / "always" claim が custom 実装にも保たれるか、 factory で normalize しているか check。
-
-例: PR #30 C10 — `chunking.Tokenizer.CountTokens` は encoding error 時に 0 を返す、 consumer の `tokens <= MaxTokens` 判定でこの 0 が「fits」と誤判定されないよう defense 必要。 C13 — exported `ChunkSpecOption` の custom 実装が contract を破る経路を factory で wrap。
-
-### 2.8 Test adversarial review (Trivial pass の摘出)
-
-各 test の assertion について 「**実装の挙動を逆にしても pass する mutation はあるか?**」 と問う。 input に repeated content / 同一値 / nil / empty が含まれる場合は特に注意、 `strings.Contains` / `len(got) > 0` / `errors.Is(...)` 系の assertion が trivially 通る経路を探す。
-
-例: PR #30 C7 — 80 個の同一 sentence repeat で carry-over の overlap を `strings.Contains` で check → carry-over が壊れても trivially true。 distinct marker (`[文NNN]`) を入れて `HasPrefix` で boundary 検証する形が正解。
-
-### 2.9 Doc last-write-wins (コメント update 漏れ摘出)
-
-実装変更後、 変更 file 内の全コメントを疑って再 read。 strong claim を grep (`grep -nE "(strictly|preserves|guarantees|ensures|always|never|returns|panics)"`)、 各 claim を impl の literal 動作と byte-level で照合 (例: "strictly under X" は `<` か `<=` か / "preserves Y" は upstream が Y を trim していないか / "returns Z on W" は実際の戻り値は何か)。 乖離は doc を impl に合わせるか、 設計意図に基づいて impl を doc に合わせる。
-
-例: PR #30 C11/C12 — `carryOverlap` の "kept strictly under overlap" は impl が equality 許容なので「at most overlap」に修正、 `joinUnits` の "preserves original surface text" は SplitSentences が whitespace を trim しているので「reproduces sentence content but not byte-for-byte identical」に修正。
+- Read the `MEMORY.md` index, decide which feedback / project entries relate to the edit, and read those entries in full
+- **Always required every time**:
+  - Mechanically check this skill's Phase 2.1 / 2.1.1 (Copilot's frequent 11 categories + rebuttal patterns) and Phase 2.6-2.9
+  - CLAUDE.md's "conduct for changes" (flagging out-of-scope changes) (Phase 2.3)
+  - No speculative mapping (only literal correspondences from the source text / Phase 2.5)
 
 ---
 
-## Phase 3: Action (修正方針 → 承認 → 修正 → 再検証)
+## Phase 2: Analysis (check by perspective)
 
-### 3.1 修正候補整理 (table 形式で提示)
+### 2.1 Design perspective — Copilot's frequent 11 categories (most important)
+
+The 11 categories that come up frequently in Copilot review (aggregated from analysis of 26 total reviews across PR #26 and PR #30). Expanded below.
+
+**5 categories from PR #26**:
+
+| # | Category | Key point |
+|---|---|---|
+| 1 | **Documentation accuracy** | When renaming a helper / API, grep all related docs / check for dropped `_` errors in samples / verify doc comment behavior matches the implementation |
+| 2 | **Input validation** | Check 0 / negative / nil / empty / traversal in public APIs (`WithXxx` / `NewXxx` / handler args); place validation at the end of the constructor |
+| 3 | **Edge cases** | Wire-form parameters present (MIME `mime.ParseMediaType`) / empty check via `strings.TrimSpace` / all-elements-fail in a batch / catch empty output |
+| 4 | **Concurrency / cancellation** | Respect `ctx.Deadline` / avoid spawning goroutines / check `ctx.Err()` at each step / **propagate ctx all the way down** (including pre-processing loops) |
+| 5 | **Error contract** | Sentinel semantic contract (transient vs. permanent) / no retry on 4xx / wrap boundary errors at the port level |
+
+**6 extended categories from PR #30**:
+
+| # | Category | Key point |
+|---|---|---|
+| 6 | **Symmetric constructor defense** | When adding a guard to one constructor, `grep "^func New"` to check whether other constructors in the same PR have the same guard (mechanically checked in Phase 2.6) |
+| 7 | **Doc/impl literal drift** | Cross-check comments containing strong claims ("strictly", "preserves", "Returns X") against the implementation byte-for-byte (mechanically checked in Phase 2.9) |
+| 8 | **Sentinel-on-error leakage** | Check the godoc of dependency interfaces for whether 0 / "" / nil / -1 is a contractual return on the error path, and whether the consumer defends against it (mechanically checked in Phase 2.7) |
+| 9 | **Exported function type contract** | If exporting `type X func(...) error` with a docstring claiming "all options X," check whether custom implementations satisfy the same contract, or wrap via a factory (mechanically checked in Phase 2.7) |
+| 10 | **Test assertion trivially passes** | Scenarios where repeated fixture content / a loose `Contains` / a nil-only check would "pass even if the implementation is broken" (mechanically checked in Phase 2.8) |
+| 11 | **Slice OOB / panic guard (test)** | Whether a `slice[len-N:]` in a test has a `len >= N` guard immediately before it, guarding against panics when the input is short |
+
+### 2.1.1 Rebuttal patterns (identifying false positives)
+
+The following are rebuttal patterns that, given project context, are judged "not applicable" and resolved via reply:
+
+- **Go 1.22+ loop variable shadowing**: if the `go.mod` go directive is 1.22+, shadowing is not an issue
+- **Re-proposing internal port boundary defense**: if it was withdrawn during a design discussion, resolve by referencing the PR description
+- **Duplicate posting of the same warning**: if the same pattern doesn't actually apply to a different test, explicitly note it as a false positive
+
+### 2.2 Mechanical checks by file type
+
+- **Go (`*.go`)**: `gofmt` / `goimports` / godoc conventions (`// Package <name>` / `// FuncName ...`) / `fmt.Errorf("...: %w", err)` / context arg first / unnecessary exports
+- **Config (`.golangci.yaml` / `Makefile` / `*.yaml` / `*.json`)**: schema version (e.g., golangci-lint v1 vs v2) / regex glob (substring match for `gen` vs. root-anchored `^gen/`) / indentation
+- **Markdown / Docs**: relative links / code block language tags / consistent table cell counts / heading hierarchy
+- **Shell / Makefile / Dockerfile**: shell injection (quoting `$VAR`) / dangerous commands (`rm -rf`, `curl | sh`)
+- **Proto (`.proto`)**: package / option / field number / backward compatibility (`buf breaking`)
+
+### 2.3 Spec literal consistency (only for work touching a spec doc)
+
+When working with a spec (`docs/adr/*.md`, `docs/design/*.md`, OpenAPI, Proto):
+
+1. Grep to enumerate literals (type names / enums / fields / file names) in the spec
+2. Grep to enumerate the same surface on the implementation side
+3. Write out **deviations** explicitly, and for each present the user with a "reason" and a remediation approach ((a) align with the spec / (b) update the spec / (c) separate ADR)
+
+Don't use "it's fine, it's a prototype" as an implicit justification. Use the three-point set of explicit statement, approval, and record (CLAUDE.md's "conduct for changes" — flag out-of-scope changes).
+
+### 2.4 Consistency with memory conventions
+
+Check whether the diff violates any related memory identified in Phase 1.3:
+
+- Terminology conventions (follow the terminology conventions in memory)
+- Document style (don't add prerequisite-knowledge preambles; relax during the prototype period)
+- Comment language (English for `*.go` / Makefile / proto / shell)
+- Mixing Phase / ticket ID notation into comments
+- Commit message style (short, content-only)
+
+### 2.5 Cross-reference / forbidden-token grep
+
+Grep across all changed files for:
+
+- **Leaking transient info**: `ticket`, `in a later`, `future ticket`, `see (commit|PR) #`, ticket ID formats (`#?\d+`, `[A-Z]+-\d+`). Get the literal check patterns from the project's `MEMORY.md` feedback rather than hardcoding them in the skill
+- **Cross-reference existence check**: whether section references in comments (`§[0-9]+\.[0-9]+`, etc.) use vocabulary that matches the source text
+- **Speculative mapping**: whether a comment fills in a correspondence that isn't actually stated in the source text
+
+### 2.6 Symmetry audit (symmetric defense check)
+
+Check whether symmetric counterparts (enumerate all constructors in the same PR with `grep "^func New" $(git diff --name-only)`, and also grep functions taking `opts ...Option`) to a guard / validation / nil check added in the diff have the same guard, and flag any that are missing.
+
+Example: PR #30 C9 — after adding a nil-opt reject to `ports.NewChunkSpec`, the `opts` of `chunker.New` needed the same guard (a lesson from fixing one spot and missing the other).
+
+### 2.7 Interface contract trace (sentinel / exported type)
+
+Re-read the godoc of any external interface used in changed files, and confirm that **sentinel return cases** (0 / "" / nil / -1 / a specific error sentinel) and the consumer's branching (`if x <= X`, `errors.Is(...)`) are consistent. If an exported function type is being exported, check whether the docstring's "all" / "always" claim also holds for custom implementations, or whether it's normalized via a factory.
+
+Example: PR #30 C10 — `chunking.Tokenizer.CountTokens` returns 0 on an encoding error, so the consumer's `tokens <= MaxTokens` check needs a defense so this 0 isn't mistaken for "fits." C13 — a custom implementation of the exported `ChunkSpecOption` could break the contract, so it's wrapped via a factory.
+
+### 2.8 Adversarial test review (surfacing trivial passes)
+
+For each test's assertions, ask: "**is there a mutation that inverts the implementation's behavior but still passes?**" Pay special attention when the input contains repeated content / identical values / nil / empty, and look for paths where assertions like `strings.Contains` / `len(got) > 0` / `errors.Is(...)` trivially pass.
+
+Example: PR #30 C7 — checking carry-over overlap with `strings.Contains` against 80 repeats of the same sentence → trivially true even if carry-over is broken. The fix was to insert a distinct marker (`[文NNN]`) and verify the boundary with `HasPrefix`.
+
+### 2.9 Doc last-write-wins (surfacing stale comment updates)
+
+After an implementation change, re-read every comment in the changed files with suspicion. Grep for strong claims (`grep -nE "(strictly|preserves|guarantees|ensures|always|never|returns|panics)"`), and cross-check each claim against the implementation's literal behavior byte-for-byte (e.g., is "strictly under X" `<` or `<=`? does "preserves Y" hold given that upstream trims Y? what does "returns Z on W" actually return?). Resolve discrepancies by either aligning the doc with the implementation, or aligning the implementation with the doc based on design intent.
+
+Example: PR #30 C11/C12 — `carryOverlap`'s "kept strictly under overlap" was corrected to "at most overlap" since the implementation allows equality; `joinUnits`'s "preserves original surface text" was corrected to "reproduces sentence content but not byte-for-byte identical" since `SplitSentences` trims whitespace.
+
+---
+
+## Phase 3: Action (fix plan → approval → fix → re-verify)
+
+### 3.1 Organize fix candidates (present as a table)
 
 ```
 ## Self-review 結果
@@ -161,33 +163,33 @@ Phase 1.3 で把握した関連 memory に対して、編集差分が違反し�
 - Makefile (ターゲット動作確認済み)
 ```
 
-重要度: **致命的 / 望ましい / nit** の 3 段階で区別。
+Distinguish severity into 3 tiers: **critical / recommended / nit**.
 
-### 3.2 ユーザー承認
+### 3.2 User approval
 
-「進めて」を待つ。selective approval (一部のみ承認) も受け入れる。
+Wait for "go ahead." Also accept selective approval (approving only some candidates).
 
-### 3.3 修正 Edit (並列)
+### 3.3 Fix via Edit (parallel)
 
-承認された候補を Edit tool で並列実施。
+Apply approved candidates in parallel with the Edit tool.
 
-### 3.4 再検証
+### 3.4 Re-verification
 
-修正後の副作用 check:
-- `make test`, `make lint` 再実行
-- 関連 grep を再走 (修正で別 location に同問題が出ていないか)
+Check for side effects after the fix:
+- Re-run `make test`, `make lint`
+- Re-run related greps (check whether the fix introduced the same problem elsewhere)
 
 ---
 
-## 鉄則
+## Iron rules
 
-1. **Phase 0 の mindset shift を skip しない**: 実装者バイアスを意識的に外す。 「自分の intent」 で読まず、 「外部 reviewer として code とコメントだけ」 で判断
-2. **修正方針を先に提示**: 黙って Edit しない
-3. **致命的 / 望ましい / nit を区別**: user が取捨選択できるように
-4. **memory feedback は関連 entry を中身まで read**: index 行だけで判断しない
-5. **Copilot 頻出 11 category を毎回 check** (Phase 2.1): docs accuracy / validation / edge case / cancellation / error contract / 対称性 / doc drift / sentinel 漏洩 / exported func type contract / test trivial pass / slice OOB
-6. **対称性 / interface 契約 / test adversarial / doc last-write-wins の 4 機械 check を skip しない** (Phase 2.6-2.9): 真の blindspot は ここに集中する
-7. **spec 逸脱は明示・承認・記録**: 暗黙正当化に「prototype だから」を使わない (CLAUDE.md「変更の作法」(指示外の変更の flag))
-8. **推測 mapping 禁止**: コメントの cross-reference / 用語対応は原文 literal の範囲だけ
-9. **副作用検証**: 修正後にビルド / テスト / lint を再実行
-10. **隠さない**: 自分が直前ターンで作ったものでも問題があれば指摘する。 「typical input では起きない」「内部 caller だから OK」を理由に check を skip しない
+1. **Don't skip the Phase 0 mindset shift**: consciously set aside implementer bias. Judge based on "code and comments alone, as an external reviewer," not "your own intent"
+2. **Present the fix plan first**: don't Edit silently
+3. **Distinguish critical / recommended / nit**: so the user can pick and choose
+4. **Read memory feedback entries in full**: don't judge from the index line alone
+5. **Check the Copilot 11 frequent categories every time** (Phase 2.1): docs accuracy / validation / edge cases / cancellation / error contract / symmetry / doc drift / sentinel leakage / exported func type contract / test trivial pass / slice OOB
+6. **Don't skip the 4 mechanical checks — symmetry / interface contract / adversarial test / doc last-write-wins** (Phase 2.6-2.9): this is where the real blind spots concentrate
+7. **Explicitly state, get approval for, and record spec deviations**: don't use "it's a prototype" as an implicit justification (CLAUDE.md's "conduct for changes" — flag out-of-scope changes)
+8. **No speculative mapping**: cross-references / terminology correspondence in comments should stay within what the source text literally states
+9. **Verify side effects**: re-run build / test / lint after fixing
+10. **Don't hide anything**: point out problems even in something you created in the immediately preceding turn. Don't skip a check just because "it doesn't happen with typical input" or "it's fine, it's an internal caller"

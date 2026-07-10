@@ -1,29 +1,31 @@
 ---
 name: go-test
-description: Go の test design / test code 慣用句の reference skill。命名 / table-driven / t.Parallel / race detector / fake・mock / boundary value / coverage 解釈を扱う。「test 名どうする」「table-driven にする」「coverage 何 % まで」等の問いで参照する。手順 skill ではない。
+description: Reference skill for Go test design and test-code idioms. Covers naming, table-driven tests, t.Parallel, the race detector, fakes/mocks, boundary values, and how to interpret coverage. Consulted for questions like 「test 名どうする」「table-driven にする」「coverage 何 % まで」. Not a procedural skill.
 ---
+
+> **Source of truth:** `claude/ja/skills/go-test/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
 # go-test
 
-Go の test design / test code 慣用句を集めた reference skill。実装 / review / refactor 候補出しの判断基準として参照する。
+A reference skill collecting Go test design and test-code idioms. Used as the judgment criteria for implementation, review, and identifying refactor candidates.
 
-## 適用条件
+## Applicability
 
-- Go の test code (`*_test.go`) を扱う任意の場面
-- code-refactor-advisor agent からの参照
-- ユーザーが「test 何書く / どう書く」を尋ねる場面
+- Any context involving Go test code (`*_test.go`)
+- Referenced by the code-refactor-advisor agent
+- When the user asks things like 「test 何書く / どう書く」
 
-## 1. 命名
+## 1. Naming
 
-- 関数名は **意図ベース** (`TestX_RejectsEmpty` / `TestX_When_..._Should_...`)。`TestX1` `TestX2` のような index ベースは禁止
-- table-driven の case 名は **意図を含む** (`{name: "EmptyProductID", ...}` / 単に `{name: "case1"}` は NG)
-- sub-test 名にスペース / 特殊文字を入れない (`t.Run("foo bar")` は `foo_bar` に正規化される、grep しにくい)
-- Helper 命名: `newFixture(t)` / `newAdapterWithFake(t, fake)` のように **意図を表す** prefix (`new` / `make`)
+- Function names are **intent-based** (`TestX_RejectsEmpty` / `TestX_When_..._Should_...`). Index-based names like `TestX1`, `TestX2` are forbidden.
+- Table-driven case names **must convey intent** (`{name: "EmptyProductID", ...}`; simply `{name: "case1"}` is not allowed).
+- Don't put spaces / special characters in sub-test names (`t.Run("foo bar")` gets normalized to `foo_bar`, which is hard to grep for).
+- Helper naming: use a prefix that **conveys intent** (`new` / `make`), like `newFixture(t)` / `newAdapterWithFake(t, fake)`.
 
-検出シグナル:
-- test 内に説明 inline コメントがある (= test 名 / 変数名で意図を表現できていない)
-- case 名が `case1` `case2` のように index ベース
-- `t.Run("with spaces")` のような名前
+Detection signals:
+- An explanatory inline comment inside a test (meaning the test name / variable names fail to convey intent)
+- Case names that are index-based, like `case1`, `case2`
+- Names like `t.Run("with spaces")`
 
 ## 2. Table-driven test
 
@@ -53,54 +55,54 @@ for _, tc := range tests {
 }
 ```
 
-- struct field は **必要最小限**。全 case で同じ値なら struct 外に定数で
-- `wantErr` は **sentinel error** (errors.Is 検証可能) を入れる。文字列比較は禁止
-- nil error 期待は `wantErr: nil` を明示 (省略でも動くが意図が伝わらない)
+- Struct fields should be **kept to the minimum necessary**. If a value is the same across all cases, pull it out as a constant outside the struct.
+- Put a **sentinel error** (verifiable via `errors.Is`) in `wantErr`. String comparison is forbidden.
+- When expecting no error, state `wantErr: nil` explicitly (omitting it still works, but doesn't convey intent).
 
-検出シグナル:
-- table-driven で 1 case しかない (= 通常の test func で十分)
-- struct field の半数以上が空値 / 同じ値 (= struct 過剰)
-- `wantErr string` で文字列比較
+Detection signals:
+- A table-driven test with only one case (a regular test function would suffice)
+- More than half the struct fields are empty / the same value (the struct is overengineered)
+- String comparison via `wantErr string`
 
 ## 3. `t.Parallel()`
 
-- **デフォルトで有効化推奨**。test 全体の wall time 短縮 + race detector 効果増
-- table-driven 内の `t.Run(tc.name, func(t *testing.T) { t.Parallel(); ... })` で **closure 内 tc capture に注意**:
+- **Enabling it by default is recommended.** It shortens overall test wall time and increases the effectiveness of the race detector.
+- Inside table-driven `t.Run(tc.name, func(t *testing.T) { t.Parallel(); ... })`, **be careful about capturing `tc` inside the closure**:
   ```go
   for _, tc := range tests {
-      tc := tc  // Go 1.22+ は不要だが <= 1.21 なら必須
+      tc := tc  // unnecessary on Go 1.22+, but required on <= 1.21
       t.Run(tc.name, func(t *testing.T) {
           t.Parallel()
           ...
       })
   }
   ```
-  Go 1.22+ から for loop 変数 scope が iteration 単位になり capture 罠は解消されたが、CI が古い Go で動く可能性があるなら明示的に local 変数化が安全
-- parallel 不可な test (global state を触る / 順序依存) は `t.Parallel()` を呼ばない
-- `t.Parallel()` 呼んだ test 同士は並行実行、呼ばない test は parallel test 完了後に逐次実行
+  From Go 1.22+, for-loop variable scope became per-iteration, which resolved the capture trap, but if CI might run on an older Go version, explicitly localizing the variable is the safe choice.
+- Tests that can't run in parallel (touching global state / order-dependent) should not call `t.Parallel()`.
+- Tests that call `t.Parallel()` run concurrently with each other; tests that don't call it run sequentially after the parallel tests complete.
 
-検出シグナル:
-- table-driven test で全 case が `t.Parallel()` を呼んでいない (= wall time 損失)
-- closure capture で `tc` を bind せずに外側の loop 変数を参照 (古い Go で bug)
-- global state 触っているのに `t.Parallel()` 呼んでいる (race / flaky)
+Detection signals:
+- Not all cases in a table-driven test call `t.Parallel()` (wasting wall time)
+- Referencing the outer loop variable without binding `tc` in the closure capture (a bug on older Go)
+- Calling `t.Parallel()` while touching global state (race / flaky)
 
 ## 4. `t.Helper()`
 
-- helper 関数 (assertion / fixture 構築) の **冒頭で `t.Helper()` 呼ぶ**。失敗時の line 報告が呼び出し側になり debug 容易
-- 純粋な data 生成 helper には不要 (実際に `t.Errorf` / `t.Fatal` を呼ばないなら)
+- **Call `t.Helper()` at the top** of helper functions (assertions / fixture construction). This makes failure line reporting point to the caller, easing debugging.
+- Not needed for pure data-generation helpers (if they never actually call `t.Errorf` / `t.Fatal`).
 
-検出シグナル:
-- `t.Errorf` / `t.Fatal` を呼ぶ helper で `t.Helper()` 呼んでいない
+Detection signals:
+- A helper that calls `t.Errorf` / `t.Fatal` without calling `t.Helper()`
 
 ## 5. Setup / Teardown
 
-- リソース cleanup は **`t.Cleanup()` で inline 登録** (Go 1.14+ の慣用)
-- 共通 fixture は helper constructor (`newFixture(t)`) に集約、内部で `t.Cleanup` 登録
-- struct field で table case 個別の前処理を持たせるときの命名は **`beforeFunc` / `afterFunc`** (`setup` / `teardown` の語は使わない)
-- struct field 方式自体は default 非推奨 (boilerplate / closure capture 罠 / `t.Parallel()` と相性悪い)
-- 例外: case ごとに genuinely 異なる前処理が必要なときのみ `beforeFunc` を struct field に追加。`afterFunc` は通常省略 (`beforeFunc` 内で `t.Cleanup` で済む)、必要なときだけ入れる
+- Register resource cleanup **inline via `t.Cleanup()`** (the Go 1.14+ idiom).
+- Consolidate common fixtures into a helper constructor (`newFixture(t)`), registering `t.Cleanup` internally.
+- When a struct field holds per-case setup for a table test, name it **`beforeFunc` / `afterFunc`** (don't use the words `setup` / `teardown`).
+- The struct-field approach itself is discouraged by default (boilerplate / closure-capture pitfalls / poor compatibility with `t.Parallel()`).
+- Exception: only add `beforeFunc` as a struct field when each case genuinely needs different setup. `afterFunc` is usually omitted (it's covered by `t.Cleanup` inside `beforeFunc`); include it only when needed.
 
-例:
+Example:
 ```go
 tests := []struct {
     name       string
@@ -117,77 +119,77 @@ tests := []struct {
 }
 ```
 
-検出シグナル:
-- `defer cleanup()` だけで cleanup している (test 全体 fail 時に走らない、`t.Cleanup` の方が安全)
-- struct field 名が `setup` / `teardown` (推奨は `beforeFunc` / `afterFunc`、project 規約があればそちら優先)
-- 全 case で同じ setup function を持たせている (= 共通 helper に切り出すべき)
+Detection signals:
+- Cleanup done solely via `defer cleanup()` (won't run if the whole test fails outright; `t.Cleanup` is safer)
+- Struct field names of `setup` / `teardown` (recommendation is `beforeFunc` / `afterFunc`; defer to project convention if one exists)
+- The same setup function attached to every case (should be extracted into a common helper)
 
 ## 6. Race detector
 
-- **常時 ON**。`go test -race` で実行 (例: `make test` に `-race` を含めて常時 ON)
-- 並行コードのデータ race は static 解析で検出不可、CI で常時走らせる価値が高い
-- コスト: ~10x 遅い + memory ~5-10x 増。unit test scale なら問題視しない
-- benchmark (`go test -bench`) は race ON だと意味のある測定不可 → 別実行
-- 例外的に race を外したい場合は build tag (`//go:build !race`)
+- **Always on.** Run with `go test -race` (e.g., always-on via including `-race` in `make test`).
+- Data races in concurrent code can't be detected via static analysis; running it constantly in CI has high value.
+- Cost: ~10x slower + ~5-10x more memory. Not a concern at unit-test scale.
+- Benchmarks (`go test -bench`) can't produce meaningful measurements with race enabled → run separately.
+- If you exceptionally need to exclude race, use a build tag (`//go:build !race`).
 
-検出シグナル:
-- CI / Makefile で `go test` のみ (= race なし) を default にしている
-- `go test -bench` を `-race` 付きで走らせている (測定が無意味)
+Detection signals:
+- CI / Makefile defaulting to plain `go test` (i.e., no race)
+- Running `go test -bench` with `-race` (measurement becomes meaningless)
 
 ## 7. Test design technique
 
 ### Black-box vs White-box
 
-- **Black-box**: input → output の契約検証、内部実装に依存しない。`package x_test` (external test package) で書くと implementation symbols に触れず public API のみで test できる
-- **White-box**: 分岐 / 内部状態を意図的に通す。`package x` (same package) で unexported symbol に触れる
-- **使い分け**: API 契約の test は black-box、実装の coverage 補完は white-box。両方共存可
+- **Black-box**: verifies the input → output contract without depending on internal implementation. Writing it as `package x_test` (an external test package) lets you test using only the public API, without touching implementation symbols.
+- **White-box**: intentionally exercises branches / internal state. Written as `package x` (the same package), touching unexported symbols.
+- **When to use which**: use black-box for testing the API contract, white-box to fill in implementation coverage. Both can coexist.
 
 ### Boundary value analysis
 
-- off-by-one / 上限下限 / 0 / 空 / nil / max / min を意図的に test
-- 例: `top_k` field なら 0 / 1 / 上限値 / 上限+1 / 負数 / 大きな数
-- **文字列 boundary は rune count vs byte count を明示**:
-  - Go の `len(string)` は **byte count**、文字数 (rune count) は `utf8.RuneCountInString` / `[]rune(s)`
-  - 上限を持つ string API は spec 側でどちらの単位かを決め、test もそれに合わせる
-  - マルチバイト文字 (日本語 / 絵文字) は 1 rune ≒ 3-4 byte。byte 上限の場合は **マルチバイトのみの境界 test が必須** (ASCII での境界 test だけでは検証漏れ)
-  - 結合文字 / 異体字 selector を含む文字列は rune count ≠ grapheme cluster count。grapheme 単位で扱う API は別途 `golang.org/x/text/unicode/norm` 等を使う
+- Intentionally test off-by-one, upper/lower bounds, 0, empty, nil, max, min.
+- Example: for a `top_k` field, test 0 / 1 / the upper bound / upper bound + 1 / negative numbers / large numbers.
+- **For string boundaries, make rune count vs. byte count explicit**:
+  - Go's `len(string)` is a **byte count**; the character count (rune count) comes from `utf8.RuneCountInString` / `[]rune(s)`.
+  - For string APIs with an upper bound, the spec should decide which unit applies, and tests should match that.
+  - Multi-byte characters (Japanese / emoji) are roughly 1 rune ≈ 3-4 bytes. For a byte-based upper bound, **a boundary test using only multi-byte characters is mandatory** (a boundary test using only ASCII leaves a verification gap).
+  - Strings containing combining characters / variation selectors have rune count ≠ grapheme cluster count. APIs that operate at the grapheme level should separately use something like `golang.org/x/text/unicode/norm`.
 
 ### Equivalence partitioning
 
-- 同値クラスに 1 件代表 test。全網羅を狙わず代表値で trade-off
-- 例: `query` 文字列なら「ASCII」「マルチバイト」「絵文字 / 結合文字」「空文字 / 空白のみ」「上限文字数 / +1」
+- One representative test per equivalence class. Trade off completeness for representative values rather than aiming for full coverage.
+- Example: for a `query` string — "ASCII," "multi-byte," "emoji / combining characters," "empty string / whitespace only," "max character count / +1."
 
 ### Negative test
 
-- 正常系 (HappyPath) だけでなく **rejection path を網羅**:
-  - validation 失敗 (各 field の境界違反)
-  - 上流 dependency error (provider unavailable / timeout)
+- Cover **rejection paths**, not just the happy path:
+  - validation failures (boundary violations for each field)
+  - upstream dependency errors (provider unavailable / timeout)
   - context cancellation
-  - permission / ACL 違反
+  - permission / ACL violations
 
 ### Property-based test
 
-- `testing/quick` (標準) / `pgregory.net/rapid` (3rd-party) で性質ベース test
-- 適用は限定的: pure function / decoder-encoder の roundtrip / ordering 保持などに有効
-- 業務 logic には value-based test の方が読みやすい
+- Use `testing/quick` (standard library) / `pgregory.net/rapid` (third-party) for property-based tests.
+- Applicability is limited: effective for pure functions, decoder-encoder roundtrips, order preservation, etc.
+- For business logic, value-based tests are more readable.
 
-検出シグナル:
-- HappyPath のみで rejection / boundary が test されていない
-- `top_k` のような数値 field で 0 / 上限 / 上限+1 が test 漏れ
-- マルチバイト文字列入力 test がない (日本語 query で fail する潜在 bug)
+Detection signals:
+- Only the happy path is tested; rejection / boundary cases are untested
+- A numeric field like `top_k` missing tests for 0 / the upper bound / upper bound + 1
+- No test for multi-byte string input (a latent bug that would fail on a Japanese query)
 
-## 8. Fake / Mock / Stub の使い分け
+## 8. Choosing between Fake / Mock / Stub
 
-- **Fake**: 動く軽量実装 (in-memory db / in-memory adapter)。複雑 logic でも動作再現できる
-- **Stub**: 固定 response を返すだけ。input は無視
-- **Mock**: input 検証 + 期待呼び出し回数を assert (xUnit style)
+- **Fake**: a working lightweight implementation (in-memory DB / in-memory adapter). Can reproduce behavior even for complex logic.
+- **Stub**: just returns a fixed response. Input is ignored.
+- **Mock**: validates input + asserts expected call counts (xUnit style).
 
-推奨方針 (project 規約があればそちら優先):
-- **手書き fake 推奨** (testify / gomock 等の generation tool は使わない)
-- 理由: dependency 最小 / fake の挙動が src コード上で完結 / 過剰 mock 回避
-- interface に narrow なものを切り (port pattern)、test 用に簡潔な struct で実装
+Recommended approach (defer to project convention if one exists):
+- **Hand-written fakes are recommended** (don't use generation tools like testify / gomock).
+- Rationale: minimal dependencies / the fake's behavior is fully contained in source code / avoids over-mocking.
+- Cut narrow interfaces (the port pattern), and implement them for tests with a concise struct.
 
-例 (推奨 pattern):
+Example (recommended pattern):
 ```go
 type fakeVectorStore struct {
     searchCalls []vectorSearchCall
@@ -203,112 +205,112 @@ func (f *fakeVectorStore) Search(_ context.Context, c string, req ports.VectorSe
 }
 ```
 
-検出シグナル:
-- testify / gomock / mockery 等の mock framework が新規導入されている
-- mock の expectation が「呼ばれた回数」だけ検証して input / output が unchecked
+Detection signals:
+- A mock framework such as testify / gomock / mockery being newly introduced
+- A mock's expectations only verifying "number of times called," leaving input/output unchecked
 
 ## 9. Test fixture / golden file / testdata
 
-- 大きい input / 期待 output は `testdata/` directory に配置 (Go 慣用、build から除外される)
-- golden file pattern: 期待 output を `testdata/golden/<name>.json` 等に保存、test 内で diff
-  - update flag (`-update` 等の独自 flag) で実装変更時に一括更新
-- fixture 共有は `testdata/fixtures/` 配下、test helper で読み込み
+- Place large inputs / expected outputs in the `testdata/` directory (a Go idiom; excluded from the build).
+- Golden file pattern: save expected output to something like `testdata/golden/<name>.json`, and diff it within the test.
+  - Use an update flag (a custom flag like `-update`) to bulk-update when the implementation changes.
+- Share fixtures under `testdata/fixtures/`, loaded via a test helper.
 
-検出シグナル:
-- 巨大な期待値 string が test code 中に inline (= testdata に切り出すべき)
-- testdata に build tag が付いていない、もしくは Go の build から除外されていない (= `testdata` ディレクトリ名は Go が自動除外)
+Detection signals:
+- A huge expected-value string inline in test code (should be extracted into testdata)
+- testdata not tagged with a build tag, or not excluded from the Go build (the directory name `testdata` is automatically excluded by Go)
 
-## 10. Test 区分 / build tag
+## 10. Test categories / build tags
 
-- **Unit test**: 同じ package 内、外部 IO なし、ms オーダー。`*_test.go` で常時実行
-- **Integration test**: 外部 dependency (DB / API) と接続、CI で別 stage。build tag で分離:
+- **Unit test**: within the same package, no external IO, on the order of milliseconds. Runs always via `*_test.go`.
+- **Integration test**: connects to external dependencies (DB / API), run as a separate stage in CI. Separated via a build tag:
   ```go
   //go:build integration
 
   package x_test
   ```
-  実行: `go test -tags=integration ./...`
-- **E2E test**: 全体起動 + black-box。`tests/e2e/` 等の外側 directory + build tag
+  Run with: `go test -tags=integration ./...`
+- **E2E test**: full system startup + black-box. An outer directory like `tests/e2e/` + a build tag.
 
-検出シグナル:
-- Pinecone / OpenAI に直接 net 接続する test が unit test (`go test ./...`) で走る (= flaky / 外部依存)
-- 別 build tag が付いていないが external IO する test
+Detection signals:
+- A test that connects directly over the network to Pinecone / OpenAI running as a unit test (`go test ./...`) (flaky / external dependency)
+- A test doing external IO without a separate build tag
 
 ## 11. HTTP / gRPC test pattern
 
 ### HTTP
 
-- `httptest.NewServer` で in-process server 起動、SDK の base URL を upcast
-- request 検証は handler 内で `r.URL` / `r.Body` を assert
-- response は `w.WriteHeader` + `w.Write([]byte(...))` で canned
+- Start an in-process server with `httptest.NewServer`, and point the SDK's base URL at it.
+- Verify requests by asserting `r.URL` / `r.Body` inside the handler.
+- Canned responses via `w.WriteHeader` + `w.Write([]byte(...))`.
 
 ### gRPC
 
-- `bufconn.Listen` で in-memory listener、`grpc.NewClient(... grpc.WithContextDialer(bufDialer)) `で client wire
-- service 全体起動が重ければ handler を直接 method 呼びでも可 (interceptor の test も含めたいなら bufconn)
+- Use `bufconn.Listen` for an in-memory listener, and wire up the client with `grpc.NewClient(... grpc.WithContextDialer(bufDialer))`.
+- If starting up the whole service is too heavy, calling the handler method directly is also fine (use bufconn if you also want to test interceptors).
 
-検出シグナル:
-- HTTP test で actual TCP port を bind している (= flaky / 並行 test 衝突)
-- gRPC test で実 net listener を起動
+Detection signals:
+- An HTTP test binding an actual TCP port (flaky / conflicts with parallel tests)
+- A gRPC test starting a real network listener
 
 ## 12. Time / Context determinism
 
-- `time.Now()` を直接呼ばず、`now func() time.Time` を struct field / param に注入
-- test では `now: func() time.Time { return time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC) }` で固定
-- ctx は test 内で `context.Background()` (entry point) または `context.WithTimeout` で deadline 制御
-- random seed も注入 / `math/rand/v2` の Local 化で deterministic
+- Don't call `time.Now()` directly; inject `now func() time.Time` as a struct field / parameter.
+- In tests, fix it with `now: func() time.Time { return time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC) }`.
+- Within tests, control ctx deadlines via `context.Background()` (entry point) or `context.WithTimeout`.
+- Also inject the random seed / localize `math/rand/v2` to keep things deterministic.
 
-検出シグナル:
-- production code が `time.Now()` を直接呼ぶ (= test で固定不可)
-- random / UUID 生成が global state 由来 (= 決定的にできない)
+Detection signals:
+- Production code calling `time.Now()` directly (can't be fixed in tests)
+- Random / UUID generation coming from global state (can't be made deterministic)
 
-## 13. Coverage 解釈
+## 13. Interpreting coverage
 
-- line coverage は guide rail、**信仰しない**
-- branch coverage / boundary coverage / 重要 path 重視
-- 100% 目指すと artificial test (`if false { ... }` を消すための pointless test) が生まれる
-- DoD ベース: 機能契約 (acceptance criteria) を満たす test を書く、内部 100% を目指さない
-- 目安: business logic / handler / adapter は 80%+、generated code / main は coverage 対象外
+- Line coverage is a guide rail — **don't treat it as gospel**.
+- Emphasize branch coverage / boundary coverage / important paths.
+- Aiming for 100% produces artificial tests (pointless tests just to eliminate `if false { ... }`).
+- DoD-based: write tests that satisfy the functional contract (acceptance criteria); don't aim for 100% internal coverage.
+- Rule of thumb: business logic / handlers / adapters should be 80%+; generated code / `main` are excluded from coverage targets.
 
-検出シグナル:
-- coverage を上げるためだけの assertion なし test
-- handler / service の HappyPath だけで coverage が稼がれているのに rejection path が test 抜け
+Detection signals:
+- A test with no assertions, existing only to bump coverage
+- Coverage padded out by only the handler/service's happy path, while rejection paths are untested
 
-## 14. Flakiness 回避
+## 14. Avoiding flakiness
 
-主な flaky 原因:
-- **time-based**: `time.Sleep` 待ち、`time.Now()` の暗黙依存 → 注入で固定
-- **ordering**: map iteration 順序依存 → sorted slice に変換してから assert
-- **net IO**: actual port bind → httptest / bufconn を使う
-- **goroutine race**: `t.Cleanup` で全 goroutine 終了を待つ、channel close で sync
-- **shared state**: `t.Parallel()` 下で global / package var を mutate → test 内 local state に切り替え
+Main causes of flakiness:
+- **time-based**: waiting via `time.Sleep`, implicit dependence on `time.Now()` → fix via injection
+- **ordering**: dependence on map iteration order → convert to a sorted slice before asserting
+- **net IO**: binding an actual port → use httptest / bufconn
+- **goroutine race**: wait for all goroutines to finish via `t.Cleanup`, sync via channel close
+- **shared state**: mutating a global / package var under `t.Parallel()` → switch to local state within the test
 
-検出シグナル:
-- test 内に `time.Sleep`
-- map iteration 結果を順序付き比較 (`reflect.DeepEqual([]Map, expectedSlice)` は順序保証なし)
-- test 終了後に goroutine が残る
+Detection signals:
+- `time.Sleep` inside a test
+- Comparing map iteration results as ordered (`reflect.DeepEqual([]Map, expectedSlice)` has no order guarantee)
+- A goroutine still alive after the test ends
 
 ---
 
-## False positive 判定基準
+## False positive criteria
 
-以下に該当する場合は本 skill の検出シグナルがヒットしても **違反扱いしない**:
+Even if a detection signal from this skill fires, do **not** treat it as a violation when any of the following apply:
 
-- **生成コード由来**: protoc / buf / openapi-generator / `go generate` などで生成された symbol / file (典型: ファイル冒頭に `Code generated by ... DO NOT EDIT.` 行を含む)。生成元の schema 側で改善されるべきで、生成後の Go コードを手で直さない
-- **言語 / library の慣用 pattern**: `func(...) (resp any, err error)` の named return + defer-recover、`http.Handler` などの固定 signature、`context.Context` を第一引数で取る規約等は本 skill の規則より優先
-- **意図的設計の例外**: コード / docs で意図が明示されている設計上の決定 (例: shutdown context を signal-aware ctx から detach するための `context.Background()` の library 内使用)
-- **public API 互換性**: 後方互換のため変えられない exported symbol (改名提案より移行戦略の提案を優先)
+- **Originates from generated code**: symbols/files generated by protoc / buf / openapi-generator / `go generate`, etc. (typically identified by a `Code generated by ... DO NOT EDIT.` line at the top of the file). Improvements belong on the source schema side; don't hand-edit generated Go code.
+- **Language/library idiomatic patterns**: things like `func(...) (resp any, err error)` with named returns + defer-recover, fixed signatures like `http.Handler`, or the convention of taking `context.Context` as the first argument take priority over this skill's rules.
+- **Intentional design exceptions**: design decisions whose intent is explicitly documented in code/docs (e.g., using `context.Background()` inside a library to detach a shutdown context from a signal-aware ctx).
+- **Public API compatibility**: exported symbols that can't be changed for backward compatibility (prefer proposing a migration strategy over a rename).
 
-疑わしい場合は除外せず、output で「false positive 候補」として flag し user 判断を仰ぐ。
+When in doubt, don't exclude it — flag it in the output as a "false positive candidate" and defer to the user's judgment.
 
-## このスキルが出力すべきもの
+## What this skill should output
 
-code-refactor-advisor agent から呼ばれた場合:
-- 対象 test code に対する **section 別の違反 / 改善余地 list**
-- 各指摘の **検出シグナル** + **根拠 section 番号**
-- 修正方針 (table-driven 化 / fake 切り替え / golden file 化 / boundary case 追加 / etc.)
+When invoked by the code-refactor-advisor agent:
+- A **list of violations / improvement opportunities, organized by section**, for the target test code
+- Each finding's **detection signal** + **supporting section number**
+- A remediation approach (convert to table-driven / switch to fakes / adopt golden files / add boundary cases / etc.)
 
-## 参照
+## References
 
 - Go testing package doc: https://pkg.go.dev/testing
 - Go Code Review Comments (Tests section): https://go.dev/wiki/CodeReviewComments

@@ -3,6 +3,8 @@ name: arc42-c4
 description: Reference for architecture design docs combining arc42 (§1-12) with the C4 model (L1-L4) — which diagram goes in which section, top-level vs subsystem split. Use for "which section gets what", "§5 vs §6 vs §7", "ADR inside or separate". Reference skill, not a procedure.
 ---
 
+> **Source of truth:** `claude/ja/skills/arc42-c4/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
+
 # arc42-c4
 
 arc42 (sections) and C4 (diagrams) are independent conventions; neither spec says which C4 diagram belongs in which arc42 section. **This skill pins that mapping as a house standard** to kill per-doc ambiguity. Project-specific doc maps live in the project's top-level design doc, not here.

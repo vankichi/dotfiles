@@ -1,6 +1,8 @@
-# 最小 parser (Python)
+> **Source of truth:** `claude/ja/skills/claude-session-jsonl/references/parser-python.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
-dict ベースで `type != "assistant"` を捨てる。dataclass は usage のみ。
+# Minimal parser (Python)
+
+Use a dict-based approach and discard anything where `type != "assistant"`. The dataclass is only for usage.
 
 ```python
 import json
