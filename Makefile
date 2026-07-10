@@ -1,4 +1,4 @@
-.PHONY: all link clean zsh bash build prod_build profile run push pull update/go update/ngt
+.PHONY: all new_link new_clean zsh bash build prod_build profile run push pull update/go update/ngt
 
 include Makefile.d/version.mk
 
@@ -7,60 +7,78 @@ USER_ID = $(eval USER_ID := $(shell id -u $(USER)))$(USER_ID)
 GROUP_ID = $(eval GROUP_ID := $(shell id -g $(USER)))$(GROUP_ID)
 GROUP_IDS = $(eval GROUP_IDS := $(shell id -G $(USER)))$(GROUP_IDS)
 ROOTDIR = $(eval ROOTDIR := $(or $(shell git rev-parse --show-toplevel), $(PWD)))$(ROOTDIR)
-
+# $(ROOTDIR)/
 all: prod_build login push profile git_push
 
 run:
 	source ./alias && devrun
 
-link:
-	mkdir -p ${HOME}/.config/nvim/colors
-	mkdir -p ${HOME}/.config/nvim/syntax
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))init.vim $(HOME)/.config/nvim/init.vim
-	# ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))starship.toml $(HOME)/.config/starship.toml
-	# ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))efm-lsp-conf.yaml $(HOME)/.config/nvim/efm-lsp-conf.yaml
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))coc-settings.json $(HOME)/.config/nvim/coc-settings.json
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))monokai.vim $(HOME)/.config/nvim/colors/monokai.vim
-	# ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))go.vim $(HOME)/.config/nvim/syntax/go.vim
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))zshrc $(HOME)/.zshrc
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))editorconfig $(HOME)/.editorconfig
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))alias $(HOME)/.aliases
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))gitconfig $(HOME)/.gitconfig
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))gitattributes $(HOME)/.gitattributes
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))gitignore $(HOME)/.gitignore
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))tmux.conf $(HOME)/.tmux.conf
-	ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))tmux-kube $(HOME)/.tmux-kube
-	# ln -sfv $(dir $(abspath $(lastword $(MAKEFILE_LIST))))tmux.new-session $(HOME)/.tmux.new-session
+unlink:
+	unlink $(HOME)/.config/nvim
 
-clean:
-	# sed -e "/\[\ \-f\ \$HOME\/\.aliases\ \]\ \&\&\ source\ \$HOME\/\.aliases/d" ~/.zshrc
-	unlink $(HOME)/.config/nvim/init.vim
-	# unlink $(HOME)/.config/starship.toml
-	# unlink $(HOME)/.config/nvim/efm-lsp-conf.yaml
-	unlink $(HOME)/.config/nvim/coc-settings.json
-	unlink $(HOME)/.config/nvim/colors/monokai.vim
-	# unlink $(HOME)/.config/nvim/syntax/go.vim
-	unlink $(HOME)/.zshrc
-	unlink $(HOME)/.editorconfig
-	unlink $(HOME)/.aliases
-	unlink $(HOME)/.gitconfig
-	unlink $(HOME)/.gitattributes
-	unlink $(HOME)/.gitignore
-	unlink $(HOME)/.tmux.conf
-	unlink $(HOME)/.tmux-kube
-	# unlink $(HOME)/.tmux.new-session
+new_link:
+	mkdir -p $(HOME)/.config
+	mkdir -p $(HOME)/.config/tmux
+	mkdir -p $(HOME)/.config/sheldon
+	ln -sfv $(shell pwd)/gitconfig $(HOME)/.gitconfig
+	ln -sfv $(shell pwd)/zshrc $(HOME)/.zshrc
+	[ -f $(shell pwd)/zshrc.local ] && ln -sfv $(shell pwd)/zshrc.local $(HOME)/.zshrc.local || true
+	ln -sfv $(shell pwd)/tmux.conf $(HOME)/.config/tmux/tmux.conf
+	ln -sfnv $(shell pwd)/config/nvim $(HOME)/.config/nvim
+	ln -sfv $(shell pwd)/starship.toml $(HOME)/.config/starship.toml
+	ln -sfv $(shell pwd)/config/sheldon/plugins.toml $(HOME)/.config/sheldon/plugins.toml
+	ln -sfv $(shell pwd)/editorconfig $(HOME)/.editorconfig
+	ln -sfv $(shell pwd)/alias $(HOME)/.aliases
+	ln -sfv $(shell pwd)/gitattributes $(HOME)/.gitattributes
+	ln -sfv $(shell pwd)/gitignore $(HOME)/.gitignore
+	ln -sfv $(shell pwd)/tmux-kube $(HOME)/.tmux-kube
+	# Claude Code config (runtime state stays local under ~/.claude)
+	mkdir -p $(HOME)/.claude
+	ln -sfv $(shell pwd)/claude/CLAUDE.md $(HOME)/.claude/CLAUDE.md
+	ln -sfv $(shell pwd)/claude/settings.json $(HOME)/.claude/settings.json
+	ln -sfv $(shell pwd)/claude/statusline-command.sh $(HOME)/.claude/statusline-command.sh
+	ln -sfnv $(shell pwd)/claude/agents $(HOME)/.claude/agents
+	ln -sfnv $(shell pwd)/claude/skills $(HOME)/.claude/skills
+	ln -sfnv $(shell pwd)/claude/hooks $(HOME)/.claude/hooks
+	ln -sfnv $(shell pwd)/claude/rules $(HOME)/.claude/rules
 
-zsh: link
-	[ -f $(HOME)/.zshrc ] && echo "[ -f $$HOME/.aliases ] && source $$HOME/.aliases" >> $(HOME)/.zshrc
+new_clean:
+	-unlink $(HOME)/.gitconfig
+	-unlink $(HOME)/.zshrc
+	-unlink $(HOME)/.zshrc.local
+	-unlink $(HOME)/.editorconfig
+	-unlink $(HOME)/.aliases
+	-unlink $(HOME)/.gitattributes
+	-unlink $(HOME)/.gitignore
+	-unlink $(HOME)/.tmux-kube
+	-unlink $(HOME)/.config/tmux/tmux.conf
+	-unlink $(HOME)/.config/nvim
+	-unlink $(HOME)/.config/starship.toml
+	-unlink $(HOME)/.config/sheldon/plugins.toml
+	-unlink $(HOME)/.claude/CLAUDE.md
+	-unlink $(HOME)/.claude/settings.json
+	-unlink $(HOME)/.claude/statusline-command.sh
+	-unlink $(HOME)/.claude/agents
+	-unlink $(HOME)/.claude/skills
+	-unlink $(HOME)/.claude/hooks
+	-unlink $(HOME)/.claude/rules
 
-bash: link
-	[ -f $(HOME)/.bashrc ] && echo "[ -f $$HOME/.aliases ] && source $$HOME/.aliases" >> $(HOME)/.bashrc
+zsh: new_link
+	@if [ -f "$(HOME)/.zshrc" ] && ! grep -qF '[ -f $HOME/.aliases ] && source $HOME/.aliases' "$(HOME)/.zshrc"; then \
+		echo '[ -f $$HOME/.aliases ] && source $$HOME/.aliases' >> "$(HOME)/.zshrc"; \
+	fi
+
+bash: new_link
+	@if [ -f "$(HOME)/.bashrc" ] && ! grep -qF '[ -f $HOME/.aliases ] && source $HOME/.aliases' "$(HOME)/.bashrc"; then \
+		echo '[ -f $$HOME/.aliases ] && source $$HOME/.aliases' >> "$(HOME)/.bashrc"; \
+	fi
 
 build:
 	docker build -t vankichi/dev:latest .
 
 docker_build:
-	docker build ${ARGS} --squash -t ${IMAGE_NAME}:latest -f ${DOCKERFILE} .
+	# docker build ${ARGS} --squash -t ${IMAGE_NAME}:latest -f ${DOCKERFILE} .
+	docker buildx build --platform $(DOCKER_BUILDER_PLATFORM) ${ARGS} --squash -t ${IMAGE_NAME}:latest -f ${DOCKERFILE} . --push
 	# docker buildx build --squash -t ${IMAGE_NAME}:latest -f ${DOCKERFILE} .
 
 docker_push:
@@ -175,7 +193,8 @@ git_push:
 DOCKER_EXTRA_OPTS = ""
 DOCKER_BUILDER_NAME = "vankichi-builder"
 DOCKER_BUILDER_DRIVER = "docker-container"
-DOCKER_BUILDER_PLATFORM = "linux/amd64,linux/arm64/v8"
+DOCKER_BUILDER_PLATFORM = "linux/amd64"
+# DOCKER_BUILDER_PLATFORM = "linux/amd64,linux/arm64"
 
 init_buildx:
 	docker run \

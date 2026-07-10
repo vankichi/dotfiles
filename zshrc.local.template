@@ -1,0 +1,20 @@
+# --------------------
+# node / volta (override)
+# --------------------
+export VOLTA_HOME="$HOME/.volta"
+export NODE_PATH="$HOME/.volta/bin"
+export PATH="$VOLTA_HOME/bin:$PATH"
+
+export HELIX_RUNTIME=~/go/src/github.com/helix-editor/helix/runtime
+
+# >>> PyPI Proxy (optional) >>>
+# export PIP_INDEX_URL="https://pypi.example.com/simple/"
+# export UV_INDEX_URL="https://pypi.example.com/simple/"
+# <<< PyPI Proxy (optional) <<<
+
+# AWS (optional)
+# export AWS_DEFAULT_PROFILE=""
+
+# Google Cloud SDK
+if [ -f "$HOME/google-cloud-sdk/path.zsh.inc" ]; then . "$HOME/google-cloud-sdk/path.zsh.inc"; fi
+if [ -f "$HOME/google-cloud-sdk/completion.zsh.inc" ]; then . "$HOME/google-cloud-sdk/completion.zsh.inc"; fi

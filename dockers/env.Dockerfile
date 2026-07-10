@@ -7,6 +7,7 @@ ARG GROUP_ID=1000
 ARG DOCKER_GROUP_ID=961
 ARG GROUP_IDS=${GROUP_ID}
 ARG WHOAMI=vankichi
+ARG TARGETARCH
 
 ENV BASE_DIR /home
 ENV USER ${WHOAMI}
@@ -16,6 +17,10 @@ ENV GROUP sudo,root,users,docker,wheel
 ENV UID ${USER_ID}
 ENV GITHUB https://github.com
 ENV API_GITHUB https://api.github.com/repos
+ENV CFLAGS "-mno-avx512f -mno-avx512dq -mno-avx512cd -mno-avx512bw -mno-avx512vl"
+ENV CXXFLAGS "-std=c++20 ${CFLAGS}"
+ENV CC gcc
+ENV CXX g++
 
 RUN groupadd --non-unique --gid ${DOCKER_GROUP_ID} docker \
     && groupadd --non-unique --gid ${GROUP_ID} wheel \
@@ -52,6 +57,8 @@ RUN echo $'/lib\n\
 RUN apt-get update -y \
     && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends --fix-missing \
+    build-essential \
+    ca-certificates \
     libgtk-3-dev \
     liblzma-dev \
     libhdf5-serial-dev \
@@ -67,12 +74,17 @@ RUN apt-get update -y \
     python3-setuptools \
     python3-venv \
     && apt-get clean \
-    && curl -LO "https://github.com/neovim/neovim/releases/download/stable/nvim-linux64.tar.gz" \
-    && tar -zxvf nvim-linux64.tar.gz \
-    && mv ./nvim-linux64/bin/nvim /usr/bin/nvim \
+    && case "${TARGETARCH}" in \
+        amd64) NVIM_ARCH="x86_64" ;; \
+        arm64) NVIM_ARCH="arm64" ;; \
+        *) echo "Unsupported TARGETARCH: ${TARGETARCH}"; exit 1 ;; \
+      esac \
+    && curl -fL -o "nvim-linux-${NVIM_ARCH}.tar.gz" "https://github.com/neovim/neovim/releases/download/v0.12.0/nvim-linux-${NVIM_ARCH}.tar.gz" \
+    && tar -zxf "nvim-linux-${NVIM_ARCH}.tar.gz" \
+    && mv "./nvim-linux-${NVIM_ARCH}/bin/nvim" /usr/bin/nvim \
     && chmod 755 -R /usr/bin/nvim \
-    && mv ./nvim-linux64/share/nvim /usr/share/nvim \
-    && mv ./nvim-linux64/lib/nvim /usr/lib/nvim \
+    && mv ./nvim-linux-${NVIM_ARCH}/share/nvim /usr/share/nvim \
+    && mv ./nvim-linux-${NVIM_ARCH}/lib/nvim /usr/lib/nvim \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install --upgrade --break-system-packages ranger-fm thefuck httpie python-language-server vim-vint grpcio-tools \
@@ -86,7 +98,6 @@ RUN nvim -v \
     && npm install -g n
 
 RUN n lts \
-    && hash -r \
     && bash -c "chown -R ${USER} $(npm config get prefix)/{lib/node_modules,bin,share}" \
     && bash -c "chmod -R 755 $(npm config get prefix)/{lib/node_modules,bin,share}" \
     && npm install -g \
@@ -96,11 +107,10 @@ RUN n lts \
         markdownlint-cli \
         npm \
         prettier \
-        resume-cli \
-        terminalizer \
         typescript \
         typescript-language-server \
         yarn \
+	--omit=optional --no-audit --no-fund \
     && bash -c "chown -R ${USER} $(npm config get prefix)/{lib/node_modules,bin,share}" \
     && bash -c "chmod -R 755 $(npm config get prefix)/{lib/node_modules,bin,share}" \
     && apt purge -y nodejs npm \
@@ -113,7 +123,11 @@ RUN cmake --version
 WORKDIR /tmp
 RUN set -x; cd "$(mktemp -d)" \
     && OS="linux" \
-    && ARCH="x86_64" \
+    && case "${TARGETARCH}" in \
+        amd64) ARCH="x86_64" ;; \
+        arm64) ARCH="aarch_64" ;; \
+        *) echo "Unsupported TARGETARCH: ${TARGETARCH}"; exit 1 ;; \
+      esac \
     && REPO_NAME="protobuf" \
     && BIN_NAME="protoc" \
     && RELEASE_LATEST="releases/latest" \
@@ -130,10 +144,15 @@ WORKDIR /tmp
 ARG NGT_VERSION
 ENV CFLAGS "-mno-avx512f -mno-avx512dq -mno-avx512cd -mno-avx512bw -mno-avx512vl"
 ENV CXXFLAGS ${CFLAGS}
-RUN curl -LO "https://github.com/yahoojapan/NGT/archive/v${NGT_VERSION}.tar.gz" \
+RUN curl -LO "https://github.com/NGT-labs/NGT/archive/v${NGT_VERSION}.tar.gz" \
     && tar zxf "v${NGT_VERSION}.tar.gz" -C /tmp \
     && cd "/tmp/NGT-${NGT_VERSION}" \
-    && cmake -DNGT_LARGE_DATASET=ON . \
+    && if [ "$TARGETARCH" = "arm64" ]; then \
+	export CFLAGS=""; \
+	export CXXFLAGS=""; \
+    fi \
+    && cmake -DNGT_LARGE_DATASET=ON -DCMAKE_C_FLAGS="$CFLAGS" -DCMAKE_CXX_FLAGS="$CXXFLAGS" . \
+    # && cmake -DNGT_LARGE_DATASET=ON . \
     && make -j -C "/tmp/NGT-${NGT_VERSION}" \
     && make install -C "/tmp/NGT-${NGT_VERSION}" \
     && cd /tmp \
