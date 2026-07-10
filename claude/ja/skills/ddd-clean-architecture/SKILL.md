@@ -1,15 +1,19 @@
 ---
-name: ddd-hexagonal
-description: DDD + Hexagonal architecture の reference skill。layer 境界 / 依存方向 / Port-Adapter / ACL / Aggregate / Repository / DTO 変換 / cross-cutting を扱う。「層曖昧」「責務違反」「port の切り方」等の問いや設計 review 時に参照する。手順 skill ではない。
+name: ddd-clean-architecture
+description: DDD + Clean Architecture (Go では Hexagonal / Ports-Adapters とほぼ同義) の reference skill。layer 境界 / 依存方向 / Port-Adapter / ACL / Aggregate / Repository / DTO 変換 / cross-cutting を扱う。「層曖昧」「責務違反」「port の切り方」「layered と同じ?」等の問いや設計 review 時に参照する。手順 skill ではない。
 ---
 
-# ddd-hexagonal
+# ddd-clean-architecture
 
-DDD + Hexagonal architecture の慣用句・原則を集めた reference skill。設計判断 / review / refactor 候補出しの判断基準として参照する。
+DDD + Clean Architecture の慣用句・原則を集めた reference skill。設計判断 / review / refactor 候補出しの判断基準として参照する。
+
+> **Clean Architecture と Hexagonal**: Go でこのレイアウトを実装する場合、両者はほぼ同義 (Dependency Rule = 内向き依存 + Port は内側が定義・外側が実装、という同じ機構)。Clean Architecture の 4 リング (Entities/Use Cases/Interface Adapters/Frameworks & Drivers) は下表の Domain/Application/Interfaces+Adapters/cmd にそのまま対応する。
+>
+> **classic Layered (N-tier) とは別物**: Layered は Business 層が Data Access の concrete 型を直接 import することを許容し、DIP (依存逆転) を要求しない。本 skill の §2/3 が禁じる「Application → concrete adapter 直 import」は Layered では違反にならない。Go でこのレイアウトが「層が積み重なって見える」のは物理配置に過ぎず、依存方向の逆転有無こそが本質的な違い。
 
 ## 適用条件
 
-- DDD + Hexagonal を採用したプロジェクト (`internal/{domain,application,interfaces,adapters}/` レイアウト)
+- DDD + Clean Architecture を採用したプロジェクト (`internal/{domain,application,interfaces,adapters}/` レイアウト)
 - code-refactor-advisor agent からの参照
 - 層境界 / port 設計 / adapter 切り方の判断場面
 
@@ -263,6 +267,7 @@ code-refactor-advisor agent から呼ばれた場合:
 
 - Eric Evans, "Domain-Driven Design"
 - Vaughn Vernon, "Implementing Domain-Driven Design"
-- Alistair Cockburn, "Hexagonal architecture": https://alistair.cockburn.us/hexagonal-architecture/
+- Robert C. Martin, "Clean Architecture: A Craftsman's Guide to Software Structure and Design"
+- Alistair Cockburn, "Hexagonal architecture": https://alistair.cockburn.us/hexagonal-architecture/ (Port-Adapter 語彙の出典、Clean Architecture とほぼ同型)
 - Mark Seemann, "Dependency Injection in .NET" (依存方向の議論)
-- project の ADR (DDD + Hexagonal 採用判断) があれば参照
+- project の ADR (DDD + Clean Architecture 採用判断) があれば参照

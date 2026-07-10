@@ -382,7 +382,7 @@ CI に必ず仕込む:
 
 - security レビュー → `security-review-local` skill
 - docs (ADR / Runbook / Design) → `tech-docs-writer` skill
-- 層境界 / 責務 (アプリ側) → `ddd-hexagonal` skill
+- 層境界 / 責務 (アプリ側) → `ddd-clean-architecture` skill
 - Go アプリ規約 → `go-style` / `go-test` skill
 
 ---

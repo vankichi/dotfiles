@@ -20,7 +20,7 @@ A reference skill collecting Go idioms and conventions. Used as the judgment cri
 - Binary entry points live at `cmd/<bin>/main.go`. One binary = one subdirectory.
 - Code under `internal/` cannot be imported from other repositories. Implementation generally lives here.
 - `pkg/` is only for code intended to be imported externally. If there's no expected reuse, put it under `internal/`.
-- When adopting DDD + Hexagonal: `internal/{domain,application,interfaces,adapters}/` (see the `ddd-hexagonal` skill for layer boundary details)
+- When adopting DDD + Clean Architecture: `internal/{domain,application,interfaces,adapters}/` (see the `ddd-clean-architecture` skill for layer boundary details)
 - Separate the proto / OpenAPI / SDK public surface into `apis/` (recommended convention)
 - One package = one responsibility. Catch-all packages like `util` / `common` / `helper` are an anti-pattern.
 

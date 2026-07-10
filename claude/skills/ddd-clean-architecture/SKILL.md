@@ -1,17 +1,21 @@
 ---
-name: ddd-hexagonal
-description: Reference skill for DDD + Hexagonal architecture. Covers layer boundaries / dependency direction / Port-Adapter / ACL / Aggregate / Repository / DTO conversion / cross-cutting concerns. Consult it for questions like 「層曖昧」「責務違反」「port の切り方」or during design review. Not a procedural skill.
+name: ddd-clean-architecture
+description: Reference skill for DDD + Clean Architecture (in Go, effectively synonymous with Hexagonal / Ports-and-Adapters). Covers layer boundaries / dependency direction / Port-Adapter / ACL / Aggregate / Repository / DTO conversion / cross-cutting concerns. Consult it for questions like 「層曖昧」「責務違反」「port の切り方」「is this the same as layered?」or during design review. Not a procedural skill.
 ---
 
-> **Source of truth:** `claude/ja/skills/ddd-hexagonal/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
+> **Source of truth:** `claude/ja/skills/ddd-clean-architecture/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
-# ddd-hexagonal
+# ddd-clean-architecture
 
-A reference skill collecting the idioms and principles of DDD + Hexagonal architecture. Consult it as a criterion for design decisions, reviews, and identifying refactor candidates.
+A reference skill collecting the idioms and principles of DDD + Clean Architecture. Consult it as a criterion for design decisions, reviews, and identifying refactor candidates.
+
+> **Clean Architecture vs. Hexagonal**: When implemented in Go, the two are effectively synonymous (same Dependency Rule: dependencies point inward, the inner layer defines Ports, the outer layer implements them). Clean Architecture's four rings (Entities / Use Cases / Interface Adapters / Frameworks & Drivers) map directly onto Domain / Application / Interfaces+Adapters / cmd in the table below.
+>
+> **Not the same as classic Layered (N-tier)**: Layered architecture allows the Business layer to import concrete Data Access types directly and does not require the Dependency Inversion Principle. What §2/3 of this skill flag as a violation ("Application directly importing a concrete adapter") is not a violation under plain Layered. In Go, the layout looking like "stacked layers" is just physical placement — what actually distinguishes it is whether the dependency direction is inverted.
 
 ## Applicability
 
-- Projects that adopt DDD + Hexagonal (`internal/{domain,application,interfaces,adapters}/` layout)
+- Projects that adopt DDD + Clean Architecture (`internal/{domain,application,interfaces,adapters}/` layout)
 - Referenced by the code-refactor-advisor agent
 - Situations involving decisions about layer boundaries / port design / how to split adapters
 
@@ -265,6 +269,7 @@ When called from the code-refactor-advisor agent:
 
 - Eric Evans, "Domain-Driven Design"
 - Vaughn Vernon, "Implementing Domain-Driven Design"
-- Alistair Cockburn, "Hexagonal architecture": https://alistair.cockburn.us/hexagonal-architecture/
+- Robert C. Martin, "Clean Architecture: A Craftsman's Guide to Software Structure and Design"
+- Alistair Cockburn, "Hexagonal architecture": https://alistair.cockburn.us/hexagonal-architecture/ (source of the Port-Adapter vocabulary; structurally near-identical to Clean Architecture)
 - Mark Seemann, "Dependency Injection in .NET" (discussion of dependency direction)
-- Refer to the project's ADR (the decision to adopt DDD + Hexagonal) if one exists
+- Refer to the project's ADR (the decision to adopt DDD + Clean Architecture) if one exists
