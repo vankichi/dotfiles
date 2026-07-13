@@ -31,10 +31,10 @@ Identify the following from the preceding cycle / work (if none apply, it's fine
 
 ### Step 3: Record it in an insights file
 
-Write **one insight per file** in the per-project dir for the target project:
+Write **one insight per file** in the per-project dir for the target project. **"Target project" = the project the feedback's target file belongs to** (not necessarily the repo the cycle ran in; feedback about the harness goes to the dotfiles side):
 
 - path: `~/.claude/projects/<encoded>/insights/<YYYYMMDD>-<slug>.md`
-- `<encoded>` = the cwd's absolute path with `/` and `.` replaced by `-` (same convention as "Where to store plan / session state files" in CLAUDE.md)
+- `<encoded>` = the target project's absolute path with `/` and `.` replaced by `-` (same convention as "Where to store plan / session state files" in CLAUDE.md)
 
 ```markdown
 ---

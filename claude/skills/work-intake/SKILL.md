@@ -15,7 +15,8 @@ The entry point of the dev loop. Picks a single ready ticket and normalizes it i
 ### Step 1: Resolve configuration (no hardcoding)
 
 - Get the watched Notion DB / ready flag / "in progress" status representation from the reference memory in `MEMORY.md`
-- If not found, explicitly state "memory reference not registered" and stop (ask the user to register it)
+- The memory reference must be registered **per project** (different repos may watch different DBs)
+- If not found, explicitly state "memory reference not registered" and stop; then get the DB info from the user, register the reference in that project's memory, and continue
 - Option: if a ticket URL is passed as an argument, skip the enumeration in Step 2 and target only that ticket
 
 ### Step 2: Enumerate ready tickets
@@ -32,6 +33,7 @@ The entry point of the dev loop. Picks a single ready ticket and normalizes it i
 ### Step 4: Selection and state transition
 
 - Select **exactly one** ticket from the contract-satisfying ones, in priority order (oldest first for equal priority)
+- If the user gave an explicit instruction at invocation time (e.g., "youngest ID first"), it takes precedence over the priority rule; flag the deviation from the rule in one line
 - Update the selected ticket's status to the "in progress" equivalent (to prevent double-pickup. State lives on the source side; this skill holds no state of its own)
 
 ### Step 5: Work item output

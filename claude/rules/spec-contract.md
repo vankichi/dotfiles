@@ -30,6 +30,7 @@ ready flag を立てるのは人間のみ。
 
 - ready = 人間が「この spec の通りに実装されたら受け入れる」と宣言した状態
 - ready を立てられるのは人間のみ。write-spec は提案まで
+- **ready flag の SoT は source 側の DB property** (Notion の status 等)。spec 本文への ready 記載は不要で、書かれていても参照扱い (stale し得る)
 - ready 後の spec 変更は契約変更 — dev-cycle が着手済みの場合は escalation する
 
 ## 置き場所

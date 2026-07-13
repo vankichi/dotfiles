@@ -13,7 +13,8 @@ Dev loop の入口。ready な ticket を 1 件選び、dev-cycle が自律実�
 ### Step 1: 設定解決 (hardcode 禁止)
 
 - `MEMORY.md` の reference memory から watch 対象 Notion DB / ready flag / 「進行中」status の表現を取得する
-- 見つからない場合は「memory reference 未登録」と明示して停止する (user に登録を依頼)
+- memory reference は **project ごと**に登録が必要 (repo ごとに watch する DB が異なり得る)
+- 見つからない場合は「memory reference 未登録」と明示して停止し、user から DB 情報を取得 → その project の memory に reference を登録してから続行する
 - option: 引数に ticket URL が渡された場合は Step 2 の列挙を skip し、その ticket だけを対象にする
 
 ### Step 2: ready ticket 列挙
@@ -30,6 +31,7 @@ Dev loop の入口。ready な ticket を 1 件選び、dev-cycle が自律実�
 ### Step 4: 選択と状態遷移
 
 - contract 充足 ticket から優先度順 (同優先度は古い順) に **1 件**選択する
+- 呼び出し時に user の明示指示 (例:「ID が若い順」) がある場合はそれを優先度規則より優先し、規則からの逸脱を 1 行 flag する
 - 選択 ticket の status を「進行中」相当に更新する (二度拾い防止。状態は source 側に置き、本 skill は状態を持たない)
 
 ### Step 5: work item 出力

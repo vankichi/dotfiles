@@ -29,10 +29,10 @@ cycle 末の軽量記録。**1 分で書ける粒度を守る**。分析・集�
 
 ### Step 3: insights ファイルに記録
 
-対象 project の per-project dir に **1 insight = 1 ファイル**で書く:
+対象 project の per-project dir に **1 insight = 1 ファイル**で書く。**「対象 project」= FB の target ファイルが属する project** (cycle の実行 repo とは限らない。harness への FB なら dotfiles 側):
 
 - path: `~/.claude/projects/<encoded>/insights/<YYYYMMDD>-<slug>.md`
-- `<encoded>` = cwd 絶対パスの `/` と `.` を `-` に置換 (CLAUDE.md「plan / session state file の保存先」と同じ規約)
+- `<encoded>` = 対象 project 絶対パスの `/` と `.` を `-` に置換 (CLAUDE.md「plan / session state file の保存先」と同じ規約)
 
 ```markdown
 ---
