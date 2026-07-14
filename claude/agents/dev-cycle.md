@@ -106,12 +106,15 @@ If the plan includes a new service / new RPC / new enum / new ACL model / new AD
 
 Read the plan and determine the type of implementation:
 
-| Content | Tool |
-|---|---|
-| Go module initial setup (no go.mod or missing skeleton) | `Skill: go-bootstrap` |
-| Go DDD+TDD feature work (additions to existing internal/) | `Agent: go-feature-tdd` |
-| Config changes / docs additions / minor edits | your own `Read` / `Edit` / `Write` |
-| Languages other than Go | implement yourself (`go-feature-tdd` is unusable) |
+| Content | Tool | model (§5.2) |
+|---|---|---|
+| Go module initial setup (no go.mod or missing skeleton) | `Skill: go-bootstrap` | (within dev-cycle) |
+| Go DDD+TDD feature work (additions to existing internal/) | `Agent: go-feature-tdd` | sonnet (pinned in frontmatter) |
+| Docs changes (design docs / README / runbooks etc.) | delegate to an `Agent: general-purpose` subagent | **opus** (specified at spawn — docs have thin machine verification and need nuance) |
+| Non-Go code / config changes | delegate to an `Agent: general-purpose` subagent | **sonnet** (specified at spawn — tests / lint act as guardrails) |
+| Trivial few-line edits | your own `Read` / `Edit` / `Write` | (within dev-cycle; only when subagent overhead isn't worth it) |
+
+When delegating, pass the work item's spec, the relevant plan steps, and the verification commands fully in the prompt (assume the subagent doesn't know the state file — make it self-contained).
 
 During implementation, follow the steps written in the plan. Always run the checks (`make build` / `make test` / `make lint`, or the language's build / test) and require green before moving to the next stage.
 
