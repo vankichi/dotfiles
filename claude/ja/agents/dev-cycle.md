@@ -128,9 +128,9 @@ plan を読み、実装内容のタイプを判定:
 ### self-review (`self-review-changes` skill)
 
 - `Skill` tool で `self-review-changes` を起動
-- **loop-mode**: 致命的・望ましい修正は承認待ちせず自動適用。**新規 dependency の検出は無条件でここでescalation** (CLAUDE.mdの既存の壁、loop-modeでも緩めない)。nit は draft PR に注記して保留
-- **対話 mode**: 従来通り、致命的なもの (memory feedback違反、設定形式誤り、spec逸脱の暗黙化、推測mapping) は必ず承認を取って修正、nitはユーザー判断
-- skill内部で実施するチェック項目の詳細は `self-review-changes` SKILL.md をSoTとする (再列挙しない)
+- **loop-mode**: skill の Phase 2 規定に従い**観点ごとに `review-lens` subagent へ並列 fan-out** する (観点 reference path + diff 範囲 + spec を渡す。model は frontmatter で sonnet 固定)。**並走で `independent-reviewer` subagent を起動** (diff + spec を渡す。**state file は渡さない** — 独立性の担保)。両者の findings を統合し、致命的・望ましい修正は承認待ちせず自動適用。**新規 dependency の検出は無条件でここでescalation** (CLAUDE.mdの既存の壁、loop-modeでも緩めない)。nit は draft PR に注記して保留。**同一箇所への相反する指摘 (衝突) や自動適用に確信が持てない致命的指摘は、その観点のみ inherit model で再判定し、なお解消しなければ escalation** (§5.2)
+- **対話 mode**: 従来通り inline で実施し、致命的なもの (memory feedback違反、設定形式誤り、spec逸脱の暗黙化、推測mapping) は必ず承認を取って修正、nitはユーザー判断
+- skill内部で実施するチェック項目・観点の詳細は `self-review-changes` SKILL.md と references/ をSoTとする (再列挙しない)
 - 修正後に build / test / lint 再実行で副作用なしを確認
 
 **境界の報告**:
@@ -141,6 +141,7 @@ plan を読み、実装内容のタイプを判定:
 - 望ましい修正: <件数> 件 → 修正済み or 保留
 - nit: <件数> 件 → 保留 (draft PRに注記 / ユーザー判断)
 - 新規dependency検出: [なし / あり→escalation]
+- fan-out: review-lens <N> 観点並列 + independent-reviewer (loop-modeのみ)。衝突: <なし / あり→再判定 or escalation>
 ```
 
 ### security review (`security-review-local` skill)
@@ -242,7 +243,9 @@ dev-cycle (this)
   ├── api-design-review (skill)                  ← 設計 review (上流、新contract/新ADR/新ACLモデル時)
   ├── go-bootstrap (skill)                        ← 実装 (初回セットアップ)
   ├── go-feature-tdd (subagent)                   ← 実装 (機能追加)
-  ├── self-review-changes (skill)                 ← self-review
+  ├── self-review-changes (skill)                 ← self-review (loop-modeでは観点をreview-lensへfan-out)
+  ├── review-lens (subagent, sonnet)               ← 観点別 review worker (N並列)
+  ├── independent-reviewer (subagent, opus)        ← 独立 review (spec + diffのみで判断)
   ├── security-review-local (skill)                ← security review
   ├── commit-push-branch (skill)                   ← commit & push (+ loop-modeはdraft PR)
   └── retrospect (skill)                            ← サイクル末のinsight記録

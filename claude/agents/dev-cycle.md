@@ -130,9 +130,9 @@ During implementation, follow the steps written in the plan. Always run the chec
 ### self-review (`self-review-changes` skill)
 
 - Launch `self-review-changes` via the `Skill` tool
-- **loop-mode**: apply critical and desirable fixes automatically without waiting for approval. **Detection of a new dependency escalates unconditionally here** (an existing CLAUDE.md wall; not relaxed even in loop-mode). Defer nits with a note in the draft PR
-- **Interactive mode**: as before, critical items (memory feedback violations, config format errors, implicit spec deviations, speculative mappings) always get approval before fixing; nits are the user's call
-- The details of the checks the skill performs have `self-review-changes` SKILL.md as their SoT (do not re-enumerate)
+- **loop-mode**: per the skill's Phase 2 rules, **fan out to `review-lens` subagents in parallel, one per perspective** (pass the perspective reference path + diff range + spec; model pinned to sonnet in frontmatter). **Launch an `independent-reviewer` subagent alongside** (pass diff + spec; **do NOT pass the state file** — this preserves its independence). Merge both sets of findings and apply critical and desirable fixes automatically without waiting for approval. **Detection of a new dependency escalates unconditionally here** (an existing CLAUDE.md wall; not relaxed even in loop-mode). Defer nits with a note in the draft PR. **For conflicting findings on the same location, or critical findings you're not confident auto-applying, re-judge only that perspective on the inherit model; if still unresolved, escalate** (§5.2)
+- **Interactive mode**: as before, run inline; critical items (memory feedback violations, config format errors, implicit spec deviations, speculative mappings) always get approval before fixing; nits are the user's call
+- The details of the checks and perspectives have `self-review-changes` SKILL.md and its references/ as their SoT (do not re-enumerate)
 - After fixes, re-run build / test / lint to confirm no side effects
 
 **Boundary report**:
@@ -143,6 +143,7 @@ During implementation, follow the steps written in the plan. Always run the chec
 - desirable fixes: <n> → fixed or deferred
 - nits: <n> → deferred (noted in draft PR / user's call)
 - new dependency detected: [none / yes → escalation]
+- fan-out: review-lens × <N> perspectives in parallel + independent-reviewer (loop-mode only). Conflicts: <none / yes → re-judged or escalated>
 ```
 
 ### security review (`security-review-local` skill)
@@ -244,7 +245,9 @@ dev-cycle (this)
   ├── api-design-review (skill)                          ← design review (upstream; new contract / ADR / ACL model)
   ├── go-bootstrap (skill)                               ← implementation (initial setup)
   ├── go-feature-tdd (subagent)                          ← implementation (feature work)
-  ├── self-review-changes (skill)                        ← self-review
+  ├── self-review-changes (skill)                        ← self-review (loop-mode fans perspectives out to review-lens)
+  ├── review-lens (subagent, sonnet)                     ← per-perspective review worker (N in parallel)
+  ├── independent-reviewer (subagent, opus)              ← independent review (judges from spec + diff only)
   ├── security-review-local (skill)                      ← security review
   ├── commit-push-branch (skill)                         ← commit & push (+ draft PR in loop-mode)
   └── retrospect (skill)                                 ← end-of-cycle insight recording
