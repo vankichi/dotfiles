@@ -25,6 +25,7 @@ Invoking `work-intake` is the caller's responsibility (the user / main session f
 - A `work-intake` work item, or a ticket URL (Notion / Linear / GitHub Issue) / natural-language feature spec is provided as input
 - Running inside a git repository
 - There is intent to run the full pipeline (from planning to push) — autonomous in loop-mode, semi-automatic in interactive mode
+- **No other dev-cycle is running against the same repo** (cycles assume serial execution; parallel launches cause worktree collisions and review contention — serialization is the caller's responsibility)
 
 ## Subordinate tools
 
@@ -100,6 +101,8 @@ If the plan includes a new service / new RPC / new enum / new ACL model / new AD
 ### Implementation
 
 **Before starting implementation, isolate with `EnterWorktree`** (implements design doc §7 row 4 "isolate via git worktree"; common to loop-mode and interactive mode). After isolation, write to the state file using the absolute path fixed during startup preparation (the auto-resolved path changes when cwd changes).
+
+**If launched with a cwd inside a worktree** (e.g., a parallel-cycle collision): EnterWorktree cannot create a nested worktree from inside one. Identify the main checkout and create your own worktree off main (or origin/main) with `git worktree add`, then move into it. Never touch files inside another agent's worktree.
 
 Read the plan and determine the type of implementation:
 

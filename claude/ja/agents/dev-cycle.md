@@ -23,6 +23,7 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 - `work-intake` の work item、または ticket URL (Notion / Linear / GitHub Issue) / 自然言語の機能仕様が入力で渡されている
 - git リポジトリ内で実行
 - 全工程 (計画から push まで) を進めたい意図がある (loop-modeなら自律、対話modeなら半自動)
+- **同一 repo で別の dev-cycle が実行中でないこと** (cycle は直列が前提。並列起動は worktree 衝突と review 競合を生む — 直列化は呼び出し側の責務)
 
 ## 配下の道具
 
@@ -98,6 +99,8 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 ### 実装
 
 **実装に入る前に `EnterWorktree` で分離する** (design doc §7 row4「git worktree で分離」に対応。loop-mode・対話mode共通)。分離後は state file への書き込みに Step起動時の準備で確定した絶対パスを使う (cwd変化で自動解決パスが変わるため)。
+
+**worktree 内の cwd で起動された場合** (並列 cycle の衝突等): EnterWorktree は worktree 内からのネスト作成ができない。main checkout を特定し、`git worktree add` で自前の worktree を main (or origin/main) から作成して移動する。他 agent の worktree 内のファイルには触れない。
 
 plan を読み、実装内容のタイプを判定:
 
