@@ -17,7 +17,7 @@ The entry point of the dev loop. Picks a single ready ticket and normalizes it i
 - Get the watched Notion DB / ready flag / "in progress" status representation from the reference memory in `MEMORY.md`
 - The memory reference must be registered **per project** (different repos may watch different DBs)
 - If not found, explicitly state "memory reference not registered" and stop; then get the DB info from the user, register the reference in that project's memory, and continue
-- Option: if a ticket URL is passed as an argument, skip the enumeration in Step 2 and target only that ticket
+- Option: if a ticket URL is passed as an argument, skip the enumeration in Step 2 and target only that ticket. **If the URL-specified ticket is already "in progress", treat it as a resume: perform only contract validation and work item output** (skip the status transition and skip-comment)
 
 ### Step 2: Enumerate ready tickets
 
