@@ -162,6 +162,15 @@ main / master への直 push は警告 (作業 branch であることを Step 4 
 
 PR 作成は別タスク。ユーザーが指示したら `gh pr create` で続ける。
 
+## loop-mode (dev-cycle からの起動時のみ)
+
+呼び出し時に **loop-mode が明示された場合のみ**適用する (根拠: CLAUDE.md「loop-mode (自律実行の例外規定)」):
+
+- Step 3-6 の branch 名 / commit message は規約と過去スタイルで自動決定し、user 確認を挟まない
+- Step 7 の push 後に **draft PR を作成する**: `gh pr create --draft` (title = commit title、body = 呼び出し元から渡された実装計画 / DoD チェック結果 / review 結果)
+- 本 PR 化 (draft 解除) と merge はしない
+- loop-mode 指定がない対話時の挙動は従来通り不変 (PR 作成は user 指示後)
+
 ## 鉄則
 
 1. **新 commit を作る**: `--amend` を使わない (前の commit を破壊する可能性)
@@ -169,7 +178,7 @@ PR 作成は別タスク。ユーザーが指示したら `gh pr create` で続�
 3. **branch を main に直 push しない**: 必ず作業 branch
 4. **`git add -A` / `-a` を使わない**: 明示列挙で secret 混入を防ぐ
 5. **過去スタイル尊重**: 前 3 commit の type / 言語 / ticket 表記 / Co-Authored-By 慣例に揃える
-6. **PR は user 指示後**: skill は push まで。`gh pr create` はユーザーから指示があれば
+6. **PR は user 指示後**: skill は push まで。`gh pr create` はユーザーから指示があれば (例外: loop-mode 時の draft PR 作成のみ — 上記「loop-mode」section 参照)
 7. **default は title 1 行・変更内容のみ**: why / 背景 / 影響範囲は書かない。body は breaking change / 本当に非自明な why のときだけ
 
 ## アンチパターン

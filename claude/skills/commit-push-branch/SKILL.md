@@ -164,6 +164,15 @@ Direct pushes to main / master trigger a warning (this assumes Step 4 has alread
 
 PR creation is a separate task. If the user instructs it, continue with `gh pr create`.
 
+## loop-mode (only when invoked by dev-cycle)
+
+Applies **only when loop-mode is explicitly specified** at invocation time (basis: "loop-mode (exception rules for autonomous execution)" in CLAUDE.md):
+
+- The branch name / commit message in Steps 3-6 are decided automatically from conventions and past style, with no user confirmation
+- After the push in Step 7, **create a draft PR**: `gh pr create --draft` (title = commit title, body = the implementation plan / DoD check results / review results passed from the caller)
+- Never promote the draft (remove draft status) or merge
+- Interactive behavior without loop-mode is unchanged (PR creation only after user instruction)
+
 ## Iron rules
 
 1. **Create a new commit**: don't use `--amend` (it could destroy the previous commit)
@@ -171,7 +180,7 @@ PR creation is a separate task. If the user instructs it, continue with `gh pr c
 3. **Don't push a branch directly to main**: always use a working branch
 4. **Don't use `git add -A` / `-a`**: prevent secrets from leaking in by listing files explicitly
 5. **Respect past style**: align with the type / language / ticket notation / Co-Authored-By conventions from the last 3 commits
-6. **PR only after user instruction**: the skill goes up to push. `gh pr create` happens only if the user instructs it
+6. **PR only after user instruction**: the skill goes up to push. `gh pr create` happens only if the user instructs it (exception: draft PR creation in loop-mode only — see the "loop-mode" section above)
 7. **Default to a single-line title, content only**: don't write why / background / impact scope. Only write a body for breaking changes / a genuinely non-obvious why
 
 ## Anti-patterns
