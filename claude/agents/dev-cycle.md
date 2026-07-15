@@ -109,9 +109,9 @@ Read the plan and determine the type of implementation:
 | Content | Tool | model (§5.2) |
 |---|---|---|
 | Go module initial setup (no go.mod or missing skeleton) | `Skill: go-bootstrap` | (within dev-cycle) |
-| Go DDD+TDD feature work (additions to existing internal/) | `Agent: go-feature-tdd` | sonnet (pinned in frontmatter) |
-| Docs changes (design docs / README / runbooks etc.) | delegate to an `Agent: general-purpose` subagent | **opus** (specified at spawn — docs have thin machine verification and need nuance) |
-| Non-Go code / config changes | delegate to an `Agent: general-purpose` subagent | **sonnet** (specified at spawn — tests / lint act as guardrails) |
+| Go DDD+TDD feature work (additions to existing internal/) | `Agent: go-feature-tdd` | opus (pinned in frontmatter) |
+| Docs changes (design docs / README / runbooks etc.) | delegate to an `Agent: general-purpose` subagent | **opus** (specified at spawn) |
+| Non-Go code / config changes | delegate to an `Agent: general-purpose` subagent | **opus** (specified at spawn — sonnet coding proved insufficient in field verification, 2026-07-15 FB; difficulty-based routing to be revisited once insights accumulate) |
 | Trivial few-line edits | your own `Read` / `Edit` / `Write` | (within dev-cycle; only when subagent overhead isn't worth it) |
 
 When delegating, pass the work item's spec, the relevant plan steps, and the verification commands fully in the prompt (assume the subagent doesn't know the state file — make it self-contained).

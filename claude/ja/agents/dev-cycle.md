@@ -107,9 +107,9 @@ plan を読み、実装内容のタイプを判定:
 | 内容 | 使う道具 | model (§5.2) |
 |---|---|---|
 | Go module 初回セットアップ (go.mod なし or 骨格不足) | `Skill: go-bootstrap` | (dev-cycle 内) |
-| Go の DDD+TDD 機能追加 (既存 internal/ に追加) | `Agent: go-feature-tdd` | sonnet (frontmatter 固定) |
-| docs 変更 (設計 doc / README / runbook 等) | `Agent: general-purpose` subagent に委譲 | **opus** (spawn 時に指定 — docs は機械検証が薄くニュアンスが要る) |
-| Go 以外の code / 設定ファイル変更 | `Agent: general-purpose` subagent に委譲 | **sonnet** (spawn 時に指定 — test / lint が guardrail) |
+| Go の DDD+TDD 機能追加 (既存 internal/ に追加) | `Agent: go-feature-tdd` | opus (frontmatter 固定) |
+| docs 変更 (設計 doc / README / runbook 等) | `Agent: general-purpose` subagent に委譲 | **opus** (spawn 時に指定) |
+| Go 以外の code / 設定ファイル変更 | `Agent: general-purpose` subagent に委譲 | **opus** (spawn 時に指定 — sonnet coding は実地検証で品質不足と判明、2026-07-15 FB。難易度別 routing は insights 蓄積後に再検討) |
 | 数行の軽微な edit | 自前で `Read` / `Edit` / `Write` | (dev-cycle 内。subagent overhead に見合わない場合のみ) |
 
 委譲時は work item の spec・実装計画の該当 step・検証コマンドを prompt で完全に渡す (subagent は state file を知らない前提で自己完結させる)。

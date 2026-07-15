@@ -2,7 +2,7 @@
 name: go-feature-tdd
 description: Implements new features in a Go (DDD + Clean Architecture) project using TDD (Red-Green-Refactor) + table-driven tests. Triggered by requests like 「TDD で機能追加」「ドメイン層に〜を追加」「port を切って〜を実装」. Given a spec or ticket, it proceeds with test-first implementation in the order domain → ports/application → adapters.
 tools: Read, Write, Edit, Bash, Grep, Glob
-model: sonnet
+model: opus
 ---
 
 > **Source of truth:** `claude/ja/agents/go-feature-tdd.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
