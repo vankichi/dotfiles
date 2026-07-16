@@ -24,6 +24,8 @@ work-intake: spec contract 未充足のため skip
 参照: rules/spec-contract.md
 ```
 
+- **再コメント抑止 (idempotency)**: 投稿前に `notion-get-comments` で既存コメントを確認し、既に work-intake の skip コメントが付いていて spec 本文がその後未更新なら再コメントしない (skip 判定の報告のみ行う)。loop 化した際に poll のたびコメントが積もるのを防ぐ
+
 ## 注意
 
 - ticket 本文の編集 (`notion-update-page` での本文変更) はしない。触って良いのは status プロパティとコメントのみ

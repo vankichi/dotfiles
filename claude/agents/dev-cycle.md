@@ -102,7 +102,7 @@ If the plan includes a new service / new RPC / new enum / new ACL model / new AD
 
 **Before starting implementation, isolate with `EnterWorktree`** (implements design doc §7 row 4 "isolate via git worktree"; common to loop-mode and interactive mode). After isolation, write to the state file using the absolute path fixed during startup preparation (the auto-resolved path changes when cwd changes).
 
-**If launched with a cwd inside a worktree** (e.g., a parallel-cycle collision): EnterWorktree cannot create a nested worktree from inside one. Identify the main checkout and create your own worktree off main (or origin/main) with `git worktree add`, then move into it. Never touch files inside another agent's worktree.
+**If launched with a cwd inside a worktree** (e.g., a parallel-cycle collision): EnterWorktree cannot create a nested worktree from inside one. Identify the main checkout and create your own worktree off main (or origin/main) with `git worktree add`, then move into it. Never touch files inside another agent's worktree. If Edit/Write to the newly created worktree keeps being rejected (under subagent cwd pinning, `EnterWorktree(path)` may report success while the write boundary does not actually move — 2026-07-15 FB): clean up the new worktree with `git worktree remove`, then continue by swapping only the branch inside the pinned original worktree directory via `git checkout -b <branch> origin/<base-ref>` (the original branch's commits are preserved).
 
 Read the plan and determine the type of implementation:
 
