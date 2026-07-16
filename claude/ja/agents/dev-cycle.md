@@ -33,7 +33,8 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 | 設計 review (上流) | `api-design-review` | skill |
 | 実装 (初回セットアップ / Go) | `go-bootstrap` | skill |
 | 実装 (機能追加 / Go DDD+TDD) | `go-feature-tdd` | subagent |
-| self-review | `self-review-changes` | skill |
+| review (loop-mode: 反復) | `review-orchestrator` | subagent |
+| review (対話 mode) | `self-review-changes` | skill |
 | security review | `security-review-local` | skill |
 | commit & push (+ loop-modeはdraft PR作成) | `commit-push-branch` | skill |
 | retrospect | `retrospect` | skill |
@@ -133,23 +134,31 @@ plan を読み、実装内容のタイプを判定:
 - カバレッジ: <値> (該当する場合)
 ```
 
-### self-review (`self-review-changes` skill)
+### review (loop-mode: `review-orchestrator` 反復 / 対話 mode: `self-review-changes` skill)
 
-- `Skill` tool で `self-review-changes` を起動
-- **loop-mode**: skill の Phase 2 規定に従い**観点ごとに `review-lens` subagent へ並列 fan-out** する (観点 reference path + diff 範囲 + spec を渡す。model は frontmatter で sonnet 固定)。**並走で `independent-reviewer` subagent を起動** (diff + spec を渡す。**state file は渡さない** — 独立性の担保)。両者の findings を統合し、致命的・望ましい修正は承認待ちせず自動適用。**新規 dependency の検出は無条件でここでescalation** (CLAUDE.mdの既存の壁、loop-modeでも緩めない)。nit は draft PR に注記して保留。**同一箇所への相反する指摘 (衝突) や自動適用に確信が持てない致命的指摘は、その観点のみ inherit model で再判定し、なお解消しなければ escalation** (§5.2)
-- **対話 mode**: 従来通り inline で実施し、致命的なもの (memory feedback違反、設定形式誤り、spec逸脱の暗黙化、推測mapping) は必ず承認を取って修正、nitはユーザー判断
-- skill内部で実施するチェック項目・観点の詳細は `self-review-changes` SKILL.md と references/ をSoTとする (再列挙しない)
-- 修正後に build / test / lint 再実行で副作用なしを確認
+**loop-mode — 反復 loop (上限 3 周)**:
+
+1. `review-orchestrator` subagent を **fresh spawn** する (毎回新規 — 実装 context を持たない reviewer による判断の分離)。渡すもの: diff 範囲 / spec 全文 / 影響範囲分類 (impact-A/B/C) / repo 規約・設計 docs の path 一覧 (起動時の準備 Step 5 で列挙済み) / iteration 番号 + 前周の修正指示 (2 周目以降)。**state file は渡さない**
+2. verdict = `approve` → nit を draft PR 注記リストに積み、follow-up 提案を state file に記録して security review へ
+3. verdict = `fix-required` → 修正指示を実施する (軽微は自前 Edit、実質的な変更は実装 subagent = opus へ委譲) → build / test / lint green を確認 → 1 へ戻り再 spawn (iteration +1)
+4. verdict = `escalation`、または **iteration が上限 3 を超えても approve に至らない** → escalation (このSliceではユーザーへの停止報告まで。ticketコメント自動投稿・push通知は Slice 2d)
+
+- **新規 dependency の検出は verdict に関わらず無条件で escalation** (CLAUDE.mdの既存の壁、loop-modeでも緩めない)
+- 修正で新たに触れた箇所も次周の reviewer が fresh で diff 全体を見るため、増分の見落としが構造的に出ない
+- 観点体系・checklist の SoT は `self-review-changes` SKILL.md と references/ (reviewer が自分で Read する。再列挙しない)
+
+**対話 mode**: 従来通り `Skill` tool で `self-review-changes` を起動し inline で実施。致命的なもの (memory feedback違反、設定形式誤り、spec逸脱の暗黙化、推測mapping) は必ず承認を取って修正、nitはユーザー判断。修正後に build / test / lint 再実行で副作用なしを確認
 
 **境界の報告**:
 ```
-## self-review 完了
+## review 完了
 - mode: [loop-mode / 対話 mode]
-- 致命的修正: <件数> 件 → 修正済み
-- 望ましい修正: <件数> 件 → 修正済み or 保留
-- nit: <件数> 件 → 保留 (draft PRに注記 / ユーザー判断)
+- iterations: <N> 周で approve (loop-mode のみ)
+- 致命的修正: <件数> 件 / 望ましい修正: <件数> 件 → 反復内で解消
+- nit: <件数> 件 → draft PR に注記
+- follow-up 提案: <件数> 件 → state file に記録
 - 新規dependency検出: [なし / あり→escalation]
-- fan-out: review-lens <N> 観点並列 + independent-reviewer (loop-modeのみ)。衝突: <なし / あり→再判定 or escalation>
+- fan-out: review-lens <N> 観点 + independent-reviewer (同期起動、reviewer 側で実施)。衝突: <なし / あり→reviewer 再判定 or escalation>
 ```
 
 ### security review (`security-review-local` skill)
@@ -201,7 +210,7 @@ plan を読み、実装内容のタイプを判定:
 | 実装計画導出 | ✓ (mode: loop-mode / 対話mode) |
 | 設計 review | ✓ (or skip 理由) |
 | 実装 | ✓ (worktree: <path>) |
-| self-review | ✓ |
+| review | ✓ (loop-mode: <N> 周で approve) |
 | security review | ✓ |
 | commit & push | ✓ |
 | retrospect | ✓ (or 記録なし) |
@@ -217,13 +226,14 @@ plan を読み、実装内容のタイプを判定:
 
 1. **工程境界で必ず報告**: 各工程完了時にサマリを地の文で出す。「黙って次に進む」のは禁止
 2. **承認ポイントはモードで異なる**:
-   - loop-mode: escalation条件 (DoDカバレッジ曖昧 / 新規dependency検出 / security要対応 / test失敗未解消) に当たった時のみ停止。それ以外は自律進行
+   - loop-mode: escalation条件 (DoDカバレッジ曖昧 / 新規dependency検出 / security要対応 / test失敗未解消 / review 反復上限超過) に当たった時のみ停止。それ以外は自律進行
    - 対話 mode: 従来の3箇所 (実装計画承認・self-review修正承認・commit直前確認)
 3. **致命的エラーで即停止** (loop-mode・対話mode共通):
    - DoDカバレッジが曖昧 (実装計画導出フェーズで検知)
    - 実装で test 失敗が解消できない
    - security review で要対応
    - 新規 dependency の検出
+   - review 反復が上限 (3 周) を超えても approve に至らない (loop-mode)
 4. **push / PR は CLAUDE.md「push / PR の作法」に従う**: `commit-push-branch` skill経由のpushはOK。loop-modeのdraft PR作成はCLAUDE.md loop-mode節の例外規定に従う。本PR化・mergeは人間のみ
 5. **task 進捗を TaskUpdate で都度更新**
 6. **既存メモリ feedback を尊重**: `MEMORY.md` 全件をReadし各entryの中身まで把握 (代表例のhardcode列挙はしない)
@@ -235,7 +245,9 @@ plan を読み、実装内容のタイプを判定:
 - work item / ticket URL を見ずに「今ある変更」を勝手にcommitに進む
 - loop-modeで実装計画導出のDoDカバレッジself-checkを省略して実装に入る
 - loop-modeで実装フェーズのworktree分離をスキップして共有checkoutを直接編集する
-- self-review / security review をスキップしてcommitする
+- review / security review をスキップしてcommitする
+- loop-modeで `fix-required` の修正後に再 review せず commit に進む (反復の打ち切り)
+- review-orchestrator に state file を渡してしまう (独立性の破壊)
 - 新規dependency検出時にescalationせず追加してしまう
 - skill / subagentを使わず全部自前で実装する (各skillのロジックを再発明しない)
 - 致命的問題を見つけても「軽微」と判断して進む
@@ -251,9 +263,10 @@ dev-cycle (this)
   ├── api-design-review (skill)                  ← 設計 review (上流、新contract/新ADR/新ACLモデル時)
   ├── go-bootstrap (skill)                        ← 実装 (初回セットアップ)
   ├── go-feature-tdd (subagent)                   ← 実装 (機能追加)
-  ├── self-review-changes (skill)                 ← self-review (loop-modeでは観点をreview-lensへfan-out)
-  ├── review-lens (subagent, sonnet)               ← 観点別 review worker (N並列)
-  ├── independent-reviewer (subagent, opus)        ← 独立 review (spec + diffのみで判断)
+  ├── review-orchestrator (subagent, opus)         ← review 統合主体 (loop-mode、反復ごとにfresh spawn)
+  │     ├── review-lens (subagent, sonnet)          ← 観点別 review worker (N並列、同期起動)
+  │     └── independent-reviewer (subagent, opus)   ← 独立 review (spec + diffのみで判断)
+  ├── self-review-changes (skill)                 ← review (対話 mode) / 観点体系のSoT (references/)
   ├── security-review-local (skill)                ← security review
   ├── commit-push-branch (skill)                   ← commit & push (+ loop-modeはdraft PR)
   └── retrospect (skill)                            ← サイクル末のinsight記録
@@ -261,8 +274,7 @@ dev-cycle (this)
 
 各道具は独立して呼び出し可能。ユーザーが「self-reviewだけやり直したい」等と言ったら直接skillを呼んで対応する。
 
-## Out of scope (Slice 2b時点)
+## Out of scope (Slice 2e時点)
 
-- review-lens / independent-reviewer agentのfan-out (self-review-changesは既存のまま使用) → Slice 2c
-- escalationの完全自動化 (ticketコメント自動投稿・push通知・circuit breakerの試行回数管理) → Slice 2d。現時点のescalationは「ユーザーへの停止報告」まで
+- escalationの完全自動化 (ticketコメント自動投稿・push通知・circuit breakerの試行回数管理) → Slice 2d。現時点のescalationは「ユーザーへの停止報告」まで (review 反復上限の超過も同じ扱い)
 - notion-ticket-planの解体 (対話modeでの利用は継続) → Slice 2d
