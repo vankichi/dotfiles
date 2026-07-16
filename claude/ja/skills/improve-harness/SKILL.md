@@ -28,7 +28,7 @@ frontmatter の `target` で振り分ける:
 | target | 扱い |
 |---|---|
 | harness 内 (`claude/` 配下 / `CLAUDE.md` / `rules/`) | 改善対象 → Step 3 へ |
-| harness 外 (他 repo のファイル / Claude Code 本体の挙動 / design doc・plans) | PR に含めない。「対象外報告」に回し、対象 project 側での対応提案を 1 行付けて `status: deferred` (reason: out-of-scope) |
+| harness 外 (他 repo のファイル / Claude Code 本体の挙動 / design doc・plans) | PR に含めない。memory 化で足りるもの (事実 / 環境の癖 / 代替 recipe) は Step 4 の memory 反映へ回す。それ以外は「対象外報告」に回し、対象 project 側での対応提案を 1 行付けて `status: deferred` (reason: out-of-scope) |
 
 ### Step 3: 現状照合
 
@@ -41,7 +41,7 @@ frontmatter の `target` で振り分ける:
 - 関連する insight をまとめて 1 改善単位 (cluster) にする
 - 反映先は `references/promotion.md` の基準で判定する。**memory → rules → skill → agent の昇格順**で、変更コストの小さい側に倒す
 - `target` が明記された insight はそれに従う (昇格判定は target 不明・横断パターンの時のみ)
-- **memory 反映は PR 不要**: 対象 project の memory に直接 write し、報告のみ
+- **memory 反映は PR 不要**: 対象 project の memory に直接 write し、報告のみ。memory 反映で完結した insight は `status: applied` (反映先 memory を併記)
 
 ### Step 5: 改善実装
 
@@ -77,7 +77,7 @@ frontmatter の `target` で振り分ける:
 | status | 意味 |
 |---|---|
 | (なし) | 未処理 |
-| `applied` | 既反映を照合で確認 (PR 不要) |
+| `applied` | 既反映を照合で確認、または memory 反映で完結 (PR 不要。memory の場合は反映先を併記) |
 | `proposed` | 改善 draft PR に含めた (`pr:` 併記) |
 | `deferred` | 要判断・対象外・別 work 割当 (`reason:` 併記) |
 
@@ -89,6 +89,7 @@ session JSONL の集計 (観点 skip 傾向・token 消費等) は user が明�
 
 - dotfiles に無関係な未 commit 変更がある場合: 触らず、改善 commit に含めない (明示 add — commit-push-branch の規約)
 - push / draft PR 作成が deny された場合: local commit まで保全し、branch 名を報告して停止する
+- memory write が deny された場合: 当該 insight を `status: deferred` (reason: write 拒否) にして要判断一覧へ回す
 
 ## 鉄則
 

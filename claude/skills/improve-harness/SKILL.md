@@ -30,7 +30,7 @@ Sort by the `target` in the frontmatter:
 | target | handling |
 |---|---|
 | inside the harness (`claude/` subtree / `CLAUDE.md` / `rules/`) | improvement target → proceed to Step 3 |
-| outside the harness (files in other repos / Claude Code's own behavior / design docs / plans) | not included in the PR. Route to the "out-of-scope report", attach a one-line proposal for handling it on the target project's side, and set `status: deferred` (reason: out-of-scope) |
+| outside the harness (files in other repos / Claude Code's own behavior / design docs / plans) | not included in the PR. Items sufficiently handled as memory (facts / environment quirks / alternative recipes) are routed to Step 4's memory application. Everything else is routed to the "out-of-scope report", with a one-line proposal for handling it on the target project's side attached, and set to `status: deferred` (reason: out-of-scope) |
 
 ### Step 3: Reconcile against current state
 
@@ -43,7 +43,7 @@ Sort by the `target` in the frontmatter:
 - Group related insights into a single improvement unit (cluster)
 - Decide where to apply using the criteria in `references/promotion.md`. Following the **promotion order memory → rules → skill → agent**, fall to the side with the smaller change cost
 - An insight with an explicit `target` follows it (promotion decision applies only when the target is unclear or the pattern is cross-cutting)
-- **Applying to memory needs no PR**: write directly to the target project's memory and just report it
+- **Applying to memory needs no PR**: write directly to the target project's memory and just report it. An insight fully resolved by memory application gets `status: applied` (note the target memory alongside)
 
 ### Step 5: Implement the improvement
 
@@ -79,7 +79,7 @@ Sort by the `target` in the frontmatter:
 | status | meaning |
 |---|---|
 | (none) | unprocessed |
-| `applied` | already-applied, confirmed by reconciliation (no PR) |
+| `applied` | confirmed already applied by reconciliation, or fully resolved by memory application (no PR; for memory, note the target memory alongside) |
 | `proposed` | included in an improvement draft PR (`pr:` alongside) |
 | `deferred` | decision-needed / out-of-scope / assigned to separate work (`reason:` alongside) |
 
@@ -91,6 +91,7 @@ Session JSONL aggregation (perspective-skip tendencies / token consumption, etc.
 
 - If dotfiles has unrelated uncommitted changes: leave them untouched and do not include them in the improvement commit (explicit add — commit-push-branch's convention)
 - If push / draft PR creation is denied: preserve up to the local commit, report the branch name, and stop
+- If a memory write is denied: set that insight to `status: deferred` (reason: write denied) and route it to the decisions-needed list
 
 ## Iron rules
 
