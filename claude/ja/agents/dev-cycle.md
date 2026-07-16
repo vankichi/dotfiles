@@ -51,13 +51,20 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
    - `go.mod` 有無 → Go プロジェクトか
    - `internal/{domain,application,adapters}/` 有無 → DDD+Clean Architecture か
    - 既存 commit 数 → 初回セットアップが必要か
-5. **既存 plan ファイル (per-project plans dir の `<ticket-slug>.md`、CLAUDE.md「plan / session state file の保存先」参照) が存在すれば Read して状態を引き継ぐ**。存在しない場合は次工程で新規作成
-6. **この時点の絶対パス (元repoのcwd) を記録する** — 後続の実装工程でEnterWorktreeするとcwdが `.claude/worktrees/<name>` に変わり、per-project plans dirの自動解決結果も変わるため、state fileへの書き込みは常にこのStep 6で確定した絶対パスを明示指定する
+5. **repo 規約・設計 docs を読み込む**: target repo の CLAUDE.md / rules ディレクトリ / lint 設定 (.golangci.yaml 等) / docs 内の設計文書 (docs/design / docs/adr 等) を glob で機械的に列挙し (存在するもののみ)、Read して **規約 digest (要点 + 原本 path 一覧)** を state file に記録する。以後、実装 subagent への委譲 prompt にはこの digest + 原本 path を含め、reviewer (review-orchestrator) には **path 一覧のみ**を渡す (原本を自分で読ませ、digest の要約バイアスを入れない)
+6. **既存 plan ファイル (per-project plans dir の `<ticket-slug>.md`、CLAUDE.md「plan / session state file の保存先」参照) が存在すれば Read して状態を引き継ぐ**。存在しない場合は次工程で新規作成
+7. **この時点の絶対パス (元repoのcwd) を記録する** — 後続の実装工程でEnterWorktreeするとcwdが `.claude/worktrees/<name>` に変わり、per-project plans dirの自動解決結果も変わるため、state fileへの書き込みは常にこのStep 7で確定した絶対パスを明示指定する
 
 ### 実装計画導出
 
 **loop-mode**:
 - `notion-ticket-plan` は呼ばない。自前で計画を導出する (手法は `notion-ticket-plan` SKILL.md Step 1-6 の型を流用: ticket fetch → DoD/既存docsの literal cross-check → 関連docs探索 → Plan agentで設計 → 主要ファイル直接確認 → state fileへ書き出し)
+- **影響範囲調査**: 導出した計画の変更予定 file / symbol を列挙し、参照元を grep して 3 分類する:
+  - **impact-A**: 新規 file / 葉領域のみ (既存 code からの参照なし)
+  - **impact-B**: 既存 code に使用が足される (新要素の呼び出し追加等)
+  - **impact-C**: 既存 logic の変更 (デグレ risk — 挙動変更 / 共有 path の変更)
+
+  分類と「対象 symbol → 参照元」の対応を state file の「影響範囲」section に記録し、**draft PR body に転記する** (commit-push-branch へ渡す)。impact-C 領域は review 工程で correctness / test-adversarial 観点の重点対象として reviewer に渡す
 - **DoD 全項目カバレッジ self-check**: spec の DoD 各項目を、導出した実装ステップに1:1で紐付ける。紐付けられない項目・複数解釈が残る項目が1つでもあれば、**実装に進まずここで停止し、ユーザーに報告する** (このSliceでのescalationの実体。ticketコメント自動投稿・push通知・circuit breakerの試行回数管理は Slice 2d で追加)
 - ExitPlanModeでの承認待ちはしない (自律default)
 
@@ -73,6 +80,7 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 - mode: [loop-mode / 対話 mode]
 - plan ファイル: <path>
 - 実装するもの: <要約 3-5 行>
+- 影響範囲: impact-A <n> / impact-B <n> / impact-C <n> (対応表は state file)
 - DoD カバレッジ: <N>/<N> 項目対応済み (未対応があれば ここで停止・報告)
 - 実装方針判定: [初期セットアップ / 機能実装 / 設定変更]
 ```
@@ -112,7 +120,7 @@ plan を読み、実装内容のタイプを判定:
 | Go 以外の code / 設定ファイル変更 | `Agent: general-purpose` subagent に委譲 | **opus** (spawn 時に指定 — sonnet coding は実地検証で品質不足と判明、2026-07-15 FB。難易度別 routing は insights 蓄積後に再検討) |
 | 数行の軽微な edit | 自前で `Read` / `Edit` / `Write` | (dev-cycle 内。subagent overhead に見合わない場合のみ) |
 
-委譲時は work item の spec・実装計画の該当 step・検証コマンドを prompt で完全に渡す (subagent は state file を知らない前提で自己完結させる)。
+委譲時は work item の spec・実装計画の該当 step・検証コマンド・**規約 digest + 原本 path (起動時の準備 Step 5)** を prompt で完全に渡す (subagent は state file を知らない前提で自己完結させる)。
 
 実装中は plan に記載のステップに沿って進める。動作確認 (`make build` / `make test` / `make lint`、または該当言語の build / test) は必ず実行し、green を次工程に進む前提とする。
 

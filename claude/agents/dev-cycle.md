@@ -53,13 +53,20 @@ For other languages / frameworks, handle the implementation stage with your own 
    - `go.mod` present → is it a Go project?
    - `internal/{domain,application,adapters}/` present → is it DDD+Clean Architecture?
    - number of existing commits → is initial setup needed?
-5. **If an existing plan file exists (per-project plans dir `<ticket-slug>.md` — see "Where to store plan / session state files" in CLAUDE.md), Read it and inherit the state**. If not, create it in the next stage
-6. **Record the absolute path (the original repo cwd) at this point** — EnterWorktree in the later implementation stage changes cwd to `.claude/worktrees/<name>`, which changes the auto-resolved per-project plans dir; always write to the state file using the absolute path fixed in this step
+5. **Read the target repo's conventions and design docs**: enumerate mechanically via glob (only what exists) the target repo's CLAUDE.md / rules directory / lint configs (.golangci.yaml etc.) / design documents under docs (docs/design, docs/adr etc.), Read them, and record a **conventions digest (key points + list of source paths)** in the state file. From then on, delegation prompts to implementation subagents must include this digest + source paths, while the reviewer (review-orchestrator) receives **only the path list** (it reads the originals itself, so no summarization bias from the digest enters review)
+6. **If an existing plan file exists (per-project plans dir `<ticket-slug>.md` — see "Where to store plan / session state files" in CLAUDE.md), Read it and inherit the state**. If not, create it in the next stage
+7. **Record the absolute path (the original repo cwd) at this point** — EnterWorktree in the later implementation stage changes cwd to `.claude/worktrees/<name>`, which changes the auto-resolved per-project plans dir; always write to the state file using the absolute path fixed in this Step 7
 
 ### Implementation-plan derivation
 
 **loop-mode**:
 - Do not call `notion-ticket-plan`. Derive the plan yourself (reuse the shape of `notion-ticket-plan` SKILL.md Steps 1-6: ticket fetch → literal cross-check of DoD/existing docs → related-docs exploration → design via the Plan agent → direct confirmation of key files → write out to the state file)
+- **Impact analysis**: enumerate the files / symbols the plan will change, grep their referencing call sites, and classify into three buckets:
+  - **impact-A**: new files / leaf areas only (nothing existing references them)
+  - **impact-B**: usage added to existing code (e.g. new call sites of a new element)
+  - **impact-C**: changes to existing logic (regression risk — behavior changes / shared-path changes)
+
+  Record the classification and the "target symbol → referencing sites" mapping in the state file's "impact scope" section and **carry it into the draft PR body** (passed to commit-push-branch). impact-C areas are passed to the reviewer as priority targets for the correctness / test-adversarial perspectives in the review stage
 - **DoD full-coverage self-check**: map each DoD item in the spec 1:1 to a derived implementation step. If even one item cannot be mapped, or still has multiple interpretations, **do not proceed to implementation — stop here and report to the user** (this Slice's concrete form of escalation. Automated ticket comments, push notifications, and circuit-breaker retry accounting are added in Slice 2d)
 - Do not wait for approval via ExitPlanMode (autonomous default)
 
@@ -75,6 +82,7 @@ For other languages / frameworks, handle the implementation stage with your own 
 - mode: [loop-mode / interactive mode]
 - plan file: <path>
 - what will be built: <3-5 line summary>
+- Impact scope: impact-A <n> / impact-B <n> / impact-C <n> (mapping table in the state file)
 - DoD coverage: <N>/<N> items mapped (if any unmapped, stop and report here)
 - implementation-approach judgment: [initial setup / feature work / config change]
 ```
@@ -114,7 +122,7 @@ Read the plan and determine the type of implementation:
 | Non-Go code / config changes | delegate to an `Agent: general-purpose` subagent | **opus** (specified at spawn — sonnet coding proved insufficient in field verification, 2026-07-15 FB; difficulty-based routing to be revisited once insights accumulate) |
 | Trivial few-line edits | your own `Read` / `Edit` / `Write` | (within dev-cycle; only when subagent overhead isn't worth it) |
 
-When delegating, pass the work item's spec, the relevant plan steps, and the verification commands fully in the prompt (assume the subagent doesn't know the state file — make it self-contained).
+When delegating, pass the work item's spec, the relevant plan steps, the verification commands, and the **conventions digest + source paths (startup preparation Step 5)** fully in the prompt (assume the subagent doesn't know the state file — make it self-contained).
 
 During implementation, follow the steps written in the plan. Always run the checks (`make build` / `make test` / `make lint`, or the language's build / test) and require green before moving to the next stage.
 
