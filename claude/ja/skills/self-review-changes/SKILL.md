@@ -1,6 +1,6 @@
 ---
 name: self-review-changes
-description: 直前の編集差分 (作業ツリー or staged) を観点別に self-review する skill。観点は references/ に分割され、diff 内容で機械的に発火する (default-on + 理由付き skip)。対話時は修正方針を提示し user 承認後に Edit、loop-mode (dev-cycle 起動) 時は観点ごとに review-lens へ fan-out する。「self review して」「review して」「修正箇所ないか確認して」等で使う。
+description: 直前の編集差分 (作業ツリー or staged) を観点別に self-review する skill。観点は references/ に分割され、diff 内容で機械的に発火する (default-on + 理由付き skip)。対話時は修正方針を提示し user 承認後に Edit。loop-mode では本 skill は直接起動されず、review-orchestrator agent が本 skill の観点体系 (references/) を読んで review-lens への fan-out を主管する。「self review して」「review して」「修正箇所ないか確認して」等で使う。
 ---
 
 # self-review-changes
@@ -43,7 +43,7 @@ self-review の最大バイアスは「自分の intent が見えて actual gap 
 | code-quality.md | code diff が 0 |
 
 - 実施する観点の references を Read し、checklist を diff に適用する
-- **loop-mode (dev-cycle からの起動時)**: 観点ごとに `review-lens` subagent へ fan-out する (観点 reference の path + diff 範囲 + spec を prompt で渡し、並列実行)。対話時は inline で順に実施
+- **loop-mode**: 本 skill は直接起動されず、`review-orchestrator` agent が本 SKILL.md と references/ を Read して観点 fan-out を主管する (`review-lens` へ観点 reference path + diff 範囲 + spec を渡し並列・**同期**起動)。対話時は inline で順に実施
 - dependency 観点が新規依存を検出した場合、loop-mode では即 escalation (CLAUDE.md の壁)
 
 ## Phase 3: Action (統合レポート → 承認 → 修正 → 再検証)
@@ -74,7 +74,7 @@ self-review の最大バイアスは「自分の intent が見えて actual gap 
 ### 3.2 承認
 
 - **対話時**: 「進めて」を待つ (selective approval 可)
-- **loop-mode**: dev-cycle の policy に従い、致命的・望ましいは自動適用、nit は draft PR に注記
+- **loop-mode**: review-orchestrator の verdict (fix instructions) を dev-cycle が適用し、再 review の反復で解消を確認。nit は draft PR に注記
 
 ### 3.3 修正 Edit (並列) → 3.4 再検証
 

@@ -1,6 +1,6 @@
 ---
 name: self-review-changes
-description: A skill that self-reviews the most recent edit diff (working tree or staged) by perspective. Perspectives are split into references/ and fire mechanically based on diff content (default-on + reasoned skip). In interactive mode it presents a fix plan and Edits only after user approval; in loop-mode (launched by dev-cycle) it fans out to review-lens per perspective. Used for 「self review して」(self-review this)「review して」(review this)「修正箇所ないか確認して」(check whether there's anything to fix) etc.
+description: A skill that self-reviews the most recent edit diff (working tree or staged) by perspective. Perspectives are split into references/ and fire mechanically based on diff content (default-on + reasoned skip). In interactive mode it presents a fix plan and Edits only after user approval. In loop-mode this skill is not invoked directly; the review-orchestrator agent reads this skill's perspective system (references/) and orchestrates the fan-out to review-lens. Used for 「self review して」(self-review this)「review して」(review this)「修正箇所ないか確認して」(check whether there's anything to fix) etc.
 ---
 
 > **Source of truth:** `claude/ja/skills/self-review-changes/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
@@ -45,7 +45,7 @@ All perspectives are default-on. **You may skip only when the mechanical conditi
 | code-quality.md | code diff is 0 |
 
 - Read the references for the perspectives you will perform, and apply the checklist to the diff
-- **loop-mode (when launched from dev-cycle)**: fan out to the `review-lens` subagent per perspective (pass the perspective reference path + diff range + spec in the prompt, run in parallel). In interactive mode, perform them inline in order
+- **loop-mode**: this skill is not invoked directly; the `review-orchestrator` agent Reads this SKILL.md and references/ and orchestrates the perspective fan-out (passing the perspective reference path + diff range + spec to `review-lens`, launched in parallel and **synchronously**). In interactive mode, perform them inline in order
 - If the dependency perspective detects a new dependency, escalate immediately in loop-mode (a CLAUDE.md wall)
 
 ## Phase 3: Action (integrated report → approval → fix → re-verify)
@@ -76,7 +76,7 @@ Severity has 3 tiers: **critical / desirable / nit**.
 ### 3.2 Approval
 
 - **Interactive mode**: wait for "go ahead" (selective approval OK)
-- **loop-mode**: follow dev-cycle's policy — apply critical and desirable automatically, note nits in the draft PR
+- **loop-mode**: review-orchestrator's verdict (fix instructions) is applied by dev-cycle and confirmed resolved through iterative re-review; nits are noted in the draft PR
 
 ### 3.3 Fix via Edit (parallel) → 3.4 Re-verification
 

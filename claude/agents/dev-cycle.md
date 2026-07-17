@@ -35,7 +35,8 @@ Invoking `work-intake` is the caller's responsibility (the user / main session f
 | Design review (upstream) | `api-design-review` | skill |
 | Implementation (initial setup / Go) | `go-bootstrap` | skill |
 | Implementation (feature work / Go DDD+TDD) | `go-feature-tdd` | subagent |
-| self-review | `self-review-changes` | skill |
+| review (loop-mode: iterative) | `review-orchestrator` | subagent |
+| review (interactive mode) | `self-review-changes` | skill |
 | security review | `security-review-local` | skill |
 | commit & push (+ draft PR creation in loop-mode) | `commit-push-branch` | skill |
 | retrospect | `retrospect` | skill |
@@ -53,13 +54,20 @@ For other languages / frameworks, handle the implementation stage with your own 
    - `go.mod` present → is it a Go project?
    - `internal/{domain,application,adapters}/` present → is it DDD+Clean Architecture?
    - number of existing commits → is initial setup needed?
-5. **If an existing plan file exists (per-project plans dir `<ticket-slug>.md` — see "Where to store plan / session state files" in CLAUDE.md), Read it and inherit the state**. If not, create it in the next stage
-6. **Record the absolute path (the original repo cwd) at this point** — EnterWorktree in the later implementation stage changes cwd to `.claude/worktrees/<name>`, which changes the auto-resolved per-project plans dir; always write to the state file using the absolute path fixed in this step
+5. **Read the target repo's conventions and design docs**: enumerate mechanically via glob (only what exists) the target repo's CLAUDE.md / rules directory / lint configs (.golangci.yaml etc.) / design documents under docs (docs/design, docs/adr etc.), Read them, and record a **conventions digest (key points + list of source paths)** in the state file. From then on, delegation prompts to implementation subagents must include this digest + source paths, while the reviewer (review-orchestrator) receives **only the path list** (it reads the originals itself, so no summarization bias from the digest enters review)
+6. **If an existing plan file exists (per-project plans dir `<ticket-slug>.md` — see "Where to store plan / session state files" in CLAUDE.md), Read it and inherit the state**. If not, create it in the next stage
+7. **Record the absolute path (the original repo cwd) at this point** — EnterWorktree in the later implementation stage changes cwd to `.claude/worktrees/<name>`, which changes the auto-resolved per-project plans dir; always write to the state file using the absolute path fixed in this Step 7
 
 ### Implementation-plan derivation
 
 **loop-mode**:
 - Do not call `notion-ticket-plan`. Derive the plan yourself (reuse the shape of `notion-ticket-plan` SKILL.md Steps 1-6: ticket fetch → literal cross-check of DoD/existing docs → related-docs exploration → design via the Plan agent → direct confirmation of key files → write out to the state file)
+- **Impact analysis**: enumerate the files / symbols the plan will change, grep their referencing call sites, and classify into three buckets:
+  - **impact-A**: new files / leaf areas only (nothing existing references them)
+  - **impact-B**: usage added to existing code (e.g. new call sites of a new element)
+  - **impact-C**: changes to existing logic (regression risk — behavior changes / shared-path changes)
+
+  Record the classification and the "target symbol → referencing sites" mapping in the state file's "impact scope" section and **carry it into the draft PR body** (passed to commit-push-branch). impact-C areas are passed to the reviewer as priority targets for the correctness / test-adversarial perspectives in the review stage
 - **DoD full-coverage self-check**: map each DoD item in the spec 1:1 to a derived implementation step. If even one item cannot be mapped, or still has multiple interpretations, **do not proceed to implementation — stop here and report to the user** (this Slice's concrete form of escalation. Automated ticket comments, push notifications, and circuit-breaker retry accounting are added in Slice 2d)
 - Do not wait for approval via ExitPlanMode (autonomous default)
 
@@ -75,6 +83,7 @@ For other languages / frameworks, handle the implementation stage with your own 
 - mode: [loop-mode / interactive mode]
 - plan file: <path>
 - what will be built: <3-5 line summary>
+- Impact scope: impact-A <n> / impact-B <n> / impact-C <n> (mapping table in the state file)
 - DoD coverage: <N>/<N> items mapped (if any unmapped, stop and report here)
 - implementation-approach judgment: [initial setup / feature work / config change]
 ```
@@ -114,7 +123,7 @@ Read the plan and determine the type of implementation:
 | Non-Go code / config changes | delegate to an `Agent: general-purpose` subagent | **opus** (specified at spawn — sonnet coding proved insufficient in field verification, 2026-07-15 FB; difficulty-based routing to be revisited once insights accumulate) |
 | Trivial few-line edits | your own `Read` / `Edit` / `Write` | (within dev-cycle; only when subagent overhead isn't worth it) |
 
-When delegating, pass the work item's spec, the relevant plan steps, and the verification commands fully in the prompt (assume the subagent doesn't know the state file — make it self-contained).
+When delegating, pass the work item's spec, the relevant plan steps, the verification commands, and the **conventions digest + source paths (startup preparation Step 5)** fully in the prompt (assume the subagent doesn't know the state file — make it self-contained).
 
 During implementation, follow the steps written in the plan. Always run the checks (`make build` / `make test` / `make lint`, or the language's build / test) and require green before moving to the next stage.
 
@@ -127,23 +136,31 @@ During implementation, follow the steps written in the plan. Always run the chec
 - coverage: <value> (if applicable)
 ```
 
-### self-review (`self-review-changes` skill)
+### review (loop-mode: `review-orchestrator` iterative / interactive mode: `self-review-changes` skill)
 
-- Launch `self-review-changes` via the `Skill` tool
-- **loop-mode**: per the skill's Phase 2 rules, **fan out to `review-lens` subagents in parallel, one per perspective** (pass the perspective reference path + diff range + spec; model pinned to sonnet in frontmatter). **Launch an `independent-reviewer` subagent alongside** (pass diff + spec; **do NOT pass the state file** — this preserves its independence). Merge both sets of findings and apply critical and desirable fixes automatically without waiting for approval. **Detection of a new dependency escalates unconditionally here** (an existing CLAUDE.md wall; not relaxed even in loop-mode). Defer nits with a note in the draft PR. **For conflicting findings on the same location, or critical findings you're not confident auto-applying, re-judge only that perspective on the inherit model; if still unresolved, escalate** (§5.2)
-- **Interactive mode**: as before, run inline; critical items (memory feedback violations, config format errors, implicit spec deviations, speculative mappings) always get approval before fixing; nits are the user's call
-- The details of the checks and perspectives have `self-review-changes` SKILL.md and its references/ as their SoT (do not re-enumerate)
-- After fixes, re-run build / test / lint to confirm no side effects
+**loop-mode — iteration loop (max 3 rounds)**:
+
+1. **Fresh spawn** a `review-orchestrator` subagent (new every time — separating judgment via a reviewer with no implementation context). What to pass: the diff range / the full spec / the impact-scope classification (impact-A/B/C) / the path list of repo conventions / design docs (already enumerated in startup preparation Step 5) / the iteration number + the previous round's fix instructions (from the 2nd round on). **Do NOT pass the state file**
+2. verdict = `approve` → stack nits onto the draft PR notes list, record follow-up proposals in the state file, and move to security review
+3. verdict = `fix-required` → apply the fix instructions (trivial ones with your own Edit, substantive changes delegated to the implementation subagent = opus) → confirm build / test / lint green → go back to 1 and re-spawn (iteration +1)
+4. verdict = `escalation`, or **iteration exceeds the max of 3 without reaching approve** → escalation (in this Slice, up to stop-and-report to the user. Automated ticket comments and push notifications come in Slice 2d)
+
+- **Detection of a new dependency escalates unconditionally regardless of the verdict** (an existing CLAUDE.md wall; not relaxed even in loop-mode)
+- Since the next round's reviewer sees the whole diff fresh, areas newly touched by a fix are structurally covered too, so incremental oversights don't slip through
+- The SoT for the perspective system / checklists is `self-review-changes` SKILL.md and references/ (the reviewer Reads them itself; not re-enumerated)
+
+**Interactive mode**: as before, launch `self-review-changes` via the `Skill` tool and run inline. Critical items (memory feedback violations, config format errors, implicit spec deviations, speculative mappings) always get approval before fixing; nits are the user's call. After fixes, re-run build / test / lint to confirm no side effects
 
 **Boundary report**:
 ```
-## self-review complete
+## review complete
 - mode: [loop-mode / interactive mode]
-- critical fixes: <n> → fixed
-- desirable fixes: <n> → fixed or deferred
-- nits: <n> → deferred (noted in draft PR / user's call)
+- iterations: approve reached in <N> rounds (loop-mode only)
+- critical fixes: <n> / desirable fixes: <n> → resolved within the iterations
+- nits: <n> → noted in draft PR
+- follow-up proposals: <n> → recorded in the state file
 - new dependency detected: [none / yes → escalation]
-- fan-out: review-lens × <N> perspectives in parallel + independent-reviewer (loop-mode only). Conflicts: <none / yes → re-judged or escalated>
+- fan-out: review-lens × <N> perspectives + independent-reviewer (synchronous launch, performed on the reviewer side). Conflicts: <none / yes → reviewer re-judged or escalated>
 ```
 
 ### security review (`security-review-local` skill)
@@ -195,7 +212,7 @@ During implementation, follow the steps written in the plan. Always run the chec
 | Implementation-plan derivation | ✓ (mode: loop-mode / interactive) |
 | Design review | ✓ (or skip reason) |
 | Implementation | ✓ (worktree: <path>) |
-| self-review | ✓ |
+| review | ✓ (loop-mode: approved in <N> iterations) |
 | security review | ✓ |
 | commit & push | ✓ |
 | retrospect | ✓ (or nothing recorded) |
@@ -211,13 +228,14 @@ Results:
 
 1. **Always report at stage boundaries**: output a prose summary when each stage completes. "Silently moving on" is forbidden
 2. **Approval points differ by mode**:
-   - loop-mode: stop only on escalation conditions (ambiguous DoD coverage / new dependency detected / security action-required / unresolved test failures). Otherwise proceed autonomously
+   - loop-mode: stop only on escalation conditions (ambiguous DoD coverage / new dependency detected / security action-required / unresolved test failures / review iteration cap exceeded). Otherwise proceed autonomously
    - interactive mode: the traditional 3 checkpoints (implementation-plan approval, self-review fix approval, pre-commit confirmation)
 3. **Stop immediately on critical errors** (common to both modes):
    - ambiguous DoD coverage (detected during plan derivation)
    - test failures that cannot be resolved during implementation
    - security review action-required
    - detection of a new dependency
+   - review iterations exceed the cap (3) without reaching approve (loop-mode)
 4. **push / PR follows CLAUDE.md "push / PR etiquette"**: pushing via the `commit-push-branch` skill is OK. Draft PR creation in loop-mode follows the exception rules in CLAUDE.md's loop-mode section. Promoting drafts / merging is humans-only
 5. **Update task progress via TaskUpdate as you go**
 6. **Respect existing memory feedback**: Read all of `MEMORY.md` and grasp each entry's content (don't hardcode representative examples — they rot as memory changes)
@@ -229,7 +247,9 @@ Results:
 - Proceeding to commit "whatever changes are lying around" without looking at the work item / ticket URL
 - Entering implementation in loop-mode while skipping the DoD-coverage self-check of plan derivation
 - Skipping worktree isolation in loop-mode and directly editing the shared checkout
-- Committing while skipping self-review / security review
+- Committing while skipping review / security review
+- In loop-mode, proceeding to commit after a `fix-required` fix without re-review (cutting the iteration short)
+- Passing the state file to review-orchestrator (breaking its independence)
 - Adding a new dependency without escalating when one is detected
 - Implementing everything yourself without using the skills / subagents (don't reinvent each skill's logic)
 - Judging a critical problem "minor" and proceeding
@@ -245,9 +265,10 @@ dev-cycle (this)
   ├── api-design-review (skill)                          ← design review (upstream; new contract / ADR / ACL model)
   ├── go-bootstrap (skill)                               ← implementation (initial setup)
   ├── go-feature-tdd (subagent)                          ← implementation (feature work)
-  ├── self-review-changes (skill)                        ← self-review (loop-mode fans perspectives out to review-lens)
-  ├── review-lens (subagent, sonnet)                     ← per-perspective review worker (N in parallel)
-  ├── independent-reviewer (subagent, opus)              ← independent review (judges from spec + diff only)
+  ├── review-orchestrator (subagent, opus)               ← review integrating principal (loop-mode, fresh spawn per iteration)
+  │     ├── review-lens (subagent, sonnet)               ← per-perspective review worker (N in parallel, synchronous launch)
+  │     └── independent-reviewer (subagent, opus)        ← independent review (judges from spec + diff only)
+  ├── self-review-changes (skill)                        ← review (interactive mode) / SoT of the perspective system (references/)
   ├── security-review-local (skill)                      ← security review
   ├── commit-push-branch (skill)                         ← commit & push (+ draft PR in loop-mode)
   └── retrospect (skill)                                 ← end-of-cycle insight recording
@@ -255,8 +276,7 @@ dev-cycle (this)
 
 Each tool can be invoked independently. If the user says "redo just the self-review" or similar, call that skill directly.
 
-## Out of scope (as of Slice 2b)
+## Out of scope (as of Slice 2e)
 
-- Fan-out of review-lens / independent-reviewer agents (self-review-changes is used as-is) → Slice 2c
-- Full automation of escalation (automated ticket comments, push notifications, circuit-breaker retry accounting) → Slice 2d. Escalation at this point means "stop and report to the user"
+- Full automation of escalation (automated ticket comments, push notifications, circuit-breaker retry accounting) → Slice 2d. Escalation at this point means "stop and report to the user" (the review-iteration cap overrun is handled the same way)
 - Dismantling notion-ticket-plan (its use in interactive mode continues) → Slice 2d
