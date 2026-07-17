@@ -117,9 +117,13 @@ grep -rnE "<old-name-pattern>" docs/ apis/ internal/ cmd/ cli/
 
 の hit list を design 結果に含めて、修正範囲を確定させる。
 
-**check phrasing**: 「旧名 を grep して 0 hits になる条件は何か」「新名 が何箇所追加されるか」
+**名前 grep は必要だが不十分** — 設計対象が producer / worker 等の **process flow** を記述する場合、関連する Accepted ADR / design doc の **flow / lifecycle 記述**(どの行を誰がいつ作るか・dedup 方式・失敗時の観測境界)まで読み合わせ、設計案と矛盾しないか確認する。field / enum 名の grep は naming overlap を拾えても、ADR 本文の散文フロー(例「worker が受信時に INSERT」「content-based dedup」)と設計案の矛盾は検出できない。関連 ADR が Accepted の場合、その中核決定と設計案の flow を 1 つずつ突き合わせ、真逆になっていないか確認する。
 
-**過去事例**: `accessScopes` 旧 surface が docs §11.2 SDK example に残置、turn 4 で発覚 → 設計時 grep で先に全箇所把握すべきだった
+**check phrasing**: 「旧名 を grep して 0 hits になる条件は何か」「新名 が何箇所追加されるか」「関連 Accepted ADR の flow / lifecycle 記述(誰がいつ作る・dedup・観測境界)と設計案の flow が一致するか」
+
+**過去事例 (naming)**: `accessScopes` 旧 surface が docs §11.2 SDK example に残置、turn 4 で発覚 → 設計時 grep で先に全箇所把握すべきだった
+
+**過去事例 (flow)**: ticket の producer/worker flow(enqueue 前に status=PENDING を作成 / 明示 dedup / メッセージに idempotency key)が、関連 Accepted ADR の中核決定(worker が受信時に INSERT / content-based dedup / enqueue 失敗は DB 外で観測)と真逆。`idempotency_key` の field 名 grep は naming overlap を拾ったが、散文フローの矛盾は見逃し、review iteration の cap でようやく発覚 → escalation。名前照合だけでなく ADR の flow 記述まで突き合わせるべきだった
 
 ### 6. memory 規約準拠 (毎回チェック)
 
