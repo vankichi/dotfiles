@@ -117,6 +117,7 @@ cargo fmt --all -- --check             && echo FMT_OK
 5. **Do not commit**: committing is delegated to a separate skill (`/commit-push-branch`)
 6. **Prefer `pub(crate)` over `pub`**: since binary crates have no external exposure, start with minimal visibility
 7. **`make` is the only task runner**: `make` ships standard with macOS / Linux at zero added dependency cost. `just` / `task` / `xtask`, etc. are new dependencies and are not added by default (only if the user explicitly wants them). Their advantages over a Makefile — cross-platform support, arguments, `--list` — aren't large enough to justify the added dependency
+8. **The pre-commit gate is a full `make ci` run**: do not commit off partial `cargo clippy` + `cargo test` runs. When rustfmt reshapes code, there is a drift where clippy lints fire anew only after formatting (e.g., a match arm over max_width expanded into a block → `semicolon_if_nothing_returned`), which only `make ci` (which includes fmt-check) can detect. Spell out `make ci` in plans' per-task verify steps and in dispatches to implementation subagents
 
 ## Anti-patterns
 
