@@ -27,6 +27,7 @@ Reference: rules/spec-contract.md
 ```
 
 - **Re-comment suppression (idempotency)**: before posting, check existing comments with `notion-get-comments`; if a work-intake skip comment already exists and the spec body has not been updated since, do not comment again (only report the skip verdict). This prevents comments from piling up on every poll once this runs in a loop.
+  - Determining "not updated since": compare the posted time of the latest work-intake skip comment (identified by its fixed leading prefix) with the page's `last_edited_time`; re-commenting is allowed only when the latter is newer. Since `last_edited_time` also moves on property changes, false positives fall on the re-comment side (conservative, acceptable)
 
 ## Notes
 

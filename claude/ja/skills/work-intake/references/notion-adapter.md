@@ -25,6 +25,7 @@ work-intake: spec contract 未充足のため skip
 ```
 
 - **再コメント抑止 (idempotency)**: 投稿前に `notion-get-comments` で既存コメントを確認し、既に work-intake の skip コメントが付いていて spec 本文がその後未更新なら再コメントしない (skip 判定の報告のみ行う)。loop 化した際に poll のたびコメントが積もるのを防ぐ
+  - 「未更新」の判定: 最新の work-intake skip コメント (冒頭の固定 prefix で同定) の投稿時刻と page の `last_edited_time` を比較し、後者が新しい場合のみ再コメント可。`last_edited_time` は property 変更でも動くため誤検知は再コメント側に倒れる (保守的で許容)
 
 ## 注意
 
