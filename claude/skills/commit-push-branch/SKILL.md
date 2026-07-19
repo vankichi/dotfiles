@@ -169,6 +169,7 @@ PR creation is a separate task. If the user instructs it, continue with `gh pr c
 Applies **only when loop-mode is explicitly specified** at invocation time (basis: "loop-mode (exception rules for autonomous execution)" in CLAUDE.md):
 
 - The branch name / commit message in Steps 3-6 are decided automatically from conventions and past style, with no user confirmation
+- **WIP squash**: if `wip(<stage>):` commits are stacked on the working branch (dev-cycle's stage-boundary WIP commits), run `git reset --soft $(git merge-base HEAD origin/<default-branch>)` to return all changes to staged, then create the single conventional commit (never use `--hard`). In this case, Step 5's explicit add is reinterpreted as "confirm via `git status` that the staged contents contain no secrets / out-of-scope files"
 - After the push in Step 7, **create a draft PR**: `gh pr create --draft` (title = commit title, body = the implementation plan / DoD check results / review results passed from the caller)
 - Never promote the draft (remove draft status) or merge
 - Interactive behavior without loop-mode is unchanged (PR creation only after user instruction)

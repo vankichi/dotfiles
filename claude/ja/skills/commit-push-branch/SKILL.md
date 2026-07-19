@@ -167,6 +167,7 @@ PR 作成は別タスク。ユーザーが指示したら `gh pr create` で続�
 呼び出し時に **loop-mode が明示された場合のみ**適用する (根拠: CLAUDE.md「loop-mode (自律実行の例外規定)」):
 
 - Step 3-6 の branch 名 / commit message は規約と過去スタイルで自動決定し、user 確認を挟まない
+- **WIP squash**: 作業 branch に `wip(<工程>):` commit が積まれている場合 (dev-cycle の工程境界 WIP commit)、`git reset --soft $(git merge-base HEAD origin/<default-branch>)` で全変更を staged に戻してから規約通りの 1 commit を作る (`--hard` は使わない)。この場合 Step 5 の明示 add は「`git status` で staged 内容に secret / 対象外ファイルが混ざっていないことを確認する」に読み替える
 - Step 7 の push 後に **draft PR を作成する**: `gh pr create --draft` (title = commit title、body = 呼び出し元から渡された実装計画 / DoD チェック結果 / review 結果)
 - 本 PR 化 (draft 解除) と merge はしない
 - loop-mode 指定がない対話時の挙動は従来通り不変 (PR 作成は user 指示後)

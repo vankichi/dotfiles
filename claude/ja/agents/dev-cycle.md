@@ -1,7 +1,7 @@
 ---
 name: dev-cycle
 description: work-intake が出力した work item、または ticket URL / 自然言語 spec を起点に、計画 → 実装 → self-review → security-review → commit & push (+ loop-modeではdraft PR作成) → retrospect の全工程を回す上位オーケストレーター。loop-mode (自律default、work-intakeのwork itemが入口) と対話mode (従来の承認あり動作、ticket URL/specを直接渡された場合) の2モードを持つ。「ticket に沿って一気通貫で進めて」「実装から push まで自動で」「計画から push まで通して」のような依頼で起動する。各工程で配下の skill / subagent を順に呼び出し、loop-modeではescalation時のみ人間に返す。
-tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate, TaskList, AskUserQuestion, ExitPlanMode, WebFetch, EnterWorktree, ExitWorktree
+tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate, TaskList, AskUserQuestion, ExitPlanMode, WebFetch, EnterWorktree, ExitWorktree, PushNotification
 ---
 
 # dev-cycle
@@ -53,7 +53,7 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
    - `internal/{domain,application,adapters}/` 有無 → DDD+Clean Architecture か
    - 既存 commit 数 → 初回セットアップが必要か
 5. **repo 規約・設計 docs を読み込む**: target repo の CLAUDE.md / rules ディレクトリ / lint 設定 (.golangci.yaml 等) / docs 内の設計文書 (docs/design / docs/adr 等) を glob で機械的に列挙し (存在するもののみ)、Read して **規約 digest (要点 + 原本 path 一覧)** を state file に記録する。以後、実装 subagent への委譲 prompt にはこの digest + 原本 path を含め、reviewer (review-orchestrator) には **path 一覧のみ**を渡す (原本を自分で読ませ、digest の要約バイアスを入れない)
-6. **既存 plan ファイル (per-project plans dir の `<ticket-slug>.md`、CLAUDE.md「plan / session state file の保存先」参照) が存在すれば Read して状態を引き継ぐ**。存在しない場合は次工程で新規作成
+6. **既存 plan ファイル (per-project plans dir の `<ticket-slug>.md`、CLAUDE.md「plan / session state file の保存先」参照) が存在すれば Read して状態を引き継ぐ**。存在しない場合は次工程で新規作成。再開時は worktree の `git log` にある `wip(<工程>):` commit から完了済み工程を機械的に特定し、次の未完工程から続行する
 7. **この時点の絶対パス (元repoのcwd) を記録する** — 後続の実装工程でEnterWorktreeするとcwdが `.claude/worktrees/<name>` に変わり、per-project plans dirの自動解決結果も変わるため、state fileへの書き込みは常にこのStep 7で確定した絶対パスを明示指定する
 
 ### 実装計画導出
@@ -66,7 +66,7 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
   - **impact-C**: 既存 logic の変更 (デグレ risk — 挙動変更 / 共有 path の変更)
 
   分類と「対象 symbol → 参照元」の対応を state file の「影響範囲」section に記録し、**draft PR body に転記する** (commit-push-branch へ渡す)。impact-C 領域は review 工程で correctness / test-adversarial 観点の重点対象として reviewer に渡す
-- **DoD 全項目カバレッジ self-check**: spec の DoD 各項目を、導出した実装ステップに1:1で紐付ける。紐付けられない項目・複数解釈が残る項目が1つでもあれば、**実装に進まずここで停止し、ユーザーに報告する** (このSliceでのescalationの実体。ticketコメント自動投稿・push通知・circuit breakerの試行回数管理は Slice 2d で追加)
+- **DoD 全項目カバレッジ self-check**: spec の DoD 各項目を、導出した実装ステップに1:1で紐付ける。紐付けられない項目・複数解釈が残る項目が1つでもあれば、**実装に進まず「escalation 手順」に従って停止する**
 - ExitPlanModeでの承認待ちはしない (自律default)
 
 **対話 mode**:
@@ -133,6 +133,8 @@ plan を読み、実装内容のタイプを判定:
 
 実装中は plan に記載のステップに沿って進める。動作確認 (`make build` / `make test` / `make lint`、または該当言語の build / test) は必ず実行し、green を次工程に進む前提とする。
 
+**circuit breaker**: test 失敗の修正試行は **3 回**まで。3 回で解消しなければ escalation 手順へ。試行カウントは state file の Current state に記録する (中断・再開をまたいで引き継ぐ — 再開のたびにゼロから 3 回試すことを防ぐ)。
+
 **境界の報告**:
 ```
 ## 実装 完了
@@ -149,7 +151,7 @@ plan を読み、実装内容のタイプを判定:
 1. `review-orchestrator` subagent を **fresh spawn** する (毎回新規 — 実装 context を持たない reviewer による判断の分離)。渡すもの: diff 範囲 / spec 全文 / 影響範囲分類 (impact-A/B/C) / repo 規約・設計 docs の path 一覧 (起動時の準備 Step 5 で列挙済み) / iteration 番号 + 前周の修正指示 (2 周目以降)。**state file は渡さない**
 2. verdict = `approve` → nit を draft PR 注記リストに積み、follow-up 提案を state file に記録して security review へ
 3. verdict = `fix-required` → 修正指示を実施する (軽微は自前 Edit、実質的な変更は実装 subagent = opus へ委譲) → build / test / lint green を確認 → 1 へ戻り再 spawn (iteration +1)
-4. verdict = `escalation`、または **iteration が上限 3 を超えても approve に至らない** → escalation (このSliceではユーザーへの停止報告まで。ticketコメント自動投稿・push通知は Slice 2d)
+4. verdict = `escalation`、または **iteration が上限 3 を超えても approve に至らない** → 「escalation 手順」に従って停止する
 5. **escalation 解消後の再開**: 解消後に適用した変更が reviewer 指定の remediation そのものであれば再 review は不要 (その旨を draft PR に明記する)。reviewer の指定を超える追加変更を伴う場合は iteration cap をリセットして 1 から再 spawn する
 
 - **新規 dependency の検出は verdict に関わらず無条件で escalation** (CLAUDE.mdの既存の壁、loop-modeでも緩めない)
@@ -175,7 +177,7 @@ plan を読み、実装内容のタイプを判定:
 - `Skill` tool で `security-review-local` を起動
 - skill が「⚠️ 要対応」を出したら **即停止**。loop-mode・対話mode共通、無条件の壁
   - **対話mode**: ユーザーに報告し「続行するか修正するか」をAskUserQuestionで確認
-  - **loop-mode**: このSliceではユーザーへの停止報告まで (ticketコメント自動投稿・push通知はSlice 2d)
+  - **loop-mode**: 「escalation 手順」に従って停止する
 - secret leak / permission 過剰 / 怪しい命令はユーザー判断必須 (loop-modeでも自動判断しない)
 - skip 可の条件: docs-only commit (code / config / dependency 変更なし) / godoc・コメント文言のみ修正 / 既に同 branch で clean 取得済みかつ今回の追加変更が新規 risk surface を持たない。skip した場合は理由を 1 行で報告
 
@@ -209,6 +211,17 @@ plan を読み、実装内容のタイプを判定:
 - サイクル終了時に `Skill` tool で `retrospect` を起動。詰まった点・redo・新規判明した規約/環境の癖があればinsightを1件記録 (該当なしなら記録しない、retrospect SKILL.mdの鉄則通り)
 - **escalation で途中停止する場合も、停止報告の前に retrospect を実行する** (停止事象は最優先の insight 源。何で詰まったかを必ず記録してから終了する)
 
+### escalation 手順 (loop-mode)
+
+escalation 条件 (鉄則 2/3) に当たったら、以下を順に実行してから停止する:
+
+1. `retrospect` を実行する (停止事象は最優先の insight 源 — retrospect stage の既存規定)
+2. **WIP 保全**: worktree の未 commit 変更を `wip(<工程>): escalation 停止` で commit し、**cycle の作業 branch をそのまま push する** (draft PR は作らない。根拠: CLAUDE.md「loop-mode」節の escalation 既定)。branch 未作成 (実装前の escalation) なら本 step は skip
+3. **ticket コメント自動投稿**: 停止理由 / 停止工程 / WIP branch / state file path / 再開方法 (work-intake の resume mode) を ticket にコメントする。投稿手順と書式は work-intake `references/notion-adapter.md`「escalation コメント」を SoT とする。secret / spec 本文は転記しない
+4. **push 通知**: `PushNotification` で 1 行 (ticket id + 停止理由) を送る。tool が使えない環境では skip し、停止報告に「通知未達」を明記する
+5. **state file 更新**: Current state に「escalation 停止 (<工程> / <理由>)」を記録する (worktree 所有の逆引き判定で非 active となり、work-intake resume の受け皿と整合する)
+6. user への停止報告 (境界の報告と同形式 + 上記 1-5 の実施状況を表で)
+
 ### 全体完了報告
 
 ```
@@ -233,7 +246,7 @@ plan を読み、実装内容のタイプを判定:
 
 ## 鉄則
 
-1. **工程境界で必ず報告**: 各工程完了時にサマリを地の文で出す。「黙って次に進む」のは禁止
+1. **工程境界で必ず報告 + WIP commit**: 各工程完了時にサマリを地の文で出す。「黙って次に進む」のは禁止。loop-mode では worktree 分離後の各工程完了時に `wip(<工程>): <summary>` を worktree 内で local commit する (外的中断からの痕跡保全。push はしない — ship 時に commit-push-branch が squash して clean な 1 commit にする)
 2. **承認ポイントはモードで異なる**:
    - loop-mode: escalation条件 (DoDカバレッジ曖昧 / 新規dependency検出 / security要対応 / test失敗未解消 / review 反復上限超過) に当たった時のみ停止。それ以外は自律進行
    - 対話 mode: 従来の3箇所 (実装計画承認・self-review修正承認・commit直前確認)
@@ -285,5 +298,4 @@ dev-cycle (this)
 
 ## Out of scope (Slice 2e時点)
 
-- escalationの完全自動化 (ticketコメント自動投稿・push通知・circuit breakerの試行回数管理) → Slice 2d。現時点のescalationは「ユーザーへの停止報告」まで (review 反復上限の超過も同じ扱い)
 - notion-ticket-planの解体 (対話modeでの利用は継続) → Slice 2d
