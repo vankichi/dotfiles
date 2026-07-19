@@ -115,6 +115,7 @@ cargo fmt --all -- --check             && echo FMT_OK
 5. **コミットしない**: コミットは別 skill (`/commit-push-branch`) に委ねる
 6. **`pub` より `pub(crate)`**: バイナリ crate は外部公開がないので可視性は最小から始める
 7. **task runner は `make` のみ**: `make` は macOS / Linux 標準同梱で追加 dep ゼロ。`just` / `task` / `xtask` などは新規 dep なので default では入れない (ユーザーが明示的に希望した場合のみ)。Makefile に対する利点は cross-platform / 引数 / `--list` 程度で、追加 dep を払うほど大きくない
+8. **commit 前 gate は `make ci` 一括実行**: `cargo clippy` + `cargo test` の部分実行で commit しない。rustfmt が整形で code 形状を変えると整形後にのみ clippy が新規発火する drift があり (例: max_width 超の match arm の block 展開 → `semicolon_if_nothing_returned`)、fmt-check を含む `make ci` でしか検出できない。plan の per-task verify step / 実装 subagent への dispatch にも `make ci` を明記する
 
 ## アンチパターン
 

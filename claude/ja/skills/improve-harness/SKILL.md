@@ -28,7 +28,7 @@ frontmatter の `target` で振り分ける:
 | target | 扱い |
 |---|---|
 | harness 内 (`claude/` 配下 / `CLAUDE.md` / `rules/`) | 改善対象 → Step 3 へ |
-| harness 外 (他 repo のファイル / Claude Code 本体の挙動 / design doc・plans) | PR に含めない。memory 化で足りるもの (事実 / 環境の癖 / 代替 recipe) は Step 4 の memory 反映へ回す。それ以外は「対象外報告」に回し、対象 project 側での対応提案を 1 行付けて `status: deferred` (reason: out-of-scope) |
+| harness 外 (他 repo のファイル / Claude Code 本体の挙動 / design doc・plans) | PR に含めない。memory 化で足りるもの (事実 / 環境の癖 / 代替 recipe) は Step 3 の照合 (対象 project の memory の現状確認、既登録なら `status: applied` で除外) を経て Step 4 の memory 反映へ回す。それ以外は「対象外報告」に回し、対象 project 側での対応提案を 1 行付けて `status: deferred` (reason: out-of-scope) |
 
 ### Step 3: 現状照合
 

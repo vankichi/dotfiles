@@ -111,7 +111,15 @@ If the plan includes a new service / new RPC / new enum / new ACL model / new AD
 
 **Before starting implementation, isolate with `EnterWorktree`** (implements design doc §7 row 4 "isolate via git worktree"; common to loop-mode and interactive mode). After isolation, write to the state file using the absolute path fixed during startup preparation (the auto-resolved path changes when cwd changes).
 
-**If launched with a cwd inside a worktree** (e.g., a parallel-cycle collision): EnterWorktree cannot create a nested worktree from inside one. Identify the main checkout and create your own worktree off main (or origin/main) with `git worktree add`, then move into it. Never touch files inside another agent's worktree. If Edit/Write to the newly created worktree keeps being rejected (under subagent cwd pinning, `EnterWorktree(path)` may report success while the write boundary does not actually move — 2026-07-15 FB): clean up the new worktree with `git worktree remove`, then continue by swapping only the branch inside the pinned original worktree directory via `git checkout -b <branch> origin/<base-ref>` (the original branch's commits are preserved).
+**If launched with a cwd inside a worktree** (e.g., a parallel-cycle collision): EnterWorktree cannot create a nested worktree from inside one. Identify the main checkout and create your own worktree off main (or origin/main) with `git worktree add`, then move into it. Never touch files inside another agent's worktree.
+
+If Edit/Write to the newly created worktree keeps being rejected (under subagent cwd pinning, `EnterWorktree(path)` may report success while the write boundary does not actually move — 2026-07-15 FB), switch to a branch swap inside the pinned original worktree:
+
+1. Clean up the new worktree with `git worktree remove`
+2. **Ownership check**: mechanically confirm via reverse lookup that the original worktree is not owned by another active cycle — grep the state files in the per-project plans dir; if an active state file (= one whose Current state does not show all stages completed / terminated by escalation) records this worktree path under `worktree:`, treat it as owned (recent mtime as a secondary signal)
+3. If it is owned, do not swap; escalate and stop (the "never touch another agent's worktree" principle)
+4. Once confirmed safe, run `git fetch origin <base-ref>` to refresh the remote-tracking ref
+5. Continue by swapping only the branch inside the original worktree directory via `git checkout -b <branch> origin/<base-ref>` (the original branch's commits are preserved)
 
 Read the plan and determine the type of implementation:
 

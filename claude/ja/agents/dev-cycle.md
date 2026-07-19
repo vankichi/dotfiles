@@ -109,7 +109,15 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 
 **実装に入る前に `EnterWorktree` で分離する** (design doc §7 row4「git worktree で分離」に対応。loop-mode・対話mode共通)。分離後は state file への書き込みに Step起動時の準備で確定した絶対パスを使う (cwd変化で自動解決パスが変わるため)。
 
-**worktree 内の cwd で起動された場合** (並列 cycle の衝突等): EnterWorktree は worktree 内からのネスト作成ができない。main checkout を特定し、`git worktree add` で自前の worktree を main (or origin/main) から作成して移動する。他 agent の worktree 内のファイルには触れない。作成した新規 worktree への Edit/Write が拒否され続ける場合 (subagent の cwd pin 下では `EnterWorktree(path)` が成功を報告しても書き込み境界が移らない — 2026-07-15 FB): 新規 worktree を `git worktree remove` で片付け、pin 済みの元 worktree ディレクトリ内で `git checkout -b <branch> origin/<base-ref>` によりブランチだけ差し替えて続行する (元ブランチの commit は保持される)。
+**worktree 内の cwd で起動された場合** (並列 cycle の衝突等): EnterWorktree は worktree 内からのネスト作成ができない。main checkout を特定し、`git worktree add` で自前の worktree を main (or origin/main) から作成して移動する。他 agent の worktree 内のファイルには触れない。
+
+作成した新規 worktree への Edit/Write が拒否され続ける場合 (subagent の cwd pin 下では `EnterWorktree(path)` が成功を報告しても書き込み境界が移らない — 2026-07-15 FB) は、pin 済みの元 worktree 内でのブランチ差し替えに切り替える:
+
+1. 新規 worktree を `git worktree remove` で片付ける
+2. **所有確認**: 元 worktree が他の稼働中 cycle の所有でないことを逆引きで機械的に確認する — per-project plans dir の state file 群を grep し、当該 worktree path を `worktree:` に記録する active な state file (= Current state が全工程完了 / escalation 終了を示していないもの) があれば所有中と判定 (直近 mtime は補助)
+3. 所有中なら差し替えず escalation して停止する (「他 agent の worktree に触れない」原則)
+4. 安全を確認したら `git fetch origin <base-ref>` で remote-tracking ref を更新する
+5. 元 worktree ディレクトリ内で `git checkout -b <branch> origin/<base-ref>` によりブランチだけ差し替えて続行する (元ブランチの commit は保持される)
 
 plan を読み、実装内容のタイプを判定:
 

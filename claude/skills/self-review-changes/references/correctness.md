@@ -52,3 +52,9 @@ Example: PR #30 C10 — `chunking.Tokenizer.CountTokens` returns 0 on an encodin
 After an implementation change, re-read every comment in the changed files with suspicion. Grep for strong claims (`grep -nE "(strictly|preserves|guarantees|ensures|always|never|returns|panics)"`), and cross-check each claim against the impl's literal behavior at the byte level (e.g., is "strictly under X" `<` or `<=` / does "preserves Y" hold given that upstream doesn't trim Y). For discrepancies, either align the doc with the impl, or align the impl with the doc based on design intent.
 
 Example: PR #30 C11/C12 — `carryOverlap`'s "kept strictly under overlap" was corrected to "at most overlap" since the impl allows equality; `joinUnits`'s "preserves original surface text" was corrected to "reproduces sentence content but not byte-for-byte identical" since SplitSentences trims whitespace.
+
+## Mechanical check 4: authoritative verification of external constants (hardcoded external constants)
+
+When the diff contains hardcoded externally-sourced constants (LLM pricing / model IDs / API rate limits / third-party service constants), do not settle for matching the port source / memory / existing code — **verify the values themselves against an authoritative source**. The SoT for Anthropic pricing / model IDs is the claude-api skill (apply the "never answer LLM pricing from memory" trigger in code-review contexts too).
+
+Example: Opus rates $15/$75 ported from ccwatch matched the port source byte-for-byte, but the current rates are $5/$25 — a 3x overcount (2026-07-17 FB; "matches the port source" is not evidence of validity).

@@ -30,7 +30,7 @@ Sort by the `target` in the frontmatter:
 | target | handling |
 |---|---|
 | inside the harness (`claude/` subtree / `CLAUDE.md` / `rules/`) | improvement target → proceed to Step 3 |
-| outside the harness (files in other repos / Claude Code's own behavior / design docs / plans) | not included in the PR. Items sufficiently handled as memory (facts / environment quirks / alternative recipes) are routed to Step 4's memory application. Everything else is routed to the "out-of-scope report", with a one-line proposal for handling it on the target project's side attached, and set to `status: deferred` (reason: out-of-scope) |
+| outside the harness (files in other repos / Claude Code's own behavior / design docs / plans) | not included in the PR. Items sufficiently handled as memory (facts / environment quirks / alternative recipes) are routed through Step 3's reconciliation (check the current state of the target project's memory; if already registered, exclude with `status: applied`) before Step 4's memory application. Everything else is routed to the "out-of-scope report", with a one-line proposal for handling it on the target project's side attached, and set to `status: deferred` (reason: out-of-scope) |
 
 ### Step 3: Reconcile against current state
 
