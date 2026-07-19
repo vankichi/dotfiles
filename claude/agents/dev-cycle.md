@@ -152,6 +152,7 @@ During implementation, follow the steps written in the plan. Always run the chec
 2. verdict = `approve` → stack nits onto the draft PR notes list, record follow-up proposals in the state file, and move to security review
 3. verdict = `fix-required` → apply the fix instructions (trivial ones with your own Edit, substantive changes delegated to the implementation subagent = opus) → confirm build / test / lint green → go back to 1 and re-spawn (iteration +1)
 4. verdict = `escalation`, or **iteration exceeds the max of 3 without reaching approve** → escalation (in this Slice, up to stop-and-report to the user. Automated ticket comments and push notifications come in Slice 2d)
+5. **Resuming after escalation resolution**: if the change applied after resolution is exactly the reviewer-specified remediation, no re-review is needed (state this explicitly in the draft PR). If it involves additional changes beyond what the reviewer specified, reset the iteration cap and re-spawn from 1
 
 - **Detection of a new dependency escalates unconditionally regardless of the verdict** (an existing CLAUDE.md wall; not relaxed even in loop-mode)
 - Since the next round's reviewer sees the whole diff fresh, areas newly touched by a fix are structurally covered too, so incremental oversights don't slip through
