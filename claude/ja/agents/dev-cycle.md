@@ -150,6 +150,7 @@ plan を読み、実装内容のタイプを判定:
 2. verdict = `approve` → nit を draft PR 注記リストに積み、follow-up 提案を state file に記録して security review へ
 3. verdict = `fix-required` → 修正指示を実施する (軽微は自前 Edit、実質的な変更は実装 subagent = opus へ委譲) → build / test / lint green を確認 → 1 へ戻り再 spawn (iteration +1)
 4. verdict = `escalation`、または **iteration が上限 3 を超えても approve に至らない** → escalation (このSliceではユーザーへの停止報告まで。ticketコメント自動投稿・push通知は Slice 2d)
+5. **escalation 解消後の再開**: 解消後に適用した変更が reviewer 指定の remediation そのものであれば再 review は不要 (その旨を draft PR に明記する)。reviewer の指定を超える追加変更を伴う場合は iteration cap をリセットして 1 から再 spawn する
 
 - **新規 dependency の検出は verdict に関わらず無条件で escalation** (CLAUDE.mdの既存の壁、loop-modeでも緩めない)
 - 修正で新たに触れた箇所も次周の reviewer が fresh で diff 全体を見るため、増分の見落としが構造的に出ない
