@@ -29,7 +29,7 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 
 | 工程 | 呼び出すもの | 種類 |
 |---|---|---|
-| 実装計画導出 | 内製 (loop-mode)。対話modeでは `notion-ticket-plan` を使う選択肢もある | skill (対話modeのみ) |
+| 実装計画導出 | 内製 (両 mode 共通。対話 mode は ExitPlanMode 承認あり) | — |
 | 設計 review (上流) | `api-design-review` | skill |
 | 実装 (初回セットアップ / Go) | `go-bootstrap` | skill |
 | 実装 (機能追加 / Go DDD+TDD) | `go-feature-tdd` | subagent |
@@ -59,7 +59,7 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 ### 実装計画導出
 
 **loop-mode**:
-- `notion-ticket-plan` は呼ばない。自前で計画を導出する (手法は `notion-ticket-plan` SKILL.md Step 1-6 の型を流用: ticket fetch → DoD/既存docsの literal cross-check → 関連docs探索 → Plan agentで設計 → 主要ファイル直接確認 → state fileへ書き出し)
+- 自前で計画を導出する: ticket fetch → DoD/既存docsの literal cross-check → 関連docs探索 (Explore subagent 最大3並列) → Plan agentで設計 → 主要ファイル直接確認 → state fileへ書き出し
 - **影響範囲調査**: 導出した計画の変更予定 file / symbol を列挙し、参照元を grep して 3 分類する:
   - **impact-A**: 新規 file / 葉領域のみ (既存 code からの参照なし)
   - **impact-B**: 既存 code に使用が足される (新要素の呼び出し追加等)
@@ -70,10 +70,10 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 - ExitPlanModeでの承認待ちはしない (自律default)
 
 **対話 mode**:
-- 従来通り `notion-ticket-plan` skill を `Skill` tool で起動し、plan ファイルが書かれて ExitPlanMode が呼ばれるまで待つ。ユーザー承認後、plan ファイルを Read で取り込んで「実装方針」を自分で要約
+- loop-mode と同じ手法で内製導出し (影響範囲調査・DoD self-check 含む)、plan を state file に書いた上で **ExitPlanMode で承認を取ってから**次工程へ進む (以降の対話 mode 承認 point は従来通り)
 
 **共通**:
-- state file は per-project plans dir の `<ticket-slug>.md` (`notion-ticket-plan` Step 6のテンプレート構成 = Context/確定判断/スコープ決定/spec逸脱/Phase2+移行/Carryover/documentation updates/Current state/設計review/Key design decisions/実装steps/DoDマッピング/想定pitfall/検証手順/handoff/references を流用)
+- state file は per-project plans dir の `<ticket-slug>.md` (構成は本ファイル末尾の「state file template」を SoT とする)
 
 **境界の報告**:
 ```
@@ -93,7 +93,7 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 - `Skill` tool で `api-design-review` を起動
 - skill が 6 観点 (client 抽象 / ACL 読み書き両側 / forward-compat / edge case / SoT 整合 / memory 規約) で考慮漏れを列挙
 - 検出された考慮漏れがあれば AskUserQuestion で user 判断 → plan に反映
-- 結果 summary を plan ファイルの「## Design review (api-design-review)」section に追記 (`notion-ticket-plan` skill が既に section を用意)
+- 結果 summary を plan ファイルの「## Design review (api-design-review)」section に追記 (state file template に section あり)
 
 **skip 判断軸**: 「この変更を実装しないと DoD を満たすか」が新 contract / 設計判断を含むなら通過、含まないなら skip。skip した場合は境界の報告で「api-design-review skip (理由: ...)」を明記。
 
@@ -281,7 +281,6 @@ escalation 条件 (鉄則 2/3) に当たったら、以下を順に実行して�
 
 ```
 dev-cycle (this)
-  ├── notion-ticket-plan (skill, 対話modeのみ)  ← 実装計画導出
   ├── api-design-review (skill)                  ← 設計 review (上流、新contract/新ADR/新ACLモデル時)
   ├── go-bootstrap (skill)                        ← 実装 (初回セットアップ)
   ├── go-feature-tdd (subagent)                   ← 実装 (機能追加)
@@ -296,6 +295,72 @@ dev-cycle (this)
 
 各道具は独立して呼び出し可能。ユーザーが「self-reviewだけやり直したい」等と言ったら直接skillを呼んで対応する。
 
-## Out of scope (Slice 2e時点)
+## Out of scope (Slice 2d時点)
 
-- notion-ticket-planの解体 (対話modeでの利用は継続) → Slice 2d
+- /loop 化 (work-intake poll driver・完了/escalation 通知の loop 統合) → SP4
+
+## state file template
+
+state file (per-project plans dir の `<ticket-slug>.md`) の構成。実装計画導出の書き出し先で、後続 agent / 再開時の context bootstrap の SoT:
+
+```
+# <Phase> / <Ticket ID>: <タイトル> — 実装プラン
+
+## Context
+なぜこの変更が必要か (DoD ベース)
+
+## Confirmed decisions
+確定した literal を列挙。再実装時の参照源、後続 agent が context bootstrap に使う。永続的な設計判断はここに置く。
+| 判断項目 | 採用 literal | 根拠 (DoD / docs どちら) |
+
+## Scope decisions (DoD 由来の意図的限定)
+DoD で「stub のみで OK」「後続 ticket で実装」と明示されている範囲限定。逸脱ではないので PR description には flag しない。
+| 範囲限定項目 | DoD 根拠 | 後続 ticket |
+
+## Spec deviations (PR description で flag、reviewer 確認対象)
+DoD / docs と実装で割れる「永続的な構造選択」のみ。reviewer に確認したい項目だけを残す。
+| # | 逸脱内容 | 是正方針 (spec update / 維持 / 後日見直し) |
+
+## Phase 2+ migration (follow-up ticket 化)
+暫定実装で将来 refactor 予定のもの。follow-up として記録、本 PR では実装しない。
+| 暫定実装 | 将来形 | follow-up ticket / link |
+
+## Carryover (既存問題、別 ticket)
+scope 外の既存問題で、本 PR では触らないが視認しておきたいもの。
+| 既存問題 | 影響範囲 | 対応 ticket |
+
+## Documentation updates (Tier 分類)
+docs 突合で抽出した矛盾箇所の Tier 別整理と本 ticket での扱い。
+| 対象 doc | 修正内容 | Tier (1/2/3/4) | 扱い (同 commit / 同 PR / 別 ticket) |
+
+## 影響範囲
+impact-A/B/C の分類と「対象 symbol → 参照元」の対応表 (実装計画導出の影響範囲調査の出力)
+
+## Current state (随時更新)
+進行状態。後続 agent / 再開時に Read 1 回で context bootstrap できるように。
+- Stage X 完了 / Y 進行中 (wip commit と対応)
+- 直近 commit: <hash> / test 修正試行カウント: <n>/3
+- Pending questions / escalation 停止 (<工程> / <理由>)
+
+## Design review (api-design-review)
+実行結果 summary (6 観点の検出有無 / 反映済み / user 判断済み / 残置 follow-up)
+
+## 主要な設計判断
+| 判断項目 | 決定 | 根拠 |
+
+## 実装ステップ (実行順)
+### Step 1: ...
+- 新規 / 編集ファイル + 内容概要
+
+## DoD と実装ステップの対応
+| DoD 項目 | 対応 Step | 検証方法 |
+
+## 想定される落とし穴
+
+## 検証手順 (実装完了後)
+
+## 次のチケットへの引き継ぎ (スコープ外)
+
+## 参照
+- ticket URL / docs のパス / repo 規約 digest の原本 path
+```

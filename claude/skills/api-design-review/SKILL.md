@@ -185,7 +185,7 @@ When the skill completes, present the following to the user as the deliverable:
 - Requires user judgment (trade-offs presented): Y items → ...
 ```
 
-When handing off to the main agent / dev-orchestrator / Plan agent / tech-docs-writer / notion-ticket-plan, writing the above out to a state file keeps the brief lightweight when a subagent restarts (a state-file-referencing brief).
+When handing off to the main agent / dev-cycle / Plan agent / tech-docs-writer, writing the above out to a state file keeps the brief lightweight when a subagent restarts (a state-file-referencing brief).
 
 ## What this skill does not do
 
@@ -196,6 +196,6 @@ When handing off to the main agent / dev-orchestrator / Plan agent / tech-docs-w
 ## Related artifacts
 
 - Everyday check (lightweight version): CLAUDE.md's 「判断と質問の作法」section
-- Related skills: `tech-docs-writer` (passes through this skill internally when drafting an ADR / Design Doc), `notion-ticket-plan` (passes through this skill when analyzing a ticket / drafting a plan), `ddd-clean-architecture` (layer boundaries / dependency direction, related to this skill's perspective 1), `code-refactor-advisor` (implementation-facing refactor candidates, the implementation-pass version of this skill)
+- Related skills / agents: `tech-docs-writer` (passes through this skill internally when drafting an ADR / Design Doc), `dev-cycle` (passes through this skill in its design-review stage), `ddd-clean-architecture` (layer boundaries / dependency direction, related to this skill's perspective 1), `code-refactor-advisor` (implementation-facing refactor candidates, the implementation-pass version of this skill)
 - Handoff to the main agent: a state-file-referencing brief
-- Built into the agent side: the `dev-orchestrator` agent's plan phase passes through this skill (already integrated)
+- Built into the agent side: the `dev-cycle` agent's design-review stage passes through this skill (already integrated)

@@ -31,7 +31,7 @@ Invoking `work-intake` is the caller's responsibility (the user / main session f
 
 | Stage | What is invoked | Kind |
 |---|---|---|
-| Implementation-plan derivation | In-house (loop-mode). In interactive mode, using `notion-ticket-plan` is also an option | skill (interactive mode only) |
+| Implementation-plan derivation | In-house (common to both modes; interactive mode adds ExitPlanMode approval) | — |
 | Design review (upstream) | `api-design-review` | skill |
 | Implementation (initial setup / Go) | `go-bootstrap` | skill |
 | Implementation (feature work / Go DDD+TDD) | `go-feature-tdd` | subagent |
@@ -61,7 +61,7 @@ For other languages / frameworks, handle the implementation stage with your own 
 ### Implementation-plan derivation
 
 **loop-mode**:
-- Do not call `notion-ticket-plan`. Derive the plan yourself (reuse the shape of `notion-ticket-plan` SKILL.md Steps 1-6: ticket fetch → literal cross-check of DoD/existing docs → related-docs exploration → design via the Plan agent → direct confirmation of key files → write out to the state file)
+- Derive the plan yourself: ticket fetch → literal cross-check of DoD/existing docs → related-docs exploration (Explore subagents, max 3 in parallel) → design via the Plan agent → direct confirmation of key files → write out to the state file
 - **Impact analysis**: enumerate the files / symbols the plan will change, grep their referencing call sites, and classify into three buckets:
   - **impact-A**: new files / leaf areas only (nothing existing references them)
   - **impact-B**: usage added to existing code (e.g. new call sites of a new element)
@@ -72,10 +72,10 @@ For other languages / frameworks, handle the implementation stage with your own 
 - Do not wait for approval via ExitPlanMode (autonomous default)
 
 **Interactive mode**:
-- As before, launch the `notion-ticket-plan` skill via the `Skill` tool and wait until the plan file is written and ExitPlanMode is called. After user approval, Read the plan file and summarize the "implementation approach" yourself
+- Derive in-house using the same method as loop-mode (including impact analysis and the DoD self-check), write the plan to the state file, then **get approval via ExitPlanMode** before moving on (subsequent interactive-mode approval points unchanged)
 
 **Common**:
-- The state file is `<ticket-slug>.md` in the per-project plans dir (reuse the `notion-ticket-plan` Step 6 template structure = Context / confirmed decisions / scope decisions / spec deviations / Phase 2+ migration / Carryover / documentation updates / Current state / design review / Key design decisions / implementation steps / DoD mapping / anticipated pitfalls / verification steps / handoff / references)
+- The state file is `<ticket-slug>.md` in the per-project plans dir (its structure takes the "state file template" at the end of this file as the SoT)
 
 **Boundary report**:
 ```
@@ -95,7 +95,7 @@ If the plan includes a new service / new RPC / new enum / new ACL model / new AD
 - Launch `api-design-review` via the `Skill` tool
 - The skill enumerates overlooked considerations across 6 axes (client abstraction / both read & write sides of ACL / forward-compat / edge cases / SoT consistency / memory conventions)
 - If overlooked considerations are found, get the user's judgment via AskUserQuestion → reflect into the plan
-- Append the result summary to the plan file's "## Design review (api-design-review)" section (the `notion-ticket-plan` skill already provides the section)
+- Append the result summary to the plan file's "## Design review (api-design-review)" section (the state file template has this section)
 
 **Skip criterion**: if "what must be implemented to satisfy the DoD" involves a new contract / design decision, pass through; if not, skip. When skipping, state "api-design-review skip (reason: ...)" in the boundary report.
 
@@ -283,7 +283,6 @@ Results:
 
 ```
 dev-cycle (this)
-  ├── notion-ticket-plan (skill, interactive mode only)  ← implementation-plan derivation
   ├── api-design-review (skill)                          ← design review (upstream; new contract / ADR / ACL model)
   ├── go-bootstrap (skill)                               ← implementation (initial setup)
   ├── go-feature-tdd (subagent)                          ← implementation (feature work)
@@ -298,6 +297,72 @@ dev-cycle (this)
 
 Each tool can be invoked independently. If the user says "redo just the self-review" or similar, call that skill directly.
 
-## Out of scope (as of Slice 2e)
+## Out of scope (as of Slice 2d)
 
-- Dismantling notion-ticket-plan (its use in interactive mode continues) → Slice 2d
+- /loop-ification (work-intake poll driver, loop integration of completion/escalation notifications) → SP4
+
+## state file template
+
+The structure of the state file (`<ticket-slug>.md` in the per-project plans dir). It is the write target of implementation-plan derivation and the SoT for context bootstrap by subsequent agents / on resume:
+
+```
+# <Phase> / <Ticket ID>: <title> — implementation plan
+
+## Context
+Why this change is needed (DoD-based)
+
+## Confirmed decisions
+Enumerate the confirmed literals. Reference source on reimplementation; used by subsequent agents for context bootstrap. Put permanent design decisions here.
+| Decision item | Adopted literal | Basis (DoD / docs) |
+
+## Scope decisions (intentional limits derived from the DoD)
+Scope limits the DoD explicitly states as "stub only is OK" / "implement in a later ticket". Not deviations, so don't flag them in the PR description.
+| Scope-limit item | DoD basis | Follow-up ticket |
+
+## Spec deviations (flagged in the PR description, reviewer-check targets)
+Only "permanent structural choices" where the implementation diverges from DoD / docs. Keep only the items you want the reviewer to check.
+| # | Deviation | Remediation policy (spec update / keep / revisit later) |
+
+## Phase 2+ migration (turned into follow-up tickets)
+Provisional implementations slated for future refactor. Recorded as follow-ups, not implemented in this PR.
+| Provisional implementation | Target form | Follow-up ticket / link |
+
+## Carryover (existing issues, separate ticket)
+Existing issues outside scope that this PR won't touch but are worth keeping in view.
+| Existing issue | Impact scope | Handling ticket |
+
+## Documentation updates (Tier classification)
+Tier-based organization of the contradictions extracted from the docs cross-check, and how they're handled in this ticket.
+| Target doc | Fix content | Tier (1/2/3/4) | Handling (same commit / same PR / separate ticket) |
+
+## Impact scope
+The impact-A/B/C classification and the "target symbol → referencing site" mapping table (output of the impact analysis in implementation-plan derivation)
+
+## Current state (updated as you go)
+Progress state. So a subsequent agent / resume can context-bootstrap with a single Read.
+- Stage X done / Y in progress (corresponding to wip commits)
+- Latest commit: <hash> / test-fix attempt count: <n>/3
+- Pending questions / escalation stop (<stage> / <reason>)
+
+## Design review (api-design-review)
+Result summary (detection status across the 6 perspectives / reflected / user-judged / remaining follow-up)
+
+## Key design decisions
+| Decision item | Decision | Basis |
+
+## Implementation steps (in execution order)
+### Step 1: ...
+- New / edited files + content overview
+
+## DoD-to-implementation-step mapping
+| DoD item | Corresponding Step | Verification method |
+
+## Anticipated pitfalls
+
+## Verification steps (after implementation)
+
+## Handoff to the next ticket (out of scope)
+
+## References
+- ticket URL / docs paths / original path of the repo conventions digest
+```
