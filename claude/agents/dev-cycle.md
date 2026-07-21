@@ -55,7 +55,7 @@ For other languages / frameworks, handle the implementation stage with your own 
    - `internal/{domain,application,adapters}/` present → is it DDD+Clean Architecture?
    - number of existing commits → is initial setup needed?
 5. **Read the target repo's conventions and design docs**: enumerate mechanically via glob (only what exists) the target repo's CLAUDE.md / rules directory / lint configs (.golangci.yaml etc.) / design documents under docs (docs/design, docs/adr etc.), Read them, and record a **conventions digest (key points + list of source paths)** in the state file. From then on, delegation prompts to implementation subagents must include this digest + source paths, while the reviewer (review-orchestrator) receives **only the path list** (it reads the originals itself, so no summarization bias from the digest enters review)
-6. **If an existing plan file exists (per-project plans dir `<ticket-slug>.md` — see "Where to store plan / session state files" in CLAUDE.md), Read it and inherit the state**. If not, create it in the next stage. On resume, mechanically identify the completed stages from the `wip(<stage>):` commits in the worktree's `git log`, and continue from the next incomplete stage
+6. **If an existing plan file exists (per-project plans dir `<ticket-slug>.md` — see "Where to store plan / session state files" in CLAUDE.md), Read it and inherit the state**. If not, create it in the next stage. On resume, mechanically identify the completed stages from the `wip(<stage>):` commits in the worktree's `git log`, and continue from the next incomplete stage. If resuming after an escalation stop and the worktree is no longer present locally, check out the WIP branch recorded in the state file from origin and recreate the worktree
 7. **Record the absolute path (the original repo cwd) at this point** — EnterWorktree in the later implementation stage changes cwd to `.claude/worktrees/<name>`, which changes the auto-resolved per-project plans dir; always write to the state file using the absolute path fixed in this Step 7
 
 ### Implementation-plan derivation
@@ -215,7 +215,7 @@ During implementation, follow the steps written in the plan. Always run the chec
 
 ### escalation procedure (loop-mode)
 
-When an escalation condition (iron rules 2/3) is hit, run the following in order, then stop:
+When an escalation condition (iron rules 2/3) is hit **in loop-mode**, execute the following in order before stopping (in interactive mode, seek the user's judgment via AskUserQuestion as before):
 
 1. Run `retrospect` (the stop event is the highest-priority insight source — an existing provision of the retrospect stage)
 2. **WIP preservation**: commit the worktree's uncommitted changes as `wip(<stage>): escalation stop`, and **push the cycle's working branch as-is** (do not create a draft PR; basis: the escalation provision in CLAUDE.md's "loop-mode" section). If no branch has been created yet (escalation before implementation), skip this step
@@ -316,7 +316,7 @@ Enumerate the confirmed literals. Reference source on reimplementation; used by 
 | Decision item | Adopted literal | Basis (DoD / docs) |
 
 ## Scope decisions (intentional limits derived from the DoD)
-Scope limits the DoD explicitly states as "stub only is OK" / "implement in a later ticket". Not deviations, so don't flag them in the PR description.
+Scope limits the DoD explicitly states as "stub only is OK" / "implement in a follow-up ticket". Not deviations, so don't flag them in the PR description.
 | Scope-limit item | DoD basis | Follow-up ticket |
 
 ## Spec deviations (flagged in the PR description, reviewer-check targets)

@@ -53,7 +53,7 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
    - `internal/{domain,application,adapters}/` 有無 → DDD+Clean Architecture か
    - 既存 commit 数 → 初回セットアップが必要か
 5. **repo 規約・設計 docs を読み込む**: target repo の CLAUDE.md / rules ディレクトリ / lint 設定 (.golangci.yaml 等) / docs 内の設計文書 (docs/design / docs/adr 等) を glob で機械的に列挙し (存在するもののみ)、Read して **規約 digest (要点 + 原本 path 一覧)** を state file に記録する。以後、実装 subagent への委譲 prompt にはこの digest + 原本 path を含め、reviewer (review-orchestrator) には **path 一覧のみ**を渡す (原本を自分で読ませ、digest の要約バイアスを入れない)
-6. **既存 plan ファイル (per-project plans dir の `<ticket-slug>.md`、CLAUDE.md「plan / session state file の保存先」参照) が存在すれば Read して状態を引き継ぐ**。存在しない場合は次工程で新規作成。再開時は worktree の `git log` にある `wip(<工程>):` commit から完了済み工程を機械的に特定し、次の未完工程から続行する
+6. **既存 plan ファイル (per-project plans dir の `<ticket-slug>.md`、CLAUDE.md「plan / session state file の保存先」参照) が存在すれば Read して状態を引き継ぐ**。存在しない場合は次工程で新規作成。再開時は worktree の `git log` にある `wip(<工程>):` commit から完了済み工程を機械的に特定し、次の未完工程から続行する。escalation 停止からの再開で worktree が手元にない場合は、state file に記録された WIP branch を origin から checkout して worktree を再作成する
 7. **この時点の絶対パス (元repoのcwd) を記録する** — 後続の実装工程でEnterWorktreeするとcwdが `.claude/worktrees/<name>` に変わり、per-project plans dirの自動解決結果も変わるため、state fileへの書き込みは常にこのStep 7で確定した絶対パスを明示指定する
 
 ### 実装計画導出
@@ -213,7 +213,7 @@ plan を読み、実装内容のタイプを判定:
 
 ### escalation 手順 (loop-mode)
 
-escalation 条件 (鉄則 2/3) に当たったら、以下を順に実行してから停止する:
+loop-mode で escalation 条件 (鉄則 2/3) に当たったら、以下を順に実行してから停止する (対話 mode では従来通り AskUserQuestion で user 判断を仰ぐ):
 
 1. `retrospect` を実行する (停止事象は最優先の insight 源 — retrospect stage の既存規定)
 2. **WIP 保全**: worktree の未 commit 変更を `wip(<工程>): escalation 停止` で commit し、**cycle の作業 branch をそのまま push する** (draft PR は作らない。根拠: CLAUDE.md「loop-mode」節の escalation 既定)。branch 未作成 (実装前の escalation) なら本 step は skip
