@@ -27,6 +27,21 @@ work-intake: spec contract 未充足のため skip
 - **再コメント抑止 (idempotency)**: 投稿前に `notion-get-comments` で既存コメントを確認し、既に work-intake の skip コメントが付いていて spec 本文がその後未更新なら再コメントしない (skip 判定の報告のみ行う)。loop 化した際に poll のたびコメントが積もるのを防ぐ
   - 「未更新」の判定: 最新の work-intake skip コメント (冒頭の固定 prefix で同定) の投稿時刻と page の `last_edited_time` を比較し、後者が新しい場合のみ再コメント可。`last_edited_time` は property 変更でも動くため誤検知は再コメント側に倒れる (保守的で許容)
 
+## escalation コメント (dev-cycle の escalation 手順 Step 3 から使用)
+
+- `notion-create-comment` で投稿する。形式:
+
+```
+dev-cycle: escalation 停止 (<工程>)
+- 理由: <停止理由 1-2 行>
+- WIP branch: <branch 名 / なし>
+- state file: <path>
+- 再開: work-intake に本 ticket URL を渡すと resume mode で再開
+```
+
+- status は変更しない (InProgress のまま = resume 対象として残す)
+- secret / spec 本文を転記しない
+
 ## 注意
 
 - ticket 本文の編集 (`notion-update-page` での本文変更) はしない。触って良いのは status プロパティとコメントのみ

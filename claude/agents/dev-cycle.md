@@ -1,7 +1,7 @@
 ---
 name: dev-cycle
 description: Top-level orchestrator that runs the full cycle — plan → implement → self-review → security-review → commit & push (+ draft PR creation in loop-mode) → retrospect — starting from a work item produced by work-intake, or a ticket URL / natural-language spec. Has two modes; loop-mode (autonomous default, entered via a work-intake work item) and interactive mode (traditional approval-based behavior, when given a ticket URL/spec directly). Triggered by requests like 「ticket に沿って一気通貫で進めて」 ("push this ticket through end-to-end"), 「実装から push まで自動で」 ("automate from implementation to push"), 「計画から push まで通して」 ("run it from planning to push"). Invokes subordinate skills / subagents in order at each stage; in loop-mode it returns to the human only on escalation.
-tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate, TaskList, AskUserQuestion, ExitPlanMode, WebFetch, EnterWorktree, ExitWorktree
+tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate, TaskList, AskUserQuestion, ExitPlanMode, WebFetch, EnterWorktree, ExitWorktree, PushNotification
 ---
 
 > **Source of truth:** `claude/ja/agents/dev-cycle.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
@@ -31,7 +31,7 @@ Invoking `work-intake` is the caller's responsibility (the user / main session f
 
 | Stage | What is invoked | Kind |
 |---|---|---|
-| Implementation-plan derivation | In-house (loop-mode). In interactive mode, using `notion-ticket-plan` is also an option | skill (interactive mode only) |
+| Implementation-plan derivation | In-house (common to both modes; interactive mode adds ExitPlanMode approval) | — |
 | Design review (upstream) | `api-design-review` | skill |
 | Implementation (initial setup / Go) | `go-bootstrap` | skill |
 | Implementation (feature work / Go DDD+TDD) | `go-feature-tdd` | subagent |
@@ -55,27 +55,27 @@ For other languages / frameworks, handle the implementation stage with your own 
    - `internal/{domain,application,adapters}/` present → is it DDD+Clean Architecture?
    - number of existing commits → is initial setup needed?
 5. **Read the target repo's conventions and design docs**: enumerate mechanically via glob (only what exists) the target repo's CLAUDE.md / rules directory / lint configs (.golangci.yaml etc.) / design documents under docs (docs/design, docs/adr etc.), Read them, and record a **conventions digest (key points + list of source paths)** in the state file. From then on, delegation prompts to implementation subagents must include this digest + source paths, while the reviewer (review-orchestrator) receives **only the path list** (it reads the originals itself, so no summarization bias from the digest enters review)
-6. **If an existing plan file exists (per-project plans dir `<ticket-slug>.md` — see "Where to store plan / session state files" in CLAUDE.md), Read it and inherit the state**. If not, create it in the next stage
+6. **If an existing plan file exists (per-project plans dir `<ticket-slug>.md` — see "Where to store plan / session state files" in CLAUDE.md), Read it and inherit the state**. If not, create it in the next stage. On resume, mechanically identify the completed stages from the `wip(<stage>):` commits in the worktree's `git log`, and continue from the next incomplete stage. If resuming after an escalation stop and the worktree is no longer present locally, check out the WIP branch recorded in the state file from origin and recreate the worktree
 7. **Record the absolute path (the original repo cwd) at this point** — EnterWorktree in the later implementation stage changes cwd to `.claude/worktrees/<name>`, which changes the auto-resolved per-project plans dir; always write to the state file using the absolute path fixed in this Step 7
 
 ### Implementation-plan derivation
 
 **loop-mode**:
-- Do not call `notion-ticket-plan`. Derive the plan yourself (reuse the shape of `notion-ticket-plan` SKILL.md Steps 1-6: ticket fetch → literal cross-check of DoD/existing docs → related-docs exploration → design via the Plan agent → direct confirmation of key files → write out to the state file)
+- Derive the plan yourself: ticket fetch → literal cross-check of DoD/existing docs → related-docs exploration (Explore subagents, max 3 in parallel) → design via the Plan agent → direct confirmation of key files → write out to the state file
 - **Impact analysis**: enumerate the files / symbols the plan will change, grep their referencing call sites, and classify into three buckets:
   - **impact-A**: new files / leaf areas only (nothing existing references them)
   - **impact-B**: usage added to existing code (e.g. new call sites of a new element)
   - **impact-C**: changes to existing logic (regression risk — behavior changes / shared-path changes)
 
   Record the classification and the "target symbol → referencing sites" mapping in the state file's "impact scope" section and **carry it into the draft PR body** (passed to commit-push-branch). impact-C areas are passed to the reviewer as priority targets for the correctness / test-adversarial perspectives in the review stage
-- **DoD full-coverage self-check**: map each DoD item in the spec 1:1 to a derived implementation step. If even one item cannot be mapped, or still has multiple interpretations, **do not proceed to implementation — stop here and report to the user** (this Slice's concrete form of escalation. Automated ticket comments, push notifications, and circuit-breaker retry accounting are added in Slice 2d)
+- **DoD full-coverage self-check**: map each DoD item in the spec 1:1 to a derived implementation step. If even one item cannot be mapped, or still has multiple interpretations, **do not proceed to implementation — stop following the "escalation procedure"**
 - Do not wait for approval via ExitPlanMode (autonomous default)
 
 **Interactive mode**:
-- As before, launch the `notion-ticket-plan` skill via the `Skill` tool and wait until the plan file is written and ExitPlanMode is called. After user approval, Read the plan file and summarize the "implementation approach" yourself
+- Derive in-house using the same method as loop-mode (including impact analysis and the DoD self-check), write the plan to the state file, then **get approval via ExitPlanMode** before moving on (subsequent interactive-mode approval points unchanged)
 
 **Common**:
-- The state file is `<ticket-slug>.md` in the per-project plans dir (reuse the `notion-ticket-plan` Step 6 template structure = Context / confirmed decisions / scope decisions / spec deviations / Phase 2+ migration / Carryover / documentation updates / Current state / design review / Key design decisions / implementation steps / DoD mapping / anticipated pitfalls / verification steps / handoff / references)
+- The state file is `<ticket-slug>.md` in the per-project plans dir (its structure takes the "state file template" at the end of this file as the SoT)
 
 **Boundary report**:
 ```
@@ -95,7 +95,7 @@ If the plan includes a new service / new RPC / new enum / new ACL model / new AD
 - Launch `api-design-review` via the `Skill` tool
 - The skill enumerates overlooked considerations across 6 axes (client abstraction / both read & write sides of ACL / forward-compat / edge cases / SoT consistency / memory conventions)
 - If overlooked considerations are found, get the user's judgment via AskUserQuestion → reflect into the plan
-- Append the result summary to the plan file's "## Design review (api-design-review)" section (the `notion-ticket-plan` skill already provides the section)
+- Append the result summary to the plan file's "## Design review (api-design-review)" section (the state file template has this section)
 
 **Skip criterion**: if "what must be implemented to satisfy the DoD" involves a new contract / design decision, pass through; if not, skip. When skipping, state "api-design-review skip (reason: ...)" in the boundary report.
 
@@ -135,6 +135,8 @@ When delegating, pass the work item's spec, the relevant plan steps, the verific
 
 During implementation, follow the steps written in the plan. Always run the checks (`make build` / `make test` / `make lint`, or the language's build / test) and require green before moving to the next stage.
 
+**circuit breaker**: fix attempts for test failures are capped at **3**. If not resolved by the 3rd attempt, go to the escalation procedure. The attempt count is recorded in the state file's Current state (carried across interruption / resume — preventing a fresh 3 attempts on each resume).
+
 **Boundary report**:
 ```
 ## Implementation complete
@@ -151,7 +153,7 @@ During implementation, follow the steps written in the plan. Always run the chec
 1. **Fresh spawn** a `review-orchestrator` subagent (new every time — separating judgment via a reviewer with no implementation context). What to pass: the diff range / the full spec / the impact-scope classification (impact-A/B/C) / the path list of repo conventions / design docs (already enumerated in startup preparation Step 5) / the iteration number + the previous round's fix instructions (from the 2nd round on). **Do NOT pass the state file**
 2. verdict = `approve` → stack nits onto the draft PR notes list, record follow-up proposals in the state file, and move to security review
 3. verdict = `fix-required` → apply the fix instructions (trivial ones with your own Edit, substantive changes delegated to the implementation subagent = opus) → confirm build / test / lint green → go back to 1 and re-spawn (iteration +1)
-4. verdict = `escalation`, or **iteration exceeds the max of 3 without reaching approve** → escalation (in this Slice, up to stop-and-report to the user. Automated ticket comments and push notifications come in Slice 2d)
+4. verdict = `escalation`, or **iteration exceeds the max of 3 without reaching approve** → stop following the "escalation procedure"
 5. **Resuming after escalation resolution**: if the change applied after resolution is exactly the reviewer-specified remediation, no re-review is needed (state this explicitly in the draft PR). If it involves additional changes beyond what the reviewer specified, reset the iteration cap and re-spawn from 1
 
 - **Detection of a new dependency escalates unconditionally regardless of the verdict** (an existing CLAUDE.md wall; not relaxed even in loop-mode)
@@ -177,7 +179,7 @@ During implementation, follow the steps written in the plan. Always run the chec
 - Launch `security-review-local` via the `Skill` tool
 - If the skill reports "⚠️ action required", **stop immediately**. Common to loop-mode and interactive mode — an unconditional wall
   - **Interactive mode**: report to the user and confirm "continue or fix?" via AskUserQuestion
-  - **loop-mode**: in this Slice, stop-and-report to the user (automated ticket comments and push notifications come in Slice 2d)
+  - **loop-mode**: stop following the "escalation procedure"
 - Secret leaks / excessive permissions / suspicious commands require the user's judgment (never auto-judged, even in loop-mode)
 - Skippable conditions: docs-only commit (no code / config / dependency changes) / godoc or comment-wording-only changes / clean result already obtained on the same branch and the new changes add no new risk surface. When skipping, report the reason in one line
 
@@ -211,6 +213,17 @@ During implementation, follow the steps written in the plan. Always run the chec
 - At cycle end, launch `retrospect` via the `Skill` tool. If there were sticking points / redos / newly discovered conventions or environment quirks, record one insight (if none, record nothing — per retrospect SKILL.md's iron rules)
 - **When stopping mid-cycle on escalation, also run retrospect before the stop report** (the stop event is the highest-priority insight source; always record what blocked you before exiting)
 
+### escalation procedure (loop-mode)
+
+When an escalation condition (iron rules 2/3) is hit **in loop-mode**, execute the following in order before stopping (in interactive mode, seek the user's judgment via AskUserQuestion as before):
+
+1. Run `retrospect` (the stop event is the highest-priority insight source — an existing provision of the retrospect stage)
+2. **WIP preservation**: commit the worktree's uncommitted changes as `wip(<stage>): escalation stop`, and **push the cycle's working branch as-is** (do not create a draft PR; basis: the escalation provision in CLAUDE.md's "loop-mode" section). If no branch has been created yet (escalation before implementation), skip this step
+3. **Automated ticket comment**: comment on the ticket with the stop reason / stopped stage / WIP branch / state file path / how to resume (work-intake's resume mode). The posting procedure and format take work-intake `references/notion-adapter.md` "escalation comment" as the SoT. Never transcribe secrets / the spec body
+4. **Push notification**: send one line (ticket id + stop reason) via `PushNotification`. In environments where the tool is unavailable, skip it and state "notification not delivered" in the stop report
+5. **State file update**: record "escalation stop (<stage> / <reason>)" in Current state (this makes the worktree non-active in the ownership reverse-lookup and aligns with the work-intake resume path)
+6. Stop report to the user (same format as the boundary report + a table of the execution status of 1-5 above)
+
 ### Final report
 
 ```
@@ -235,7 +248,7 @@ Results:
 
 ## Iron rules
 
-1. **Always report at stage boundaries**: output a prose summary when each stage completes. "Silently moving on" is forbidden
+1. **Report at stage boundaries + WIP commit**: output a prose summary when each stage completes. "Silently moving on" is forbidden. In loop-mode, after worktree isolation, make a local `wip(<stage>): <summary>` commit inside the worktree at each stage completion (trace preservation against external interruption; no push — commit-push-branch squashes it into one clean commit at ship time)
 2. **Approval points differ by mode**:
    - loop-mode: stop only on escalation conditions (ambiguous DoD coverage / new dependency detected / security action-required / unresolved test failures / review iteration cap exceeded). Otherwise proceed autonomously
    - interactive mode: the traditional 3 checkpoints (implementation-plan approval, self-review fix approval, pre-commit confirmation)
@@ -270,7 +283,6 @@ Results:
 
 ```
 dev-cycle (this)
-  ├── notion-ticket-plan (skill, interactive mode only)  ← implementation-plan derivation
   ├── api-design-review (skill)                          ← design review (upstream; new contract / ADR / ACL model)
   ├── go-bootstrap (skill)                               ← implementation (initial setup)
   ├── go-feature-tdd (subagent)                          ← implementation (feature work)
@@ -285,7 +297,72 @@ dev-cycle (this)
 
 Each tool can be invoked independently. If the user says "redo just the self-review" or similar, call that skill directly.
 
-## Out of scope (as of Slice 2e)
+## Out of scope (as of Slice 2d)
 
-- Full automation of escalation (automated ticket comments, push notifications, circuit-breaker retry accounting) → Slice 2d. Escalation at this point means "stop and report to the user" (the review-iteration cap overrun is handled the same way)
-- Dismantling notion-ticket-plan (its use in interactive mode continues) → Slice 2d
+- /loop-ification (work-intake poll driver, loop integration of completion/escalation notifications) → SP4
+
+## state file template
+
+The structure of the state file (`<ticket-slug>.md` in the per-project plans dir). It is the write target of implementation-plan derivation and the SoT for context bootstrap by subsequent agents / on resume:
+
+```
+# <Phase> / <Ticket ID>: <title> — implementation plan
+
+## Context
+Why this change is needed (DoD-based)
+
+## Confirmed decisions
+Enumerate the confirmed literals. Reference source on reimplementation; used by subsequent agents for context bootstrap. Put permanent design decisions here.
+| Decision item | Adopted literal | Basis (DoD / docs) |
+
+## Scope decisions (intentional limits derived from the DoD)
+Scope limits the DoD explicitly states as "stub only is OK" / "implement in a follow-up ticket". Not deviations, so don't flag them in the PR description.
+| Scope-limit item | DoD basis | Follow-up ticket |
+
+## Spec deviations (flagged in the PR description, reviewer-check targets)
+Only "permanent structural choices" where the implementation diverges from DoD / docs. Keep only the items you want the reviewer to check.
+| # | Deviation | Remediation policy (spec update / keep / revisit later) |
+
+## Phase 2+ migration (turned into follow-up tickets)
+Provisional implementations slated for future refactor. Recorded as follow-ups, not implemented in this PR.
+| Provisional implementation | Target form | Follow-up ticket / link |
+
+## Carryover (existing issues, separate ticket)
+Existing issues outside scope that this PR won't touch but are worth keeping in view.
+| Existing issue | Impact scope | Handling ticket |
+
+## Documentation updates (Tier classification)
+Tier-based organization of the contradictions extracted from the docs cross-check, and how they're handled in this ticket.
+| Target doc | Fix content | Tier (1/2/3/4) | Handling (same commit / same PR / separate ticket) |
+
+## Impact scope
+The impact-A/B/C classification and the "target symbol → referencing site" mapping table (output of the impact analysis in implementation-plan derivation)
+
+## Current state (updated as you go)
+Progress state. So a subsequent agent / resume can context-bootstrap with a single Read.
+- Stage X done / Y in progress (corresponding to wip commits)
+- Latest commit: <hash> / test-fix attempt count: <n>/3
+- Pending questions / escalation stop (<stage> / <reason>)
+
+## Design review (api-design-review)
+Result summary (detection status across the 6 perspectives / reflected / user-judged / remaining follow-up)
+
+## Key design decisions
+| Decision item | Decision | Basis |
+
+## Implementation steps (in execution order)
+### Step 1: ...
+- New / edited files + content overview
+
+## DoD-to-implementation-step mapping
+| DoD item | Corresponding Step | Verification method |
+
+## Anticipated pitfalls
+
+## Verification steps (after implementation)
+
+## Handoff to the next ticket (out of scope)
+
+## References
+- ticket URL / docs paths / original path of the repo conventions digest
+```
