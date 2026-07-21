@@ -50,3 +50,9 @@ project context 上「適用不可」と判断して resolve するパターン:
 実装変更後、変更 file 内の全コメントを疑って再 read。strong claim を grep (`grep -nE "(strictly|preserves|guarantees|ensures|always|never|returns|panics)"`)、各 claim を impl の literal 動作と byte-level で照合 (例: "strictly under X" は `<` か `<=` か / "preserves Y" は upstream が Y を trim していないか)。乖離は doc を impl に合わせるか、設計意図に基づいて impl を doc に合わせる。
 
 例: PR #30 C11/C12 — `carryOverlap` の "kept strictly under overlap" は impl が equality 許容なので「at most overlap」に修正、`joinUnits` の "preserves original surface text" は SplitSentences が whitespace を trim しているので「reproduces sentence content but not byte-for-byte identical」に修正。
+
+## 機械 check 4: 外部定数の権威検証 (hardcoded external constants)
+
+差分に外部由来の hardcoded 定数 (LLM pricing / model ID / API rate limit / 第三者サービスの定数) が含まれる場合、port 元・memory・既存コードとの一致確認で済ませず、**authoritative source で数値そのものを検証**する。Anthropic の pricing / model ID の SoT は claude-api skill (「LLM pricing は memory で答えない」trigger をコードレビュー文脈でも適用)。
+
+例: ccwatch から port した Opus レート $15/$75 は port 元と byte 一致だったが、現行レートは $5/$25 で 3x 過大計上 (2026-07-17 FB。「port 元と一致」は正当性の根拠にならない)。

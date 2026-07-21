@@ -187,7 +187,7 @@ skill 完了時、以下を成果物として user に提示:
 - user 判断要 (trade-off 提示): Y 件 → ...
 ```
 
-main agent / dev-orchestrator / Plan agent / tech-docs-writer / notion-ticket-plan に引き継ぐ場合、上記を state-file に書き出すと subagent 再起動時の brief が薄くなる (state-file 参照型 brief)。
+main agent / dev-cycle / Plan agent / tech-docs-writer に引き継ぐ場合、上記を state-file に書き出すと subagent 再起動時の brief が薄くなる (state-file 参照型 brief)。
 
 ## 適用しないこと
 
@@ -198,6 +198,6 @@ main agent / dev-orchestrator / Plan agent / tech-docs-writer / notion-ticket-pl
 ## 関連 artifact
 
 - 日常 check (軽量版): CLAUDE.md「判断と質問の作法」
-- 関連 skill: `tech-docs-writer` (ADR / Design Doc 起票時、本 skill を内部で通過)、`notion-ticket-plan` (ticket 解析 / plan 起票時、本 skill 通過)、`ddd-clean-architecture` (層境界・依存方向、本 skill 観点 1 と関連)、`code-refactor-advisor` (実装面の refactor 候補、本 skill の implementation pass version)
+- 関連 skill / agent: `tech-docs-writer` (ADR / Design Doc 起票時、本 skill を内部で通過)、`dev-cycle` (設計 review stage で本 skill 通過)、`ddd-clean-architecture` (層境界・依存方向、本 skill 観点 1 と関連)、`code-refactor-advisor` (実装面の refactor 候補、本 skill の implementation pass version)
 - 主 agent への引き継ぎ: state-file 参照型 brief
-- agent 側組み込み: `dev-orchestrator` agent の plan phase で本 skill を通過 (組み込み済)
+- agent 側組み込み: `dev-cycle` agent の設計 review stage で本 skill を通過 (組み込み済)
