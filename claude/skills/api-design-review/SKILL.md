@@ -119,9 +119,13 @@ grep -rnE "<old-name-pattern>" docs/ apis/ internal/ cmd/ cli/
 
 Include the resulting hit list in the design output to finalize the scope of changes.
 
-**Check phrasing**: "What condition makes grepping for the old name return 0 hits?" / "How many places will the new name be added to?"
+**Name grep is necessary but not sufficient** — when the design target describes a **process flow** (producer / worker, etc.), also read through the related Accepted ADR / design doc's **flow / lifecycle prose** (which row is created by whom and when, the dedup method, the failure-time observation boundary) and check that the design doesn't contradict it. Grepping field / enum names catches naming overlap but can't detect contradictions between the ADR's prose flow (e.g. "the worker INSERTs on receive", "content-based dedup") and the design. When a related ADR is Accepted, compare its core decisions against the design's flow one by one and check they aren't inverted.
 
-**Past case**: the old `accessScopes` surface was left behind in the docs §11.2 SDK example, discovered at turn 4 → should have grepped during design to grasp every location up front
+**Check phrasing**: "What condition makes grepping for the old name return 0 hits?" / "How many places will the new name be added to?" / "Does the design's flow match the related Accepted ADR's flow / lifecycle description (who creates what and when · dedup · observation boundary)?"
+
+**Past case (naming)**: the old `accessScopes` surface was left behind in the docs §11.2 SDK example, discovered at turn 4 → should have grepped during design to grasp every location up front
+
+**Past case (flow)**: a ticket's producer/worker flow (create status=PENDING before enqueue / explicit dedup / an idempotency key in the message) was the exact opposite of the related Accepted ADR's core decisions (the worker INSERTs on receive / content-based dedup / an enqueue failure is observed outside the DB); the `idempotency_key` field-name grep caught the naming overlap but the prose-flow contradiction was missed and only surfaced at the review-iteration cap → escalation; name matching alone wasn't enough — the ADR's flow prose should have been cross-checked too
 
 ### 6. Compliance with memory conventions (check every time)
 
