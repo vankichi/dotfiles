@@ -25,6 +25,8 @@ ready flag を立てるのは人間のみ。
 - [ ] 制約セクションに新規依存の可否が明記されている
 - [ ] 対象 repo が実在する path / URL で特定できる
 - [ ] 設計の未決事項 (「A か B か検討」等) が残っていない — 残っている場合 ready 不可
+- [ ] DoD に example / test 表がある場合、各 input→expected を設計本体の算法に 1 行ずつ通して矛盾がない (non-goals との整合を含む)
+- [ ] DoD の期待値が opaque (hash / checksum / 符号化 blob 等、目視比較不能) の場合、算法出力からの再計算と一致する — 不一致の golden は機械的に満たせない DoD であり ready 不可
 
 ## ready の意味
 
@@ -32,6 +34,7 @@ ready flag を立てるのは人間のみ。
 - ready を立てられるのは人間のみ。write-spec は提案まで
 - **ready flag の SoT は source 側の DB property** (Notion の status 等)。spec 本文への ready 記載は不要で、書かれていても参照扱い (stale し得る)
 - ready 後の spec 変更は契約変更 — dev-cycle が着手済みの場合は escalation する
+- **ready gate は自律 pipeline の入口 (work-intake) にのみ適用する**。対話 mode (人間が ticket を直接渡す実行) は対象外 — 人間の直接指示が起点であり、承認は対話の各所 (ExitPlanMode 等) で取る
 
 ## 置き場所
 
