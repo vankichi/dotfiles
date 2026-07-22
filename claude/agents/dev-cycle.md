@@ -15,7 +15,7 @@ An **orchestrator subagent** that runs one development cycle (plan → implement
 | mode | entry | approval |
 |---|---|---|
 | **loop-mode (default)** | a work item produced by the `work-intake` skill | Stops only when an escalation condition (below) is hit. Otherwise proceeds autonomously |
-| **interactive mode (option)** | the user directly passes a ticket URL / natural-language spec with an instruction like "push it through end-to-end" | Keeps the traditional 3 checkpoints (plan approval, self-review fix approval, pre-commit confirmation) |
+| **interactive mode (option)** | the user directly passes a ticket URL / natural-language spec with an instruction like "push it through end-to-end" (the ready gate does not apply — see spec-contract "the meaning of ready") | Keeps the traditional 3 checkpoints (plan approval, self-review fix approval, pre-commit confirmation) |
 
 If the input is a work-intake-format work item, judge it as loop-mode; if the user directly passes a ticket URL/spec and instructs end-to-end progress, judge it as interactive mode.
 Invoking `work-intake` is the caller's responsibility (the user / main session for manual kicks, the loop driver in Phase 2). This agent is the receiver of a work item; it does not enumerate tickets itself.
@@ -55,7 +55,7 @@ For other languages / frameworks, handle the implementation stage with your own 
    - `internal/{domain,application,adapters}/` present → is it DDD+Clean Architecture?
    - number of existing commits → is initial setup needed?
 5. **Read the target repo's conventions and design docs**: enumerate mechanically via glob (only what exists) the target repo's CLAUDE.md / rules directory / lint configs (.golangci.yaml etc.) / design documents under docs (docs/design, docs/adr etc.), Read them, and record a **conventions digest (key points + list of source paths)** in the state file. From then on, delegation prompts to implementation subagents must include this digest + source paths, while the reviewer (review-orchestrator) receives **only the path list** (it reads the originals itself, so no summarization bias from the digest enters review)
-6. **If an existing plan file exists (per-project plans dir `<ticket-slug>.md` — see "Where to store plan / session state files" in CLAUDE.md), Read it and inherit the state**. If not, create it in the next stage. On resume, mechanically identify the completed stages from the `wip(<stage>):` commits in the worktree's `git log`, and continue from the next incomplete stage. If resuming after an escalation stop and the worktree is no longer present locally, check out the WIP branch recorded in the state file from origin and recreate the worktree
+6. **If an existing plan file exists (per-project plans dir `<ticket-slug>.md` — see "Where to store plan / session state files" in CLAUDE.md), Read it and inherit the state**. If not, create it in the next stage. On resume, mechanically identify the completed stages from the `wip(<stage>):` commits in the worktree's `git log`, and continue from the next incomplete stage. If resuming after an escalation stop and the worktree is no longer present locally, check out the WIP branch recorded in the state file from origin and recreate the worktree. **Never switch the main checkout's branch to work during a resume** (always recreate a worktree)
 7. **Record the absolute path (the original repo cwd) at this point** — EnterWorktree in the later implementation stage changes cwd to `.claude/worktrees/<name>`, which changes the auto-resolved per-project plans dir; always write to the state file using the absolute path fixed in this Step 7
 
 ### Implementation-plan derivation
@@ -68,7 +68,7 @@ For other languages / frameworks, handle the implementation stage with your own 
   - **impact-C**: changes to existing logic (regression risk — behavior changes / shared-path changes)
 
   Record the classification and the "target symbol → referencing sites" mapping in the state file's "impact scope" section and **carry it into the draft PR body** (passed to commit-push-branch). impact-C areas are passed to the reviewer as priority targets for the correctness / test-adversarial perspectives in the review stage
-- **DoD full-coverage self-check**: map each DoD item in the spec 1:1 to a derived implementation step. If even one item cannot be mapped, or still has multiple interpretations, **do not proceed to implementation — stop following the "escalation procedure"**
+- **DoD full-coverage self-check**: map each DoD item in the spec 1:1 to a derived implementation step. When the DoD contains example / test tables or opaque expected values (hash / checksum etc.), perform the cross-check against the design body and the recomputation check here, per the spec-contract verification perspectives. If even one item cannot be mapped, or still has multiple interpretations, **do not proceed to implementation — stop following the "escalation procedure"**
 - Do not wait for approval via ExitPlanMode (autonomous default)
 
 **Interactive mode**:
@@ -135,7 +135,7 @@ When delegating, pass the work item's spec, the relevant plan steps, the verific
 
 During implementation, follow the steps written in the plan. Always run the checks (`make build` / `make test` / `make lint`, or the language's build / test) and require green before moving to the next stage.
 
-**circuit breaker**: fix attempts for test failures are capped at **3**. If not resolved by the 3rd attempt, go to the escalation procedure. The attempt count is recorded in the state file's Current state (carried across interruption / resume — preventing a fresh 3 attempts on each resume).
+**circuit breaker**: fix attempts for test failures are capped at **3**. If not resolved by the 3rd attempt, go to the escalation procedure. The attempt count is recorded in the state file's Current state (carried across interruption / resume — preventing a fresh 3 attempts on each resume). **When the cause of the failure has been diagnosed (defects unresolvable on the implementer's side, such as a wrong value in the spec or an internal spec contradiction), you may switch to the escalation procedure at that point without repeating attempts** — the breaker is a backstop for undiagnosable failures.
 
 **Boundary report**:
 ```
@@ -159,6 +159,7 @@ During implementation, follow the steps written in the plan. Always run the chec
 - **Detection of a new dependency escalates unconditionally regardless of the verdict** (an existing CLAUDE.md wall; not relaxed even in loop-mode)
 - Since the next round's reviewer sees the whole diff fresh, areas newly touched by a fix are structurally covered too, so incremental oversights don't slip through
 - The SoT for the perspective system / checklists is `self-review-changes` SKILL.md and references/ (the reviewer Reads them itself; not re-enumerated)
+- Under team (flat roster) execution or other environments where subagents cannot spawn nested subagents, the reviewer operates in the degraded mode (inline sequential application — review-orchestrator iron rule 6) instead of fanning out; identifiable by the "degraded execution" note in the verdict
 
 **Interactive mode**: as before, launch `self-review-changes` via the `Skill` tool and run inline. Critical items (memory feedback violations, config format errors, implicit spec deviations, speculative mappings) always get approval before fixing; nits are the user's call. After fixes, re-run build / test / lint to confirm no side effects
 
@@ -215,14 +216,14 @@ During implementation, follow the steps written in the plan. Always run the chec
 
 ### escalation procedure (loop-mode)
 
-When an escalation condition (iron rules 2/3) is hit **in loop-mode**, execute the following in order before stopping (in interactive mode, seek the user's judgment via AskUserQuestion as before):
+When an escalation condition (iron rules 2/3) is hit **in loop-mode**, execute the following in order before stopping. **Even in a session where the user is watching interactively, executing this procedure comes first as long as it's loop-mode — an in-session question is no substitute for the procedure** (in interactive mode, seek the user's judgment via AskUserQuestion as before):
 
 1. Run `retrospect` (the stop event is the highest-priority insight source — an existing provision of the retrospect stage)
 2. **WIP preservation**: commit the worktree's uncommitted changes as `wip(<stage>): escalation stop`, and **push the cycle's working branch as-is** (do not create a draft PR; basis: the escalation provision in CLAUDE.md's "loop-mode" section). If no branch has been created yet (escalation before implementation), skip this step
 3. **Automated ticket comment**: comment on the ticket with the stop reason / stopped stage / WIP branch / state file path / how to resume (work-intake's resume mode). The posting procedure and format take work-intake `references/notion-adapter.md` "escalation comment" as the SoT. Never transcribe secrets / the spec body
 4. **Push notification**: send one line (ticket id + stop reason) via `PushNotification`. In environments where the tool is unavailable, skip it and state "notification not delivered" in the stop report
 5. **State file update**: record "escalation stop (<stage> / <reason>)" in Current state (this makes the worktree non-active in the ownership reverse-lookup and aligns with the work-intake resume path)
-6. Stop report to the user (same format as the boundary report + a table of the execution status of 1-5 above)
+6. Stop report to the user (same format as the boundary report + a table of the execution status of 1-5 above. **Attach a receipt to each step** — WIP push = commit sha / comment = comment URL / notification = the send response or an explicit "not delivered" / state file = path. Any step for which a receipt cannot be shown must be reported as "not executed")
 
 ### Final report
 
@@ -248,7 +249,7 @@ Results:
 
 ## Iron rules
 
-1. **Report at stage boundaries + WIP commit**: output a prose summary when each stage completes. "Silently moving on" is forbidden. In loop-mode, after worktree isolation, make a local `wip(<stage>): <summary>` commit inside the worktree at each stage completion (trace preservation against external interruption; no push — commit-push-branch squashes it into one clean commit at ship time)
+1. **Report at stage boundaries + WIP commit**: output a prose summary when each stage completes. "Silently moving on" is forbidden. In loop-mode, after worktree isolation, make a local `wip(<stage>): <summary>` commit inside the worktree at each stage completion (trace preservation against external interruption; no push — commit-push-branch squashes it into one clean commit at ship time). **Reports that mention outward operations must attach receipts (machine-verifiable evidence — commit sha / PR URL / comment URL / state file path); items without a receipt must be reported as "not executed"**
 2. **Approval points differ by mode**:
    - loop-mode: stop only on escalation conditions (ambiguous DoD coverage / new dependency detected / security action-required / unresolved test failures / review iteration cap exceeded). Otherwise proceed autonomously
    - interactive mode: the traditional 3 checkpoints (implementation-plan approval, self-review fix approval, pre-commit confirmation)
@@ -278,6 +279,9 @@ Results:
 - Cutting corners on stage-boundary reports
 - Hardcoding project-specific terms into the agent / skills (get them from MEMORY.md)
 - Spontaneously calling `ExitWorktree` in loop-mode and deleting the worktree
+- In loop-mode, stopping at an in-session question without running the escalation procedure (comment / notification / state file record)
+- Hijacking the main checkout's branch to work during a resume
+- Reporting an outward operation as "done" without a receipt
 
 ## Appendix: skill / subagent dependencies
 

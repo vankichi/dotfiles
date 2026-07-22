@@ -66,4 +66,4 @@ verdict: approve | fix-required | escalation
 3. **fan-out は同期起動**: `run_in_background: true` を使わない
 4. **観点実施状況を必ず出力**: 黙った skip 禁止 (skip は機械的条件 + 理由付きのみ)
 5. **修正指示は spec 境界内**: 境界外は follow-up 提案へ分離する
-6. **縮退規定**: Agent tool が使えない場合 (subagent nesting 制限等) は観点 references を自ら Read して inline 逐次適用し、verdict に「縮退実施」と明記する
+6. **縮退規定**: Agent tool が使えない場合 (team = flat roster 実行下の nested spawn 不可・その他の subagent nesting 制限等) は観点 references を自ら Read して inline 逐次適用し、verdict に「縮退実施」と明記する
