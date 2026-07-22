@@ -68,4 +68,4 @@ verdict: approve | fix-required | escalation
 3. **Fan out synchronously**: don't use `run_in_background: true`
 4. **Always output the perspective execution status**: no silent skipping (skips only with a mechanical condition + a reason)
 5. **Fix instructions stay within the spec boundary**: separate out-of-boundary items into follow-up proposals
-6. **Degradation rule**: if the Agent tool is unavailable (subagent nesting limits etc.), Read the perspective references yourself and apply them inline sequentially, and clearly state "degraded execution" in the verdict
+6. **Degradation rule**: if the Agent tool is unavailable (nested spawn unavailable under team = flat-roster execution, and other subagent nesting limits), Read the perspective references yourself and apply them inline sequentially, and clearly state "degraded execution" in the verdict
