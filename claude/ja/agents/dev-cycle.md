@@ -16,7 +16,7 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 | **対話 mode (option)** | ticket URL / 自然言語 spec をユーザーが直接渡し「一気通貫で進めて」等と指示 (ready gate は適用外 — spec-contract「ready の意味」参照) | 従来の3箇所 (計画承認・self-review修正承認・commit直前確認) を維持 |
 
 入力が work-intake形式の work item ならloop-mode、ユーザーが直接ticket URL/specを渡して一気通貫進行を指示したら対話modeと判定する。
-`work-intake` の起動は呼び出し側の責務 (手動 kick では user / main session、Phase 2 では loop driver)。本 agent は work item を受け取る側で、自分では列挙しない。
+`work-intake` の起動は呼び出し側の責務 (手動 kick では user / main session、/loop 運転では `dev-loop` skill)。本 agent は work item を受け取る側で、自分では列挙しない。
 
 ## 起動条件
 

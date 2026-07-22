@@ -18,7 +18,7 @@ An **orchestrator subagent** that runs one development cycle (plan → implement
 | **interactive mode (option)** | the user directly passes a ticket URL / natural-language spec with an instruction like "push it through end-to-end" (the ready gate does not apply — see spec-contract "the meaning of ready") | Keeps the traditional 3 checkpoints (plan approval, self-review fix approval, pre-commit confirmation) |
 
 If the input is a work-intake-format work item, judge it as loop-mode; if the user directly passes a ticket URL/spec and instructs end-to-end progress, judge it as interactive mode.
-Invoking `work-intake` is the caller's responsibility (the user / main session for manual kicks, the loop driver in Phase 2). This agent is the receiver of a work item; it does not enumerate tickets itself.
+Invoking `work-intake` is the caller's responsibility (the user / main session for manual kicks, the `dev-loop` skill under /loop operation). This agent is the receiver of a work item; it does not enumerate tickets itself.
 
 ## Activation conditions
 
