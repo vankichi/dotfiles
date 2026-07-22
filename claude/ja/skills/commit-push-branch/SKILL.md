@@ -167,7 +167,7 @@ PR 作成は別タスク。ユーザーが指示したら `gh pr create` で続�
 呼び出し時に **loop-mode が明示された場合のみ**適用する (根拠: CLAUDE.md「loop-mode (自律実行の例外規定)」):
 
 - Step 3-6 の branch 名 / commit message は規約と過去スタイルで自動決定し、user 確認を挟まない
-- **WIP squash (branch が未 push の場合のみ)**: 作業 branch に `wip(<工程>):` commit が積まれていて (dev-cycle の工程境界 WIP commit)、かつ **origin/<branch> がまだ存在しない**場合のみ、`git reset --soft $(git merge-base HEAD origin/<default-branch>)` で全変更を staged に戻してから規約通りの 1 commit を作る (`--hard` は使わない)。この場合 Step 5 の明示 add は「`git status` で staged 内容に secret / 対象外ファイルが混ざっていないことを確認する」に読み替える
+- **WIP squash の適用判定 (機械実行)**: 作業 branch に `wip(<工程>):` commit が積まれている場合 (dev-cycle の工程境界 WIP commit)、squash の前に必ず `git ls-remote --heads origin <branch>` を実行する。**出力が空 (= 未 push) の場合のみ**、`git reset --soft $(git merge-base HEAD origin/<default-branch>)` で全変更を staged に戻してから規約通りの 1 commit を作る (`--hard` は使わない)。この場合 Step 5 の明示 add は「`git status` で staged 内容に secret / 対象外ファイルが混ざっていないことを確認する」に読み替える
 - **escalation で push 済みの branch では squash しない**: push 済み履歴の書き換えは force push が必要になり禁止と衝突する。wip の上に最終 commit を積み増してそのまま push する (fast-forward)。PR の commit 欄に wip が残るが、merge は squash merge 慣例のため default branch は汚れない
 - Step 7 の push 後に **draft PR を作成する**: `gh pr create --draft` (title = commit title、body = 呼び出し元から渡された実装計画 / DoD チェック結果 / review 結果)
 - 本 PR 化 (draft 解除) と merge はしない
