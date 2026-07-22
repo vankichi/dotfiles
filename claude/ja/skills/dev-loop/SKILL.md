@@ -42,7 +42,7 @@ dev-cycle の報告から receipts を取り、**実在を機械確認してか�
 | escalation | ticket コメント / WIP branch (`git ls-remote`) を確認 | 「<ticket-id>: escalation (<停止理由 1 行>)」 |
 | receipts が実在しない | — | 「<ticket-id>: 報告と実態の乖離を検出」+ escalation 扱いでカウント |
 
-- PushNotification が使えない場合は tick 報告に「通知未達」を明記する (沈黙しない)
+- 通知結果は **3 区分**で扱い、tick 報告に必ず記す: **送信** (発行された) / **skip (terminal active)** = user が terminal で active なため tool が意図的に抑止 — **正常** (通知は無人時のみ配達される仕様) / **未達** (tool 不可・エラー — 異常。沈黙しない)
 
 ### Step 5: self-pacing (`ScheduleWakeup`)
 
@@ -63,6 +63,7 @@ dev-cycle の報告から receipts を取り、**実在を機械確認してか�
 - poll: [該当なし / <ticket-id> を選択]
 - cycle: [未実行 / 完走 (PR <URL>) / escalation (<理由>)] — receipts: <検証済み一覧>
 - escalation 連続: <n>/3
+- 通知: [送信 / skip (terminal active — 正常) / 未達 / 対象なし]
 - 次 wakeup: <秒> (<理由>)
 ```
 

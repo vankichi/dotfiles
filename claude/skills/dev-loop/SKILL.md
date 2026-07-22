@@ -44,7 +44,7 @@ Take the receipts from dev-cycle's report, and **notify via `PushNotification` o
 | escalation | Confirm the ticket comment / WIP branch (`git ls-remote`) | 「<ticket-id>: escalation (<one-line stop reason>)」 |
 | receipts do not actually exist | — | 「<ticket-id>: detected a divergence between report and reality」 + counted as escalation |
 
-- If PushNotification is unavailable, state "notification undelivered" explicitly in the tick report (do not go silent)
+- Notification outcomes are handled in **3 categories** and always recorded in the tick report: **sent** (issued) / **skipped (terminal active)** = the tool deliberately suppressed it because the user is active at the terminal — **normal** (notifications are only delivered when unattended, by design) / **not delivered** (tool unavailable / error — abnormal; never stay silent)
 
 ### Step 5: self-pacing (`ScheduleWakeup`)
 
@@ -65,6 +65,7 @@ Take the receipts from dev-cycle's report, and **notify via `PushNotification` o
 - poll: [none applicable / selected <ticket-id>]
 - cycle: [not run / completed (PR <URL>) / escalation (<reason>)] — receipts: <verified list>
 - escalation streak: <n>/3
+- notification: [sent / skipped (terminal active — normal) / not delivered / n/a]
 - next wakeup: <seconds> (<reason>)
 ```
 
