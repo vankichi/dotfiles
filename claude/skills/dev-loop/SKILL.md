@@ -18,6 +18,7 @@ The dev loop's driver. **The loop's lifecycle is managed by the user's /loop ope
 
 ### Step 1: Precondition check
 
+- Run `date '+%Y-%m-%d %H:%M %Z'` to get the current local time — for the tick report's time line; never guess the time
 - Must be inside a git repo
 - **Serial guard**: check the state files in the per-project plans dir, and ensure no active cycle exists (a state file whose Current state does not indicate all-stages-complete / escalation stop). If one exists, this tick does not start a cycle and goes to Step 5 (300s wakeup — waiting for the running cycle to finish)
 - Leave Notion reachability to work-intake (if unreachable, Step 2 terminates abnormally → notify "Notion unreachable" and 1800s wakeup)
@@ -62,11 +63,12 @@ Take the receipts from dev-cycle's report, and **notify via `PushNotification` o
 
 ```
 ## dev-loop tick report
+- time: <current local time> — previous tick: <time from previous report / unknown>
 - poll: [none applicable / selected <ticket-id>]
 - cycle: [not run / completed (PR <URL>) / escalation (<reason>)] — receipts: <verified list>
 - escalation streak: <n>/3
 - notification: [sent / skipped (terminal active — normal) / not delivered / n/a]
-- next wakeup: <seconds> (<reason>)
+- next wakeup: <seconds> (~<HH:MM> / <reason>)
 ```
 
 ## Iron rules

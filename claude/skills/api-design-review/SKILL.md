@@ -8,7 +8,7 @@ model: claude-fable-5
 
 # api-design-review
 
-A systematic review skill for API / upstream system design that **prevents issues from surfacing piecemeal across turns**. Read-only (no Edit / Write; only grep via Bash is allowed).
+A systematic review skill for API / upstream system design that **prevents issues from surfacing piecemeal across turns**. Read-only (no Edit / Write; only grep via Bash is allowed). **Performed from a principal engineer's standpoint**: question not the adequacy of the expression but the rightness of the design decision itself — right for future extension, operations, and maintainers.
 
 The source of overlooked considerations isn't the wire representation (proto / OpenAPI) but the **domain design / use-case analysis / ACL model / API experience design that precedes it** — so running this **before** starting to write proto is most effective. Reviewing after proto work has already begun is only supplementary.
 
