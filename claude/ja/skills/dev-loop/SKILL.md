@@ -16,6 +16,7 @@ Dev loop の driver。**loop の生死は user の /loop 操作が管理し、�
 
 ### Step 1: 前提確認
 
+- `date '+%Y-%m-%d %H:%M %Z'` を実行して現在時刻 (現地) を取得する — tick 報告の時刻欄用。時刻を推測で書かない
 - git repo 内であること
 - **直列 guard**: per-project plans dir の state file 群を確認し、active な cycle (Current state が全工程完了 / escalation 停止を示していない state file) が存在しないこと。存在するなら本 tick は cycle を起動せず Step 5 へ (300s wakeup — 実行中 cycle の完了待ち)
 - Notion 到達性は work-intake に委ねる (不達なら Step 2 が異常終了 → 「Notion 不達」を通知して 1800s wakeup)
@@ -60,11 +61,12 @@ dev-cycle の報告から receipts を取り、**実在を機械確認してか�
 
 ```
 ## dev-loop tick 報告
+- 時刻: <現在時刻 (現地)> — 前回 tick: <前回報告の時刻 / 不明>
 - poll: [該当なし / <ticket-id> を選択]
 - cycle: [未実行 / 完走 (PR <URL>) / escalation (<理由>)] — receipts: <検証済み一覧>
 - escalation 連続: <n>/3
 - 通知: [送信 / skip (terminal active — 正常) / 未達 / 対象なし]
-- 次 wakeup: <秒> (<理由>)
+- 次 wakeup: <秒> (~<HH:MM> 頃 / <理由>)
 ```
 
 ## 鉄則

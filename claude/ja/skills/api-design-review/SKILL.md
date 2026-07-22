@@ -6,7 +6,7 @@ model: claude-fable-5
 
 # api-design-review
 
-API / システム上流設計の **turn を跨いだ段階的発覚を防ぐ** ための系統的レビュー skill。read-only (Edit / Write しない、Bash で grep のみ可)。
+API / システム上流設計の **turn を跨いだ段階的発覚を防ぐ** ための系統的レビュー skill。read-only (Edit / Write しない、Bash で grep のみ可)。**principal engineer の視座で行う**: 表現の妥当性ではなく設計判断そのものの正しさ — 将来の拡張・運用・保守者にとって正しいか — を問う。
 
 考慮漏れの源泉は wire 表現 (proto / OpenAPI) ではなく、その **前段のドメイン設計 / use case 分析 / ACL モデル / API 体験設計** にあるため、proto を書き始める **前** に通すのが最も効果的。proto を触り始めてからの review は補完用。
 
