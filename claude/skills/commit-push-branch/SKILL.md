@@ -188,6 +188,7 @@ Materials passed from the caller (dev-cycle) = implementation plan / DoD check r
 | Spec compliance | each DoD item ↔ its implementation & tests (check results) |
 | Spec deviations | SD# ("none" if there are none) |
 | Impact scope | changed symbol → referencing-site mapping and impact classification |
+| Review guide | suggested diff reading order (entry point → core → tests, derived from the impact-scope mapping) / focus areas (spots reworked after review findings or with low confidence) / steps for a reviewer to verify the DoD locally (copied from the DoD verification procedures) |
 | Verification | test / lint run results + self-review & security-review results (including perspective completion status) |
 | References | ticket URL / related docs |
 | Checklist | check only mechanically verifiable items (leave human items like reviewer assignment unchecked) |
