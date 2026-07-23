@@ -171,9 +171,30 @@ Applies **only when loop-mode is explicitly specified** at invocation time (basi
 - The branch name / commit message in Steps 3-6 are decided automatically from conventions and past style, with no user confirmation
 - **WIP squash applicability check (mechanical execution)**: if `wip(<stage>):` commits are stacked on the working branch (dev-cycle's stage-boundary WIP commits), always run `git ls-remote --heads origin <branch>` before squashing; **only if the output is empty (= unpushed)** proceed to run `git reset --soft $(git merge-base HEAD origin/<default-branch>)` to return all changes to staged, then create the single conventional commit (never use `--hard`). In this case, Step 5's explicit add is reinterpreted as "confirm via `git status` that the staged contents contain no secrets / out-of-scope files"
 - **Do not squash a branch already pushed by escalation**: rewriting pushed history would require a force push, which conflicts with the ban. Stack the final commit on top of the wip commits and push as-is (fast-forward). The wip commits remain visible in the PR's commit list, but the default branch stays clean because of the squash-merge convention
-- After the push in Step 7, **create a draft PR**: `gh pr create --draft` (title = commit title, body = the implementation plan / DoD check results / review results passed from the caller)
+- After the push in Step 7, **create a draft PR**: `gh pr create --draft` (title = commit title, body = assembled per the "PR body construction rules" below)
 - Never promote the draft (remove draft status) or merge
 - Interactive behavior without loop-mode is unchanged (PR creation only after user instruction)
+
+### PR body construction rules (loop-mode)
+
+Materials passed from the caller (dev-cycle) = implementation plan / DoD check results / spec deviations (SD#) / impact scope / self-review & security-review results (including perspective completion status) / ticket URL. Turn these into the body with the following rules:
+
+1. **Look for the target repo's PR template**: the first one found in the order `.github/pull_request_template.md` → `.github/PULL_REQUEST_TEMPLATE.md` → `PULL_REQUEST_TEMPLATE.md` → `docs/pull_request_template.md`
+2. **If a template exists, follow its section structure**: delete the HTML comment hints (`<!-- ... -->`) and fill each section with the corresponding material. Section names vary by repo, so map by meaning (guideline):
+
+| template section (example) | material to fill in |
+|---|---|
+| Summary / Changes | summary of the implementation plan / what changed |
+| Spec compliance | each DoD item ↔ its implementation & tests (check results) |
+| Spec deviations | SD# ("none" if there are none) |
+| Impact scope | changed symbol → referencing-site mapping and impact classification |
+| Verification | test / lint run results + self-review & security-review results (including perspective completion status) |
+| References | ticket URL / related docs |
+| Checklist | check only mechanically verifiable items (leave human items like reviewer assignment unchecked) |
+
+   If some material has no matching section in the template, append a section at the end of the body and record it in full (never drop it silently)
+3. **If there is no template, generate the default skeleton**: the 6 sections `## Summary` / `## Spec compliance` / `## Spec deviations` / `## Impact scope` / `## Verification` / `## References`
+4. **Branch ticket handling on repo visibility** (mechanically judged via `gh repo view --json visibility`): for a private repo, put the ticket URL in References (review-loop relies on "PR body + the ticket it references" as the spec). **For a public repo, never write internal URLs / the ticket body** (same spirit as the improve-harness iron rule — reference insights / tickets by name or ID only)
 
 ## Iron rules
 

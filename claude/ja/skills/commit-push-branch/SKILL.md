@@ -169,9 +169,30 @@ PR 作成は別タスク。ユーザーが指示したら `gh pr create` で続�
 - Step 3-6 の branch 名 / commit message は規約と過去スタイルで自動決定し、user 確認を挟まない
 - **WIP squash の適用判定 (機械実行)**: 作業 branch に `wip(<工程>):` commit が積まれている場合 (dev-cycle の工程境界 WIP commit)、squash の前に必ず `git ls-remote --heads origin <branch>` を実行する。**出力が空 (= 未 push) の場合のみ**、`git reset --soft $(git merge-base HEAD origin/<default-branch>)` で全変更を staged に戻してから規約通りの 1 commit を作る (`--hard` は使わない)。この場合 Step 5 の明示 add は「`git status` で staged 内容に secret / 対象外ファイルが混ざっていないことを確認する」に読み替える
 - **escalation で push 済みの branch では squash しない**: push 済み履歴の書き換えは force push が必要になり禁止と衝突する。wip の上に最終 commit を積み増してそのまま push する (fast-forward)。PR の commit 欄に wip が残るが、merge は squash merge 慣例のため default branch は汚れない
-- Step 7 の push 後に **draft PR を作成する**: `gh pr create --draft` (title = commit title、body = 呼び出し元から渡された実装計画 / DoD チェック結果 / review 結果)
+- Step 7 の push 後に **draft PR を作成する**: `gh pr create --draft` (title = commit title、body = 下記「PR body 構築規則」で組み立てる)
 - 本 PR 化 (draft 解除) と merge はしない
 - loop-mode 指定がない対話時の挙動は従来通り不変 (PR 作成は user 指示後)
+
+### PR body 構築規則 (loop-mode)
+
+呼び出し元 (dev-cycle) から渡される材料 = 実装計画 / DoD チェック結果 / spec deviation (SD#) / impact scope / self-review・security review 結果 (観点実施状況を含む) / ticket URL。これを次の規則で body に落とす:
+
+1. **対象 repo の PR template を探索**: `.github/pull_request_template.md` → `.github/PULL_REQUEST_TEMPLATE.md` → `PULL_REQUEST_TEMPLATE.md` → `docs/pull_request_template.md` の順で最初に見つかったもの
+2. **template があればその section 構成に従う**: HTML comment の記入 hint (`<!-- ... -->`) は削除し、各 section へ材料を対応付けて記入する。section 名は repo により異なるため意味で対応させる (目安):
+
+| template section (例) | 記入する材料 |
+|---|---|
+| Summary / Changes | 実装計画の要約 / 変更内容 |
+| Spec compliance | DoD 各項目 ↔ 実装・テストの対応 (チェック結果) |
+| Spec deviations | SD# (無ければ "none") |
+| Impact scope | 変更 symbol → 参照元の mapping と impact 分類 |
+| Verification | test / lint 実行結果 + self-review・security review の結果 (観点実施状況を含む) |
+| References | ticket URL / 関連 doc |
+| Checklist | 機械的に判定できる項目のみ check (reviewer assign 等の人間項目は空欄のまま) |
+
+   材料に対応する section が template に無い場合は body 末尾に section を追加して漏らさず記載する (黙って捨てない)
+3. **template が無ければ default skeleton で生成**: `## Summary` / `## Spec compliance` / `## Spec deviations` / `## Impact scope` / `## Verification` / `## References` の 6 section
+4. **repo の可視性で ticket 記載を分岐** (`gh repo view --json visibility` で機械判定): private repo は References に ticket URL を記載する (review-loop が「PR body + 参照 ticket」を spec として辿る前提)。**public repo では内部 URL / ticket 本文を書かない** (improve-harness 鉄則と同精神 — insights / ticket は名前・ID のみで参照)
 
 ## 鉄則
 
