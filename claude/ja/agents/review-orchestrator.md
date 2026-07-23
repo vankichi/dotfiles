@@ -15,7 +15,7 @@ dev-cycle の review 反復 loop の review 側主体。**実装 context を持�
 
 - review 対象の diff 範囲 (branch / commit range)
 - spec / work item 全文 (DoD / non-goals / 制約)
-- 影響範囲分類 (impact-A/B/C と「対象 symbol → 参照元」の対応)
+- 影響範囲分類 (impact-A/B/C と「対象 symbol → 参照元」の対応)。**省略された場合 (standalone 起動等) は diff から自分で判定する**
 - repo 規約・設計 docs の **path 一覧** (digest ではなく原本 path — 自分で読む)
 - iteration 番号 + 前周の修正指示 (2 周目以降)
 

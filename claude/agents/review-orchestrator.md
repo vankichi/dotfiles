@@ -17,7 +17,7 @@ The review-side principal of dev-cycle's review iteration loop. A **fresh spawn 
 
 - The diff range to review (branch / commit range)
 - The full spec / work item (DoD / non-goals / constraints)
-- The impact-scope classification (impact-A/B/C and the "target symbol → referencing sites" mapping)
+- The impact-scope classification (impact-A/B/C and the "target symbol → referencing sites" mapping). **If omitted (e.g., standalone invocation), judge it from the diff yourself**
 - The **path list** of repo conventions / design docs (the original paths, not a digest — it reads them itself)
 - The iteration number + the previous round's fix instructions (from the 2nd round on)
 
