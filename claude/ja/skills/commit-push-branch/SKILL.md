@@ -182,11 +182,12 @@ PR 作成は別タスク。ユーザーが指示したら `gh pr create` で続�
 
 | template section (例) | 記入する材料 |
 |---|---|
-| Summary / Changes | 実装計画の要約 / 変更内容 |
-| Spec compliance | DoD 各項目 ↔ 実装・テストの対応 (チェック結果) |
+| Summary | 実装計画の要約 / 変更内容 (what & why) |
+| Spec compliance | DoD 各項目 ↔ 実装・テストの対応 (チェック結果)。表 skeleton があれば列構成に従う |
 | Spec deviations | SD# (無ければ "none") |
 | Impact scope | 変更 symbol → 参照元の mapping と impact 分類 |
-| Review guide | diff の読み順 (entry point → 本体 → test。impact scope の mapping から導出) / 重点確認箇所 (review 指摘を受けて修正した箇所・自信の低い箇所) / reviewer が手元で DoD を確認する手順 (DoD 検証手順から転記) |
+| Review guide | diff の読み順 (entry point → 本体 → test。file → symbol で指定し行番号を使わない — push で rot する) / 重点確認箇所 (review 指摘を受けて修正した箇所・自信の低い箇所) |
+| Compat & rollback | breaking の有無 / migration・env・config 変更と適用順 / rollback 手順 (該当なしなら "none / clean revert") |
 | Verification | test / lint 実行結果 + self-review・security review の結果 (観点実施状況を含む) |
 | References | ticket URL / 関連 doc |
 | Checklist | 機械的に判定できる項目のみ check (reviewer assign 等の人間項目は空欄のまま) |
