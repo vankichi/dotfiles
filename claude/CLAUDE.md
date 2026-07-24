@@ -49,6 +49,7 @@
 - 例外として許可: `commit-push-branch` (loop-mode 拡張) 経由の feature branch push + **draft PR 作成**
 - improve-harness (knowledge loop) も同例外を使える: harness 改善の draft PR 作成まで (対象 repo は dotfiles のみ)
 - review-loop も同例外を使える: watch 対象 PR への **review comment 投稿**まで (approve / request-changes / merge は引き続き人間のみ)
+- pr-follow-loop も同例外を使える: 自 author PR の bot 指摘 **triage の提示** (idempotency marker comment を含む) + **merge 後の自 worktree / merge 済 local branch の自動掃除**まで (bot 指摘の修正適用・decline 返信は人間承認後の対話で行い、approve / request-changes / merge は引き続き人間のみ)
 - 引き続き禁止: merge / draft の本 PR 化 / main への直 push / 新規 dependency 追加 / 破壊的操作 / 外部送信の有効化 — 検出したら escalation (ticket コメント + 通知 + WIP branch push) して停止
 - 安全装置 (hooks / permission deny / least privilege) は loop-mode でも一切緩めない
 - superpowers 棲み分け: 自律 pipeline (dev loop) では superpowers の process skill を使わない (背骨は自前 skill)。対話 session での brainstorming / TDD 参照は可
