@@ -25,6 +25,7 @@ self-review の最大バイアスは「自分の intent が見えて actual gap 
 2. 全変更 file を Read tool で並列読み込み (Bash の `cat` ではなく)
 3. `MEMORY.md` index を Read し、編集内容に関連する feedback / project entry を中身まで read
 4. 対応する spec / work item があれば取得 (spec-alignment 観点の入力)
+5. **SoT 突合 (finding 報告前の必須 step)**: 指摘しようとしている領域について (a) spec / ticket の禁止事項・Out of Scope、(b) 該当する design doc の節、(c) DB schema / 型定義コメントに宣言された不変条件 を grep で確認する。**突合で矛盾する finding は報告しない** — 撤回コストと user の判断コストを二重に消費する。選択肢を user に提示する場合も提示前に確認する
 
 ## Phase 2: 観点の実行 (default-on + 機械的 skip 判定)
 
