@@ -206,6 +206,18 @@ PR 作成は別タスク。ユーザーが指示したら `gh pr create` で続�
 6. **PR は user 指示後**: skill は push まで。`gh pr create` はユーザーから指示があれば (例外: loop-mode 時の draft PR 作成のみ — 上記「loop-mode」section 参照)
 7. **default は title 1 行・変更内容のみ**: why / 背景 / 影響範囲は書かない。body は breaking change / 本当に非自明な why のときだけ
 
+## stacked PR の rebase (親が squash merge された後)
+
+親 PR が **squash merge** されると、親の全 commit は default branch 上で patch-id が一致しなくなる。この状態で子 branch に `git rebase --onto origin/<default> <親 tip>` を掛けると、子の最初の commit が親の古い状態に対して書かれているため親相当を再適用しようとして衝突する。commit 単位の rebase を試さず、目標 tree を確定させて 1 commit に collapse する:
+
+1. `git diff <親 tip> origin/<default>` が**空**であることを確認する (= default branch の tree が親 tip と一致。空でなければこの手順は使えない)
+2. `git branch backup/<name> <子 tip>` で復旧点を作る
+3. `NEW=$(git commit-tree <子 tip>^{tree} -p origin/<default> -F <msg file>)` で目標 tree を固定した commit を作る
+4. `git checkout -B <branch> $NEW` で branch を移す (`reset --hard` は使わない)
+5. `git diff <子 tip> HEAD` が空 = review 済み head と tree が byte 一致、`git diff origin/<default> HEAD --stat` が PR の想定差分と一致することを機械的に検証する
+
+衝突ゼロで、repo が squash-merge 運用なら commit 分割の情報損失もない。push は force が必要なので **user の明示指示を待つ** (`--force-with-lease` + backup ref の提示)。
+
 ## アンチパターン
 
 - `git commit -am` (untracked が漏れる + 全 staged を盲目 commit)

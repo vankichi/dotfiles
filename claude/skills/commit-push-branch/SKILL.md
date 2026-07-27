@@ -208,6 +208,18 @@ Materials passed from the caller (dev-cycle) = implementation plan / DoD check r
 6. **PR only after user instruction**: the skill goes up to push. `gh pr create` happens only if the user instructs it (exception: draft PR creation in loop-mode only — see the "loop-mode" section above)
 7. **Default to a single-line title, content only**: don't write why / background / impact scope. Only write a body for breaking changes / a genuinely non-obvious why
 
+## Rebasing a stacked PR (after the parent was squash-merged)
+
+Once the parent PR is **squash-merged**, none of the parent's commits match by patch-id on the default branch. Running `git rebase --onto origin/<default> <parent tip>` on the child branch then conflicts, because the child's first commit was written against the parent's older state and the rebase tries to re-apply the parent's content. Do not attempt a commit-by-commit rebase; pin the target tree and collapse to a single commit:
+
+1. Confirm `git diff <parent tip> origin/<default>` is **empty** (i.e. the default branch's tree matches the parent tip). If it is not empty, this procedure does not apply
+2. Create a recovery point: `git branch backup/<name> <child tip>`
+3. `NEW=$(git commit-tree <child tip>^{tree} -p origin/<default> -F <msg file>)` to build a commit with the target tree pinned
+4. `git checkout -B <branch> $NEW` to move the branch (do not use `reset --hard`)
+5. Verify mechanically: `git diff <child tip> HEAD` is empty (tree is byte-identical to the reviewed head) and `git diff origin/<default> HEAD --stat` matches the PR's expected diff
+
+No conflicts, and no information is lost when the repo squash-merges anyway. Pushing needs a force, so **wait for the user's explicit instruction** (offer `--force-with-lease` plus the backup ref).
+
 ## Anti-patterns
 
 - `git commit -am` (misses untracked files + blindly commits everything staged)

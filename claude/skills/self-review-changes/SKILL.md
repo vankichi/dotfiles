@@ -27,6 +27,7 @@ The biggest bias in self-review is that "you can see your own intent but not the
 2. Read all changed files in parallel with the Read tool (not `cat` via Bash)
 3. Read the `MEMORY.md` index and read the feedback / project entries related to the edit in full
 4. If there is a corresponding spec / work item, fetch it (input for the spec-alignment perspective)
+5. **SoT cross-check (mandatory step before reporting a finding)**: for the area you are about to flag, grep-verify (a) the spec's / ticket's prohibitions and Out of Scope, (b) the relevant section of the design doc, (c) invariants declared in DB schema / type-definition comments. **Do not report a finding that the cross-check contradicts** — it burns both the retraction cost and the user's decision cost. Verify before presenting options to the user, too
 
 ## Phase 2: Perspective execution (default-on + mechanical skip judgment)
 

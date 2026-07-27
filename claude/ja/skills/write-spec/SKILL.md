@@ -57,3 +57,5 @@ spec を markdown で組み立て、contract の検証 checklist **全項目の�
 2. 検証 checklist と尋問観点は全項目の判定 / 実施状況を必ず出力する (黙った skip 禁止)
 3. 尋問は 1 問ずつ (multiple choice 優先)
 4. project 固有情報 (Notion DB 等) は hardcode せず MEMORY.md の reference から取得する
+5. **spec 本文は制約 (what / why) に限定する**: 実装手段 (how) を DoD に書かない。実装時に cost/benefit が反転したとき、spec が how を指定していると正しい判断更新が「逸脱」扱いになる。手段を示す必要がある場合は **「参考案 (非拘束)」ラベルを必須**にする
+6. **識別子 literal は repo 照合済みのものだけ書く**: 型名 / file path / 列名などを spec に書く場合、実 repo に grep して存在を確認する。未確認の literal は「〜相当」と書き、実装側の裁量に残す

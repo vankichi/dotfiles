@@ -27,6 +27,11 @@ ready flag を立てるのは人間のみ。
 - [ ] 設計の未決事項 (「A か B か検討」等) が残っていない — 残っている場合 ready 不可
 - [ ] DoD に example / test 表がある場合、各 input→expected を設計本体の算法に 1 行ずつ通して矛盾がない (non-goals との整合を含む)
 - [ ] DoD の期待値が opaque (hash / checksum / 符号化 blob 等、目視比較不能) の場合、算法出力からの再計算と一致する — 不一致の golden は機械的に満たせない DoD であり ready 不可
+- [ ] spec が「挙動不変 / 既存 test をそのまま green」を要求しつつ、**同じ shared code path に対する新しい内部挙動 (処理順序等) を別途指定していない** — 併存する場合は自己矛盾であり ready 不可 (実装側の tie-break は regression-guarded 側の優先)
+- [ ] spec の literal (識別子 / 配置 path / 処理順序) を lint rule・層規約・design doc と **grep で照合済み** — 照合していない literal は spec に書かない
+- [ ] 変更領域に触れる ADR / design doc を列挙し、spec との矛盾を cross-check した (doc 同士が矛盾する場合は SoT 階層で正を決める)
+- [ ] DoD 各項目の**検証実行者と環境が実在する** (AWS 権限 / 別 repo 管轄 / live 環境が必要なものは agent が実行できない) — 実行不能なものは「human 検証 follow-up」欄へ分離し、機械検証可能な DoD と混ぜない
+- [ ] DoD に **failure mode / 並行性 / 冪等性**の 3 欄がある (該当なしなら「なし」と明記) — 正常系のみの DoD は非機能の空白を実装後の review 指摘に持ち越す
 
 ## ready の意味
 
