@@ -59,3 +59,5 @@ Assemble the spec in markdown, and output the judgment for **every item** of the
 2. Always output the judgment for every item of the validation checklist and the implementation status of every interrogation perspective (no silent skipping)
 3. Interrogate one question at a time (prefer multiple choice)
 4. Do not hardcode project-specific information (e.g., the Notion DB); get it from the reference in `MEMORY.md`
+5. **Keep the spec body limited to constraints (what / why)**: do not write implementation means (how) into the DoD. When cost/benefit flips during implementation, a spec that prescribed the how turns a correct decision update into a "deviation". If you must show a means, a **"reference proposal (non-binding)" label is mandatory**
+6. **Only write identifier literals you have verified against the repo**: when putting type names / file paths / column names into a spec, grep the real repo to confirm they exist. Write unverified literals as "equivalent to ..." and leave them to the implementer's discretion
