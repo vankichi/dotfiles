@@ -111,6 +111,8 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 
 **worktree 内の cwd で起動された場合** (並列 cycle の衝突等): EnterWorktree は worktree 内からのネスト作成ができない。main checkout を特定し、`git worktree add` で自前の worktree を main (or origin/main) から作成して移動する。他 agent の worktree 内のファイルには触れない。
 
+**base が default branch でない場合** (stacked PR で親 branch の上に積む等): `EnterWorktree` の新規作成は既定 baseRef が `origin/<default-branch>` のため使えない。`git worktree add -b <branch> <path> <親 branch>` で base 指定の worktree を作り、`EnterWorktree(path: <path>)` で入る。base branch は state file に記録し、commit-push-branch への委譲時に明示的に渡す (squash の base ref と `gh pr create --base` の両方で必要)。
+
 作成した新規 worktree への Edit/Write が拒否され続ける場合 (subagent の cwd pin 下では `EnterWorktree(path)` が成功を報告しても書き込み境界が移らない — 2026-07-15 FB) は、pin 済みの元 worktree 内でのブランチ差し替えに切り替える:
 
 1. 新規 worktree を `git worktree remove` で片付ける

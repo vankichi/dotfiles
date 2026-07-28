@@ -113,6 +113,8 @@ If the plan includes a new service / new RPC / new enum / new ACL model / new AD
 
 **If launched with a cwd inside a worktree** (e.g., a parallel-cycle collision): EnterWorktree cannot create a nested worktree from inside one. Identify the main checkout and create your own worktree off main (or origin/main) with `git worktree add`, then move into it. Never touch files inside another agent's worktree.
 
+**If base is not the default branch** (e.g., stacking on top of a parent branch in a stacked PR): `EnterWorktree`'s create path is unusable because its default baseRef is `origin/<default-branch>`. Create a worktree with an explicit base via `git worktree add -b <branch> <path> <parent branch>`, and enter it with `EnterWorktree(path: <path>)`. Record the base branch in the state file and pass it explicitly when delegating to commit-push-branch (needed for both the squash base ref and `gh pr create --base`).
+
 If Edit/Write to the newly created worktree keeps being rejected (under subagent cwd pinning, `EnterWorktree(path)` may report success while the write boundary does not actually move — 2026-07-15 FB), switch to a branch swap inside the pinned original worktree:
 
 1. Clean up the new worktree with `git worktree remove`

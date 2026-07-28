@@ -167,9 +167,11 @@ PR 作成は別タスク。ユーザーが指示したら `gh pr create` で続�
 呼び出し時に **loop-mode が明示された場合のみ**適用する (根拠: CLAUDE.md「loop-mode (自律実行の例外規定)」):
 
 - Step 3-6 の branch 名 / commit message は規約と過去スタイルで自動決定し、user 確認を挟まない
-- **WIP squash の適用判定 (機械実行)**: 作業 branch に `wip(<工程>):` commit が積まれている場合 (dev-cycle の工程境界 WIP commit)、squash の前に必ず `git ls-remote --heads origin <branch>` を実行する。**出力が空 (= 未 push) の場合のみ**、`git reset --soft $(git merge-base HEAD origin/<default-branch>)` で全変更を staged に戻してから規約通りの 1 commit を作る (`--hard` は使わない)。この場合 Step 5 の明示 add は「`git status` で staged 内容に secret / 対象外ファイルが混ざっていないことを確認する」に読み替える
+- **base ref は default branch ではなく PR の base branch**: stacked PR (親 PR の branch の上に積む) では base = 親 branch。以下の squash / `gh pr create` の両方で default branch を前提にしない (`origin/<default-branch>` 決め打ちは stack を壊す)
+- **WIP squash の適用判定 (機械実行)**: 作業 branch に `wip(<工程>):` commit が積まれている場合 (dev-cycle の工程境界 WIP commit)、squash の前に必ず `git ls-remote --heads origin <branch>` を実行する。**出力が空 (= 未 push) の場合のみ**、`git reset --soft $(git merge-base HEAD <base>)` で全変更を staged に戻してから規約通りの 1 commit を作る (`--hard` は使わない)。この場合 Step 5 の明示 add は「`git status` で staged 内容に secret / 対象外ファイルが混ざっていないことを確認する」に読み替える
+  - **squash 前に対象範囲を機械確認する**: `git log --oneline <base>..HEAD` の出力が自分の WIP commit だけであること (親 branch の commit が混ざっていないこと) を確認する。混ざっていれば base の取り違えなので squash せず base を訂正する
 - **escalation で push 済みの branch では squash しない**: push 済み履歴の書き換えは force push が必要になり禁止と衝突する。wip の上に最終 commit を積み増してそのまま push する (fast-forward)。PR の commit 欄に wip が残るが、merge は squash merge 慣例のため default branch は汚れない
-- Step 7 の push 後に **draft PR を作成する**: `gh pr create --draft` (title = commit title、body = 下記「PR body 構築規則」で組み立てる)
+- Step 7 の push 後に **draft PR を作成する**: `gh pr create --draft` (title = commit title、body = 下記「PR body 構築規則」で組み立てる)。**base が default branch でない場合は `--base <base branch>` を明示する** (省略すると default branch 向けの PR になり親の差分を巻き込む)
 - 本 PR 化 (draft 解除) と merge はしない
 - loop-mode 指定がない対話時の挙動は従来通り不変 (PR 作成は user 指示後)
 
