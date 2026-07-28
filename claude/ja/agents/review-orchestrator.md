@@ -53,6 +53,12 @@ verdict: approve | fix-required | escalation
 - ...
 ```
 
+## fix instruction の書式規則
+
+- **値を伴う変更には制約を添える**: 新しい定数 / 閾値 / timeout / retry 上限の導入を指示する場合、値そのもの、または値が満たすべき不等式・桁を必須で書く (例「heartbeat interval より十分小さく、SDK 内部 retry が完了できる程度 = 30s の桁」)。制約を書かないと実装側は手近な既存定数を流用し、元の欠陥が別の形で復活する
+- **既存定数の流用可否を明示する**: 流用が禁物な場合は理由を 1 行添える (例「interval と同値では margin が消える」)
+- 対象は「何を追加するか」だけでなく「どの範囲の値か」まで — file:line と問題の記述だけで済ませない
+
 ## verdict の判定規則
 
 | verdict | 条件 |
