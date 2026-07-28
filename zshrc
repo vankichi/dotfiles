@@ -4,9 +4,9 @@ HOST=$(hostname)
 
 # --------------------
 # Homebrew shellenv (macOS)
-# non-login shell (tmux split-pane 等) では path_helper が走らず
-# brew prefix が PATH に乗らないことがあり、後続の `type fzf` 等の
-# 偽陰性で alias が消える。zshrc 冒頭で確定させる。
+# Non-login shells (e.g. tmux split-pane) never run path_helper, so the brew
+# prefix can be missing from PATH. Later `type fzf` style probes then return
+# false negatives and silently drop aliases. Settle PATH up front.
 # --------------------
 if [ "$(uname -s)" = Darwin ]; then
     if [ -x /opt/homebrew/bin/brew ]; then
@@ -18,12 +18,11 @@ fi
 
 if type tmux >/dev/null 2>&1; then
     if [ -z "$TMUX" ]; then
-        ID="$(tmux ls 2>/dev/null | grep -vm1 attached | cut -d: -f1)"
-        if [[ -z "$ID" ]]; then
-            tmux new-session -n "$USER" -s "$USER@$HOST"
-        else
-            tmux attach-session -t "$ID"
-        fi
+        # Attach-or-create. This also lets `devin` join the phantom session held
+        # by the detached CMD zsh. The previous logic (attach only unattached
+        # sessions, otherwise create one with the same name) deadlocked once every
+        # session was attached: attach found nothing and create hit a name clash.
+        tmux new-session -A -s "$USER@$HOST" -n "$USER"
     fi
 fi
 
@@ -63,12 +62,12 @@ if type nvim >/dev/null 2>&1; then
     else
         export VIMRUNTIME=/usr/share/nvim/runtime
     fi
-    # nvim の data は XDG default (~/.local/share/nvim) に、log は ~/.local/state/nvim に置く。
-    # ~/.config/nvim は repo への symlink なので、$NVIM_HOME 配下に XDG_DATA_HOME を向けると
-    # 全 XDG アプリの状態まで repo に流れ込む。local に固定して repo を汚さない。
+    # Keep nvim data at the XDG default (~/.local/share/nvim) and logs in
+    # ~/.local/state/nvim. Since ~/.config/nvim is a symlink into this repo,
+    # pointing XDG_DATA_HOME under $NVIM_HOME would drain the state of every XDG
+    # app into the repo. Pin these locally so the repo stays clean.
     export NVIM_LOG_FILE_PATH=$HOME/.local/state/nvim
     mkdir -p "$NVIM_LOG_FILE_PATH"
-    # export NVIM_TUI_ENABLE_TRUE_COLOR=1
     export NVIM_PYTHON_LOG_LEVEL=WARNING;
     export NVIM_PYTHON_LOG_FILE=$NVIM_LOG_FILE_PATH/nvim.log;
     export NVIM_LISTEN_ADDRESS="/tmp/nvim_$$";
@@ -95,11 +94,6 @@ export SUDO_EDITOR=$EDITOR
 export K9S="$HOME/.local/bin"
 
 # --------------------
-# node
-# --------------------
-# export NODE_PATH="/usr/local/lib/node_modules"
-
-# --------------------
 # volta
 # --------------------
 export VOLTA_HOME=$HOME/.volta
@@ -119,33 +113,29 @@ fi
 
 [ -f $HOME/.aliases ] && source $HOME/.aliases
 
-# use colors
-# autoload -Uz colors
-# colors
-
 # --------------------
 # option
 # --------------------
 setopt no_beep
 setopt correct
-setopt auto_cd         # ディレクトリ名だけでcdする
-setopt auto_list       # 補完候補を一覧表示
-setopt auto_menu       # 補完候補が複数あるときに自動的に一覧表示する
-setopt auto_param_keys # カッコの対応などを自動的に補完
-setopt auto_pushd      # cd したら自動的にpushdする
+setopt auto_cd
+setopt auto_list
+setopt auto_menu
+setopt auto_param_keys
+setopt auto_pushd
 setopt extended_glob
 setopt ignore_eof
-setopt interactive_comments # '#' 以降をコメントとして扱う
-setopt list_packed          # 補完候補を詰めて表示
-setopt list_types           # 補完候補一覧でファイルの種別をマーク表示
-setopt magic_equal_subst    # = の後はパス名として補完する
-setopt no_flow_control      # フローコントロールを無効にする
+setopt interactive_comments
+setopt list_packed
+setopt list_types
+setopt magic_equal_subst
+setopt no_flow_control
 setopt noautoremoveslash
 setopt nonomatch
-setopt notify            # バックグラウンドジョブの状態変化を即時報告
-setopt print_eight_bit   # 日本語ファイル名を表示可能にする
-setopt prompt_subst      # プロンプト定義内で変数置換やコマンド置換を扱う
-setopt pushd_ignore_dups # 重複したディレクトリを追加しない
+setopt notify
+setopt print_eight_bit
+setopt prompt_subst
+setopt pushd_ignore_dups
 
 # --------------------
 # history setting
@@ -183,9 +173,6 @@ if [ -n "$HOMEBREW_PREFIX" ] && [ -d "$HOMEBREW_PREFIX/share/zsh/functions" ]; t
     fpath=("$HOMEBREW_PREFIX/share/zsh/functions" $fpath)
 fi
 autoload -Uz compinit -C && compinit -C
-# if [ -e /usr/local/share/zsh-completions ]; then
-#   fpath=(/usr/local/share/zsh-completions $fpath)
-# fi
 
 zstyle ':completion:*' format '%B%d%b'
 zstyle ':completion:*' group-name ''
@@ -225,9 +212,6 @@ zstyle ':completion:*:sudo:*' command-path /usr/local/sbin /usr/local/bin /usr/s
 zstyle ':completion:*:warnings' format ' %F{red}-- no matches found --%f'
 zstyle ':completion::complete:*' cache-path "${ZDOTDIR:-${HOME}}/.zcompcache"
 zstyle ':completion::complete:*' use-cache on
-# zstyle ':zsh-kubectl-prompt:' separator ' | ns: '
-# zstyle ':zsh-kubectl-prompt:' preprompt 'ctx: '
-# zstyle ':zsh-kubectl-prompt:' postprompt ''
 setopt list_packed
 
 mkcd() {
@@ -301,20 +285,28 @@ export GPG_TTY=$TTY
 
 # sheldon
 if type sheldon >/dev/null 2>&1; then
-    eval "$(sheldon source)"
+    # Deliberately no `eval "$(sheldon source)"` here: combined with sourcing the
+    # cache below it loaded every plugin twice (duplicate widgets, slower startup)
+    # and defeated the point of the cache. Run sheldon only to build the cache.
     cache_dir=${XDG_CACHE_HOME:-$HOME/.cache}
     sheldon_cache="$cache_dir/sheldon.zsh"
     sheldon_toml="$HOME/.config/sheldon/plugins.toml"
-    if [[ ! -r "$sheldon_cache" || "$sheldon_toml" -nt "$sheldon_cache" ]]; then
+    # Test with -s, not -r. If sheldon ever fails to start it leaves a 0-byte
+    # cache, which -r accepts as valid and pins the shell in a plugin-less state
+    # forever (nothing regenerates it until plugins.toml is touched).
+    if [[ ! -s "$sheldon_cache" || "$sheldon_toml" -nt "$sheldon_cache" ]]; then
       mkdir -p $cache_dir
-      sheldon source > $sheldon_cache
+      # Never leave an empty cache behind on failure.
+      sheldon source > "$sheldon_cache.tmp" && mv "$sheldon_cache.tmp" "$sheldon_cache" \
+        || rm -f "$sheldon_cache.tmp"
     fi
-    source "$sheldon_cache"
+    [[ -s "$sheldon_cache" ]] && source "$sheldon_cache"
     unset cache_dir sheldon_cache sheldon_toml
 fi
 
-# fzf 系 alias は sheldon が PATH に fzf / fzf-tmux を入れた後で判定する。
-# (旧位置だと `type fzf` が偽陰性となり、g / s / vf alias が定義されなかった)
+# Probe for the fzf aliases only after sheldon has put fzf / fzf-tmux on PATH.
+# Earlier in the file `type fzf` returns a false negative and the g / s / vf
+# aliases silently never get defined.
 if type fzf >/dev/null 2>&1; then
     if type fzf-tmux >/dev/null 2>&1; then
         if type fd >/dev/null 2>&1; then
@@ -330,7 +322,6 @@ fi
 if type kubectl >/dev/null 2>&1; then
     source <(kubectl completion zsh)
 fi
-# source <(kubectl convert completion zsh)
 if type k3d >/dev/null 2>&1; then
     source <(k3d completion zsh)
 fi
@@ -341,151 +332,10 @@ if type docker >/dev/null 2>&1; then
     source <(docker completion zsh)
 fi
 
-# alias
-rcpath="$HOME/go/src/github.com/vankichi/dotfiles"
-zpath="/usr/bin/zsh"
-container_name="dev"
-image_name="vankichi/dev:latest"
-
-function dockerrm {
-    docker container stop $(docker container ls -aq)
-    docker ps -aq | xargs docker rm -f
-    docker container prune -f
-    docker images -aq | xargs docker rmi -f
-    docker image prune -a
-    docker volume prune -f
-    docker network prune -f
-    docker system prune -a
-}
-
-alias dockerrm="dockerrm"
-
-alias vmove="cd $rcpath"
-
-alias vbuild="vmove&&docker build --pull=true --file=$rcpath/Dockerfile -t vankichi/dev:latest $rcpath"
-
-function devrun {
-    port_range="7000-9300"
-    privileged=true
-    tz_path="/usr/share/zoneinfo/Japan"
-    font_dir="/System/Library/Fonts"
-    docker_daemon="$HOME/Library/Containers/com.docker.helper/Data/.docker/daemon.json"
-    docker_config="$HOME/Library/Containers/com.docker.helper/Data/.docker/config.json"
-    docker_sock="/var/run/docker.sock"
-    container_home="/home/vankichi"
-    container_root="/root"
-    container_goroot="$container_home/go"
-    goroot="/usr/local/go"
-    case "$(uname -s)" in
-        Darwin)
-            echo 'Docker on macOS start'
-            docker run \
-                --cap-add=ALL \
-                --name $container_name \
-                --restart always \
-                --privileged=$privileged \
-                -v /var/run/docker.sock:/var/run/docker.sock \
-                -p $port_range:$port_range \
-                -v $HOME/.docker/daemon.json:$container_root/.docker/daemon.json \
-                -v $HOME/.kube:$container_root/.kube \
-                -v $HOME/.netrc:$container_root/.netrc \
-                -v $HOME/.ssh:$container_root/.ssh \
-                -v $HOME/.gnupg:$container_root/.gnupg \
-                -v $HOME/Documents:$container_root/Documents \
-                -v $HOME/Downloads:$container_root/Downloads \
-                -v $HOME/go/src:/go/src:cached \
-                -v $docker_config:/etc/docker/config.json:ro,cached \
-                -v $docker_daemon:/etc/docker/daemon.json:ro,cached \
-                -v $font_dir:/usr/share/fonts:ro \
-                -v $rcpath/editorconfig:$container_root/.editorconfig \
-                -v $rcpath/gitconfig:$container_root/.gitconfig \
-                -v $rcpath/gitignore:$container_root/.gitignore \
-                -v $rcpath/tmux.conf:$container_root/.config/tmux/tmux.conf \
-                -v $rcpath/zshrc:$container_root/.zshrc \
-                -v $rcpath/go.env:$container_goroot/go.env:ro \
-                -v $rcpath/go.env:$goroot/go.env:ro \
-                -v $HOME/.zsh_history:$container_root/.zsh_history \
-                -v $tz_path:/etc/localtime:ro \
-                -v $docker_sock:$docker_sock \
-                -dit $image_name
-            ;;
-
-        Linux)
-            echo 'Docker on Linux start'
-            font_dir="/usr/share/fonts"
-            tz_path="/etc/timezone"
-            docker_daemon="/etc/docker/daemon.json"
-            docker_config="/etc/docker/config.json"
-            docker run \
-                --cap-add=ALL \
-                --name $container_name \
-                --restart always \
-                --privileged=$privileged \
-                -p 1313:1313 \
-                -p 6443:6550 \
-                -u "$(id -u $USER):$(id -g $USER)" \
-                -v $HOME/.docker:$container_home/.docker \
-                -v $HOME/.docker:$container_root/.docker \
-                -v $HOME/.gnupg:$container_home/.gnupg \
-                -v $HOME/.gnupg:$container_root/.gnupg \
-                -v $HOME/.kube:$container_home/.kube \
-                -v $HOME/.netrc:$container_home/.netrc:ro \
-                -v $HOME/.ssh:$container_home/.ssh \
-                -v $HOME/.config:$container_home/.config:cached \
-                -v $HOME/.p10k.zsh:$container_home/.p10k.zsh:cached \
-                -v $HOME/.zsh_history:$container_home/.zsh_history:cached \
-                -v $HOME/Documents:$container_home/Documents \
-                -v $HOME/Downloads:$container_home/Downloads \
-                -v $HOME/go/src:$container_goroot/src:cached \
-                -v $docker_config:$docker_config:ro,cached \
-                -v $docker_daemon:$docker_daemon:ro,cached \
-                -v $docker_sock:$docker_sock \
-                -v $font_dir:$font_dir \
-                -v $rcpath/editorconfig:$container_home/.editorconfig \
-                -v $rcpath/gitattributes:$container_home/.gitattributes \
-                -v $rcpath/gitconfig:$container_home/.gitconfig \
-                -v $rcpath/gitignore:$container_home/.gitignore \
-                -v $HOME/.config/nvim:$container_home/.config/nvim \
-                -v /usr/bin/sheldon:/usr/bin/sheldon:ro,cached \
-                -v $HOME/.config/sheldon:$container_home/.config/sheldon:ro,cached \
-                -v $rcpath/go.env:$container_goroot/go.env:ro \
-                -v $rcpath/go.env:$goroot/go.env:ro \
-                -v $rcpath/zshrc:$container_home/.zshrc:ro,cached \
-                -v $tz_path:/etc/localtime:ro,cached \
-                -dit $image_name
-            ;;
-
-        CYGWIN*|MINGW32*|MSYS*)
-            echo 'MS Windows is not ready for this environment'
-            ;;
-
-        *)
-            echo 'other OS'
-            ;;
-    esac
-    # docker exec -d $container_name $zpath nvup
-}
-
-alias devrun="devrun"
-alias devin="docker exec -it $container_name $zpath"
-
-function devkill {
-    docker update --restart=no $container_name \
-        && docker container stop $(docker container ls -aq) \
-        && docker container stop $(docker ps -a -q) \
-        && docker ps -aq | xargs docker rm -f \
-        && docker container prune -f
-}
-
-alias devkill="devkill"
-
-alias devres="devkill && devrun"
-
-function fup {
-  sudo systemctl reload dbus.service
-  sudo systemctl restart fwupd.service
-  sudo lsusb
-}
+# The repo's `alias` file (= ~/.aliases, sourced near the top) is the single
+# source of truth for the container helpers (dockerrm/vmove/vbuild/devrun/devin/
+# devkill/devres/fup). Duplicate definitions used to live here and shadowed the
+# `alias` version of devrun, dropping its claude mount.
 
 TRAPUSR1() {
   source ~/.zshrc
