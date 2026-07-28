@@ -49,7 +49,7 @@ gh pr list --state open --search "review-requested:@me" \
 ```bash
 gh pr comment <number> --body '<!-- review-loop: <head-sha> -->
 ## Integrating review (review-loop)
-verdict: <approve / fix-required / escalation>
+verdict: <approve / approve-with-notes / fix-required / escalation>
 <findings table / perspective completion status / overall assessment>'
 ```
 

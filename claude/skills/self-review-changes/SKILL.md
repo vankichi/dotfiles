@@ -78,7 +78,7 @@ Severity has 3 tiers: **critical / desirable / nit**.
 ### 3.2 Approval
 
 - **Interactive mode**: wait for "go ahead" (selective approval OK)
-- **loop-mode**: review-orchestrator's verdict (fix instructions) is applied by dev-cycle and confirmed resolved through iterative re-review; nits are noted in the draft PR
+- **loop-mode**: review-orchestrator's verdict (fix instructions) is applied by dev-cycle and confirmed resolved through iterative re-review. When 0 critical findings remain and only desirable ones do, the verdict is `approve-with-notes` (whether to push them to notes or fix them + re-review is dev-cycle's choice); nits are noted in the draft PR
 
 ### 3.3 Fix via Edit (parallel) → 3.4 Re-verification
 

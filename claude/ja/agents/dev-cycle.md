@@ -160,18 +160,23 @@ plan を読み、実装内容のタイプを判定:
 
 ### review (loop-mode: `review-orchestrator` 反復 / 対話 mode: `self-review-changes` skill)
 
-**loop-mode — 反復 loop (上限 3 周)**:
+**loop-mode — 反復 loop (致命的 fix の cap 3 周 / 総 round 上限 6)**:
 
 1. `review-orchestrator` subagent を **fresh spawn** する (毎回新規 — 実装 context を持たない reviewer による判断の分離)。渡すもの: diff 範囲 / spec 全文 / 影響範囲分類 (impact-A/B/C) / repo 規約・設計 docs の path 一覧 (起動時の準備 Step 5 で列挙済み) / iteration 番号 + 前周の修正指示 (2 周目以降)。**state file は渡さない**
 2. verdict = `approve` → nit を draft PR 注記リストに積み、follow-up 提案を state file に記録して security review へ
-3. verdict = `fix-required` → 修正指示を実施する (軽微は自前 Edit、実質的な変更は実装 subagent = opus へ委譲) → build / test / lint green を確認 → 1 へ戻り再 spawn (iteration +1)
-4. verdict = `escalation`、または **iteration が上限 3 を超えても approve に至らない** → 「escalation 手順」に従って停止する
-5. **escalation 解消後の再開**: 解消後に適用した変更が reviewer 指定の remediation そのものであれば再 review は不要 (その旨を draft PR に明記する)。reviewer の指定を超える追加変更を伴う場合は iteration cap をリセットして 1 から再 spawn する
+3. verdict = `approve-with-notes` (致命的 0 / 望ましいのみ残存) → 次の 2 択。どちらでもよいが **cap は消費しない** (escalation risk なし)
+   - **(a) 修正しない**: 望ましい findings を nit / follow-up として draft PR 注記リストと state file に記録して security review へ
+   - **(b) 修正する**: 修正指示を実施 → build / test / lint green を確認 → 1 へ戻り再 spawn (総 round のみ +1)
+   - **(a) を選んだうえで望ましい findings を修正するのは禁止** — 最終 diff に reviewer 未確認の変更を残さない invariant。直すなら必ず (b) で再 review を通す
+4. verdict = `fix-required` (致命的を 1 件以上含む) → 修正指示を実施する (軽微は自前 Edit、実質的な変更は実装 subagent = opus へ委譲) → build / test / lint green を確認 → 1 へ戻り再 spawn (iteration +1、**cap を消費**)
+5. verdict = `escalation`、または **致命的を含む fix-required が cap 3 周を超えても解消しない** → 「escalation 手順」に従って停止する
+6. **総 round 上限 6 に到達したら打ち切る**: 致命的 0 が前提のため escalation せず 3(a) と同じ扱いで完走する (望ましい findings を注記に送って security review へ)。到達時点で致命的が残存している場合のみ 5 の cap 規定どおり escalation する
+7. **escalation 解消後の再開**: 解消後に適用した変更が reviewer 指定の remediation そのものであれば再 review は不要 (その旨を draft PR に明記する)。reviewer の指定を超える追加変更を伴う場合は iteration cap をリセットして 1 から再 spawn する。**本条項は escalation 解消後の復帰時に限る** — 通常の iteration で cap や round 上限に抵触した場合に「reviewer 指定どおりだから再 review 不要」と読み替える根拠には使えない (通常の iteration は 3-6 の規定で処理する)
 
 - **新規 dependency の検出は verdict に関わらず無条件で escalation** (CLAUDE.mdの既存の壁、loop-modeでも緩めない)
 - 修正で新たに触れた箇所も次周の reviewer が fresh で diff 全体を見るため、増分の見落としが構造的に出ない
 - 観点体系・checklist の SoT は `self-review-changes` SKILL.md と references/ (reviewer が自分で Read する。再列挙しない)
-- team (flat roster) 実行下など subagent の nested spawn が不可な環境では、reviewer は fan-out せず縮退規定 (inline 逐次適用 — review-orchestrator 鉄則 6) で動作する。verdict の「縮退実施」明記で判別できる
+- team (flat roster) 実行下など subagent の nested spawn が不可な環境では、reviewer は fan-out せず縮退規定 (inline 逐次適用 — review-orchestrator 鉄則 7) で動作する。verdict の「縮退実施」明記で判別できる
 
 **対話 mode**: 従来通り `Skill` tool で `self-review-changes` を起動し inline で実施。致命的なもの (memory feedback違反、設定形式誤り、spec逸脱の暗黙化、推測mapping) は必ず承認を取って修正、nitはユーザー判断。修正後に build / test / lint 再実行で副作用なしを確認
 
@@ -179,8 +184,9 @@ plan を読み、実装内容のタイプを判定:
 ```
 ## review 完了
 - mode: [loop-mode / 対話 mode]
-- iterations: <N> 周で approve (loop-mode のみ)
+- iterations: <N> 周で approve / approve-with-notes (loop-mode のみ。cap 消費 <n>/3 (致命的 fix) / 総 round <n>/6)
 - 致命的修正: <件数> 件 / 望ましい修正: <件数> 件 → 反復内で解消
+- approve-with-notes: [なし / あり → (a) 注記のみ (未修正) / (b) 修正して再 review 通過]
 - nit: <件数> 件 → draft PR に注記
 - follow-up 提案: <件数> 件 → state file に記録
 - 新規dependency検出: [なし / あり→escalation]
@@ -247,7 +253,7 @@ loop-mode で escalation 条件 (鉄則 2/3) に当たったら、以下を順�
 | 実装計画導出 | ✓ (mode: loop-mode / 対話mode) |
 | 設計 review | ✓ (or skip 理由) |
 | 実装 | ✓ (worktree: <path>) |
-| review | ✓ (loop-mode: <N> 周で approve) |
+| review | ✓ (loop-mode: <N> 周で approve / approve-with-notes) |
 | security review | ✓ |
 | commit & push | ✓ |
 | retrospect | ✓ (or 記録なし) |
@@ -263,14 +269,14 @@ loop-mode で escalation 条件 (鉄則 2/3) に当たったら、以下を順�
 
 1. **工程境界で必ず報告 + WIP commit**: 各工程完了時にサマリを地の文で出す。「黙って次に進む」のは禁止。loop-mode では worktree 分離後の各工程完了時に `wip(<工程>): <summary>` を worktree 内で local commit する (外的中断からの痕跡保全。push はしない — ship 時に commit-push-branch が squash して clean な 1 commit にする)。**外向き操作に言及する報告には receipts (機械検証可能な証跡 — commit sha / PR URL / comment URL / state file path) を添え、receipt のない項目は「未実施」と報告する**
 2. **承認ポイントはモードで異なる**:
-   - loop-mode: escalation条件 (DoDカバレッジ曖昧 / 新規dependency検出 / security要対応 / test失敗未解消 / review 反復上限超過) に当たった時のみ停止。それ以外は自律進行
+   - loop-mode: escalation条件 (DoDカバレッジ曖昧 / 新規dependency検出 / security要対応 / test失敗未解消 / 致命的を含む review 反復の cap 超過) に当たった時のみ停止。それ以外は自律進行
    - 対話 mode: 従来の3箇所 (実装計画承認・self-review修正承認・commit直前確認)
 3. **致命的エラーで即停止** (loop-mode・対話mode共通):
    - DoDカバレッジが曖昧 (実装計画導出フェーズで検知)
    - 実装で test 失敗が解消できない
    - security review で要対応
    - 新規 dependency の検出
-   - review 反復が上限 (3 周) を超えても approve に至らない (loop-mode)
+   - 致命的を含む fix-required の反復が cap (3 周) を超えても解消しない (loop-mode。致命的 0 の `approve-with-notes` は cap を消費せず escalation 条件にもならない)
 4. **push / PR は CLAUDE.md「push / PR の作法」に従う**: `commit-push-branch` skill経由のpushはOK。loop-modeのdraft PR作成はCLAUDE.md loop-mode節の例外規定に従う。本PR化・mergeは人間のみ
 5. **task 進捗を TaskUpdate で都度更新**
 6. **既存メモリ feedback を尊重**: `MEMORY.md` 全件をReadし各entryの中身まで把握 (代表例のhardcode列挙はしない)
@@ -284,6 +290,8 @@ loop-mode で escalation 条件 (鉄則 2/3) に当たったら、以下を順�
 - loop-modeで実装フェーズのworktree分離をスキップして共有checkoutを直接編集する
 - review / security review をスキップしてcommitする
 - loop-modeで `fix-required` の修正後に再 review せず commit に進む (反復の打ち切り)
+- `approve-with-notes` で (a) を選んだのに望ましい findings を直してしまう (reviewer 未確認の変更が最終 diff に残る)
+- 致命的 0 の `approve-with-notes` を cap 消費扱いにして escalation する / 逆に致命的を含む cap 超過を注記送りで完走する
 - review-orchestrator に state file を渡してしまう (独立性の破壊)
 - 新規dependency検出時にescalationせず追加してしまう
 - skill / subagentを使わず全部自前で実装する (各skillのロジックを再発明しない)
