@@ -58,7 +58,7 @@ Sort by the `target` in the frontmatter:
 
 ### Step 7: Update state + report
 
-- Insights included in the PR: add `status: proposed` + `pr: <URL>` to the frontmatter
+- Insights included in the PR: add `status: proposed` + `pr: <URL>` to the frontmatter. **Append the status right after the cluster's commit — do not wait for PR creation** (only `pr:` is appended after the PR is created) — so that on an interruption you can trace "how far the application got" independently of the commits
 - **Force-output a disposition table for every insight** (no silent skips):
 
 ```
@@ -73,6 +73,15 @@ Sort by the `target` in the frontmatter:
 ## Decisions needed (for a human)
 - <summary of the undecided proposal + the point you want decided>
 ```
+
+## Resuming from an interruption
+
+If a run terminates abnormally (an API stall, etc.), do not start over from scratch — identify the incomplete steps and continue. Use only these two criteria to judge progress:
+
+1. **The commit list from `git log origin/<default-branch>..HEAD`** = the clusters already applied. **Do not use the local `<default-branch>` as the base** — when it is stale it picks up already-merged commits and the results look overstated (always count against `origin/` after a `git fetch`)
+2. **The `status` in the insight frontmatter** = whether the processed mark is there. If not a single one is set, Step 7's state update has not run
+
+Resume procedure: reuse the working branch (and worktree) if they are still there, identify the unapplied insights from the difference between the two points above → continue from Step 5 onward. Do not squash / rewrite already-pushed commits; stack on top of them (no force push). If a draft PR already exists, do not create a new one — edit its body to append.
 
 ## status lifecycle (insight frontmatter)
 

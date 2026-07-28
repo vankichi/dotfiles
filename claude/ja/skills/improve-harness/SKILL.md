@@ -56,7 +56,7 @@ frontmatter の `target` で振り分ける:
 
 ### Step 7: 状態更新 + 報告
 
-- PR に含めた insight: frontmatter に `status: proposed` + `pr: <URL>` を追記する
+- PR に含めた insight: frontmatter に `status: proposed` + `pr: <URL>` を追記する。**status の追記は cluster の commit 直後に行い、PR 作成を待たない** (`pr:` のみ PR 作成後に追記) — 中断時に「どこまで適用したか」を commit と独立に辿れるようにする
 - **全 insight の処遇表を強制出力する** (黙った skip 禁止):
 
 ```
@@ -71,6 +71,15 @@ frontmatter の `target` で振り分ける:
 ## 要判断 (人間へ)
 - <undecided な proposal の要約 + 判断してほしい点>
 ```
+
+## 中断からの resume
+
+run が異常終了 (API stall 等) した場合、ゼロからやり直さず未完了 step を特定して継続する。進捗の判定基準は次の 2 つだけを使う:
+
+1. **`git log origin/<default-branch>..HEAD` の commit 一覧** = 適用済 cluster。**local の `<default-branch>` を基準にしない** — stale だと merge 済 commit を拾って成果が過大に見える (必ず `git fetch` 後に `origin/` 基準で数える)
+2. **insight frontmatter の `status`** = 処理済マークの有無。1 件も付いていなければ Step 7 の状態更新が未実行
+
+再開手順: 作業 branch (と worktree) が残っていれば再利用し、上記 2 点の差分から未適用の insight を特定 → Step 5 以降を続行する。push 済 commit は squash / 書き換えせず積み増す (force push 禁止)。draft PR が既に存在する場合は新規作成せず body を編集して追補する。
 
 ## status lifecycle (insight frontmatter)
 
