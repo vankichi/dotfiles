@@ -52,6 +52,7 @@ Dev loop の入口。ready な ticket を 1 件選び、dev-cycle が自律実�
 ## 障害時
 
 - Notion MCP 不達 / auth 切れ: retry せず「Notion に到達できない」を明示して異常終了する (通知は呼び出し側の責務)
+- **MCP tool が自分の tool schema に露出していない場合** (`claude mcp list` は Connected でも主 session の schema に無いことがある): 全 tool を持つ subagent へ委譲して実行する (委譲 prompt に read-only / 書き込み範囲 — status 更新 + コメント追加のみ — を明記)。委譲もできない場合は「tool 不在により未実行」と明記して終了し、**代替手段でごまかさない** (ticket を更新せずに更新済みと報告しない)
 
 ## 鉄則
 

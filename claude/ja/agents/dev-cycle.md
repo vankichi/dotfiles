@@ -239,6 +239,7 @@ loop-mode で escalation 条件 (鉄則 2/3) に当たったら、以下を順�
 1. `retrospect` を実行する (停止事象は最優先の insight 源 — retrospect stage の既存規定)
 2. **WIP 保全**: worktree の未 commit 変更を `wip(<工程>): escalation 停止` で commit し、**cycle の作業 branch をそのまま push する** (draft PR は作らない。根拠: CLAUDE.md「loop-mode」節の escalation 既定)。branch 未作成 (実装前の escalation) なら本 step は skip
 3. **ticket コメント自動投稿**: 停止理由 / 停止工程 / WIP branch / state file path / 再開方法 (work-intake の resume mode) を ticket にコメントする。投稿手順と書式は work-intake `references/notion-adapter.md`「escalation コメント」を SoT とする。secret / spec 本文は転記しない
+   - **MCP tool が自分の tool schema に無い場合は全 tool を持つ subagent へ委譲する** (委譲 prompt に書き込み範囲 = 当該 ticket へのコメント追加のみを明記)。委譲もできない場合は receipt に「tool 不在により未実行」と明記する — 代替手段でごまかさず、未実行を隠さない
 4. **push 通知**: `PushNotification` で 1 行 (ticket id + 停止理由) を送る。tool が使えない環境では skip し、停止報告に「通知未達」を明記する
 5. **state file 更新**: Current state に「escalation 停止 (<工程> / <理由>)」を記録する (worktree 所有の逆引き判定で非 active となり、work-intake resume の受け皿と整合する)
 6. user への停止報告 (境界の報告と同形式 + 上記 1-5 の実施状況を表で。**各 step に receipt を添える** — WIP push = commit sha / コメント = comment URL / 通知 = 送信応答 or「未達」の明記 / state file = path。receipt を提示できない step は「未実施」と報告する)
