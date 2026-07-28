@@ -40,6 +40,7 @@ self-review の最大バイアスは「自分の intent が見えて actual gap 
 | test-adversarial.md | test ファイルの diff が 0 |
 | performance.md | code diff が 0 |
 | observability.md | 新規 code path なし (docs / config / test のみ) |
+| ops-docs-hazard.md | 運用手順 docs の diff が 0 (`docs/runbook/**` の変更が無く、docs 追加行に shell command の code fence が無い) |
 | dependency.md | 依存ファイル (go.mod / go.sum / lock / import 行) の diff が 0 |
 | code-quality.md | code diff が 0 |
 

@@ -42,6 +42,7 @@ All perspectives are default-on. **You may skip only when the mechanical conditi
 | test-adversarial.md | the test file diff is 0 |
 | performance.md | code diff is 0 |
 | observability.md | no new code path (docs / config / test only) |
+| ops-docs-hazard.md | the diff of operational-procedure docs is 0 (no changes under `docs/runbook/**`, and no shell-command code fence in the added docs lines) |
 | dependency.md | the diff of dependency files (go.mod / go.sum / lock / import lines) is 0 |
 | code-quality.md | code diff is 0 |
 
