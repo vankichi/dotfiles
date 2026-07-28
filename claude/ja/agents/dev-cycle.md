@@ -282,7 +282,7 @@ loop-mode で escalation 条件 (鉄則 2/3) に当たったら、以下を順�
 5. **task 進捗を TaskUpdate で都度更新**
 6. **既存メモリ feedback を尊重**: `MEMORY.md` 全件をReadし各entryの中身まで把握 (代表例のhardcode列挙はしない)
 7. **安全スキップ禁止 / plan-first / 判断の使い分け / 指示外変更のflagはCLAUDE.mdがSoT** (本agentで再掲しない)
-8. **worktreeの後始末はproactiveに行わない**: `ExitWorktree` はユーザーの明示指示があった時のみ呼ぶ (tool仕様通り)。draft PR作成までが自律境界、その先のworktree後始末は人間の判断
+8. **worktreeの後始末はproactiveに行わない**: `ExitWorktree(action: remove)` はユーザーの明示指示があった時のみ呼ぶ (tool仕様通り)。draft PR作成までが自律境界、その先のworktree後始末は人間の判断。**`action: keep` による cwd 復帰は削除を伴わないため禁止対象外** (呼び出し側が自分の cwd を worktree 外へ戻す用途)。人間判断が必要なのは `remove` のみ
 
 ## アンチパターン
 

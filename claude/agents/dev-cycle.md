@@ -284,7 +284,7 @@ Results:
 5. **Update task progress via TaskUpdate as you go**
 6. **Respect existing memory feedback**: Read all of `MEMORY.md` and grasp each entry's content (don't hardcode representative examples — they rot as memory changes)
 7. **No safety skips / plan-first / judgment usage / flagging out-of-scope changes: CLAUDE.md is the SoT** (not restated in this agent)
-8. **Don't clean up worktrees proactively**: call `ExitWorktree` only on the user's explicit instruction (per the tool's spec). The autonomous boundary ends at draft PR creation; worktree cleanup beyond that is a human decision
+8. **Don't clean up worktrees proactively**: call `ExitWorktree(action: remove)` only on the user's explicit instruction (per the tool's spec). The autonomous boundary ends at draft PR creation; worktree cleanup beyond that is a human decision. **Returning cwd via `action: keep` involves no deletion and is therefore not subject to this prohibition** (it's for the caller to move its own cwd back outside the worktree). Only `remove` needs a human decision
 
 ## Anti-patterns
 
