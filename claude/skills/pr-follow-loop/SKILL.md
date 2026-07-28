@@ -59,8 +59,10 @@ Select one PR from the poll (oldest created first) and, based on its current sta
 - The trigger comes from the Step 2 cross-check: a local worktree that still exists while its corresponding PR is already merged
 - **Auto-cleanup** (report after the fact):
   1. Confirm the target worktree's `git status --porcelain` is empty (clean). **If dirty, do not clean up — escalate** (to avoid losing uncommitted changes)
-  2. If clean, `git worktree remove <path>` + **delete the merged local branch**
+  2. If clean, `git worktree remove <path>` + **delete the merged local branch** (`git branch -d`. `-D` and the `--force` family are left to human execution)
   3. **Do not touch the remote branch or other worktrees** (leave remote deletion to GitHub's auto-delete on merge; deleting the remote is an outward action outside this skill's scope)
+- **If a cleanup command is denied by the permission classifier, do not work around it**: compound commands containing `--force`, and `git branch -D`, can be denied. On a deny, abort the remaining cleanup and **present the unexecuted commands to the human as-is and finish**. State "not executed due to deny" in the receipts (never report "cleanup complete" for something whose removal could not be mechanically confirmed)
+  - Whether to add the minimum permissions needed for cleanup (`Bash(git worktree remove:*)` / `Bash(git branch -d:*)`, etc.) to settings is **a human decision**. The skill never rewrites settings itself
 - Notify the cleanup result (receipts: mechanically confirm the worktree is gone from `git worktree list` and the branch is gone from the branch list)
 
 ### Step 4: self-pacing (`ScheduleWakeup`)
@@ -90,7 +92,7 @@ Select one PR from the poll (oldest created first) and, based on its current sta
 
 1. **Approve / request-changes / merge are the human's only** — the loop never operates GitHub's review state
 2. **Bot findings go only as far as presenting the triage** — applying fixes / posting decline replies happen after the user approves, in dialogue. The loop never fixes / declines on its own
-3. **Cleanup requires a clean check** — a dirty worktree is not cleaned; escalate instead. Cleanup targets are the own worktree + the merged local branch only (remote / other worktrees are left untouched)
+3. **Cleanup requires a clean check** — a dirty worktree is not cleaned; escalate instead. Cleanup targets are the own worktree + the merged local branch only (remote / other worktrees are left untouched). A denied cleanup command is presented to the human, not worked around
 4. **Notify only after verifying the receipts exist** — mechanically confirm the triage notification / the removal / the Monitor start before reporting
 5. **Do not hardcode configuration** — bot names / required reviewers / repo come from the reference memory
 6. **Do not omit the tick report** — output all items every tick
