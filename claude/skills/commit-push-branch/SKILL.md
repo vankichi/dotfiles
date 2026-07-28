@@ -179,8 +179,8 @@ Applies **only when loop-mode is explicitly specified** at invocation time (basi
 
 Materials passed from the caller (dev-cycle) = implementation plan / DoD check results / spec deviations (SD#) / impact scope / self-review & security-review results (including perspective completion status) / ticket URL. Turn these into the body with the following rules:
 
-1. **Look for the target repo's PR template**: the first one found in the order `.github/pull_request_template.md` → `.github/PULL_REQUEST_TEMPLATE.md` → `PULL_REQUEST_TEMPLATE.md` → `docs/pull_request_template.md`
-2. **If a template exists, follow its section structure**: delete the HTML comment hints (`<!-- ... -->`) and fill each section with the corresponding material. Section names vary by repo, so map by meaning (guideline):
+1. **Look for the target repo's PR template**: the first one found in the order `.github/pull_request_template.md` → `.github/PULL_REQUEST_TEMPLATE.md` → `.github/PULL_REQUEST_TEMPLATE/*.md` → `PULL_REQUEST_TEMPLATE.md` → `docs/pull_request_template.md` (`PULL_REQUEST_TEMPLATE/` is the directory form for multiple templates; if there is a single one, use it unconditionally, if there are several, pick the one matching loop-mode / the purpose)
+2. **If a template exists, its section structure is the SoT**: don't use the skill's own structure. Delete the HTML comments (`<!-- ... -->`) **only after reading them as filling instructions** (they may state filling criteria / sizing rules / explicit instructions for loop-mode). Fill each section with the corresponding material. Section names vary by repo, so map by meaning (guideline):
 
 | template section (example) | material to fill in |
 |---|---|
@@ -197,6 +197,14 @@ Materials passed from the caller (dev-cycle) = implementation plan / DoD check r
    If some material has no matching section in the template, append a section at the end of the body and record it in full (never drop it silently)
 3. **If there is no template, generate the default skeleton**: the 6 sections `## Summary` / `## Spec compliance` / `## Spec deviations` / `## Impact scope` / `## Verification` / `## References`
 4. **Branch ticket handling on repo visibility** (mechanically judged via `gh repo view --json visibility`): for a private repo, put the ticket URL in References (review-loop relies on "PR body + the ticket it references" as the spec). **For a public repo, never write internal URLs / the ticket body** (same spirit as the improve-harness iron rule — reference insights / tickets by name or ID only)
+5. **Don't delete a section you can't fill, either**: write "none" explicitly when not applicable (many templates are read as "a missing section = not declared")
+
+### Style conventions (loop-mode PR body; applies whether or not a template exists)
+
+- Write in **noun-ending phrasing** (体言止め: 「〜の追加」「〜は不変」). Don't close on the predicates 「〜する」/「〜した」/「〜になる」
+- **Bullets first**. Don't put prose paragraphs in. Enumerations are either a table or bullets, nothing else
+- **Don't enumerate every review nit / follow-up proposal**: compress to "count + a reference to the state file path" + "only the 2-3 items the reviewer needs to know before merge" (the SoT for the full list is the state file)
+- The guideline is **45-70 lines / 4-5k characters**. If you exceed it, first revisit the compression of nits and follow-ups (stay within budget by cutting redundancy, not by deleting sections)
 
 ## Iron rules
 

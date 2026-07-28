@@ -177,8 +177,8 @@ PR 作成は別タスク。ユーザーが指示したら `gh pr create` で続�
 
 呼び出し元 (dev-cycle) から渡される材料 = 実装計画 / DoD チェック結果 / spec deviation (SD#) / impact scope / self-review・security review 結果 (観点実施状況を含む) / ticket URL。これを次の規則で body に落とす:
 
-1. **対象 repo の PR template を探索**: `.github/pull_request_template.md` → `.github/PULL_REQUEST_TEMPLATE.md` → `PULL_REQUEST_TEMPLATE.md` → `docs/pull_request_template.md` の順で最初に見つかったもの
-2. **template があればその section 構成に従う**: HTML comment の記入 hint (`<!-- ... -->`) は削除し、各 section へ材料を対応付けて記入する。section 名は repo により異なるため意味で対応させる (目安):
+1. **対象 repo の PR template を探索**: `.github/pull_request_template.md` → `.github/PULL_REQUEST_TEMPLATE.md` → `.github/PULL_REQUEST_TEMPLATE/*.md` → `PULL_REQUEST_TEMPLATE.md` → `docs/pull_request_template.md` の順で最初に見つかったもの (`PULL_REQUEST_TEMPLATE/` は複数 template の directory 形式。単一なら無条件、複数なら loop-mode / 用途に合致するものを選ぶ)
+2. **template があればその section 構成が SoT**: skill 側の独自構成を使わない。HTML comment (`<!-- ... -->`) は**記入指示として読んでから**削除する (記入基準 / sizing rule / loop-mode 向けの明示指示が書かれている場合がある)。各 section へ材料を対応付けて記入する。section 名は repo により異なるため意味で対応させる (目安):
 
 | template section (例) | 記入する材料 |
 |---|---|
@@ -195,6 +195,14 @@ PR 作成は別タスク。ユーザーが指示したら `gh pr create` で続�
    材料に対応する section が template に無い場合は body 末尾に section を追加して漏らさず記載する (黙って捨てない)
 3. **template が無ければ default skeleton で生成**: `## Summary` / `## Spec compliance` / `## Spec deviations` / `## Impact scope` / `## Verification` / `## References` の 6 section
 4. **repo の可視性で ticket 記載を分岐** (`gh repo view --json visibility` で機械判定): private repo は References に ticket URL を記載する (review-loop が「PR body + 参照 ticket」を spec として辿る前提)。**public repo では内部 URL / ticket 本文を書かない** (improve-harness 鉄則と同精神 — insights / ticket は名前・ID のみで参照)
+5. **埋められない section も削除しない**: 該当なしなら "none" と明記する (多くの template が「section の欠落 = 未申告」と解釈されるため)
+
+### 文体規約 (loop-mode PR body、template 有無に依らず適用)
+
+- **体言止め**で書く (「〜の追加」「〜は不変」)。「〜する」「〜した」「〜になる」の述語止めを使わない
+- **bullet 主体**。散文の段落を置かない。列挙は表 or bullet の 2 択
+- **review nit / follow-up 提案は全件列挙しない**: 「件数 + state file path 参照」+ 「reviewer が merge 前に知る必要がある 2-3 件のみ」に圧縮する (全件の SoT は state file)
+- 目安は **45-70 行 / 4-5k 字**。超えたら nit・follow-up の圧縮を先に見直す (section の削除ではなく冗長さの削減で収める)
 
 ## 鉄則
 
