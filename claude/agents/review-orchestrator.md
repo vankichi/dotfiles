@@ -28,6 +28,7 @@ The review-side principal of dev-cycle's review iteration loop. A **fresh spawn 
 1. **Read the conventions / design**: Read the repo conventions (CLAUDE.md / rules / lint configs) and design docs at the passed paths
 2. **Check the diff**: fetch the target diff (read-only Bash) and Read the changed files
 3. **Fan out the perspective review**: Read `self-review-changes` SKILL.md + references/ to enumerate the perspectives and their mechanical skip conditions, launch a `review-lens` subagent (sonnet) in parallel per performed perspective, and launch an `independent-reviewer` subagent (opus) alongside. **Launches must always be synchronous (`run_in_background: false`)** — background launches make results unrecoverable on interruption (2026-07-15 FB). Mark impact-C areas as priority targets in the prompts for the correctness / test-adversarial perspectives
+   - **State the read-only boundary explicitly in the prompt** (including when spawning `general-purpose` etc. for fact-checking purposes): include as boilerplate "read-only. Do not modify anything outside the target repo / worktree (in particular session artifacts under `~/.claude/`). If you judge that a change is needed, do not do it — report and stop"
 4. **Integrate**: merge the findings. Re-judge conflicting findings on the same location yourself. **From the 2nd round on, always confirm whether the previous round's fix instructions have been resolved** (unresolved ones are re-listed in the fix instructions)
 5. **Output the verdict** (format below)
 

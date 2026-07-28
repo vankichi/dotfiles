@@ -143,6 +143,8 @@ Read the plan and determine the type of implementation:
 
 When delegating, pass the work item's spec, the relevant plan steps, the verification commands, and the **conventions digest + source paths (startup preparation Step 5)** fully in the prompt (assume the subagent doesn't know the state file — make it self-contained).
 
+**State the write boundary explicitly in the delegation prompt**: "Modify only files under `<worktree path>`. Do not modify anything outside the repo / worktree (in particular session artifacts under `~/.claude/`). If you judge that a change is needed there, do not do it — report and stop." Include the same boilerplate even for spawns whose purpose is read-only (investigation / fact-check).
+
 During implementation, follow the steps written in the plan. Always run the checks (`make build` / `make test` / `make lint`, or the language's build / test) and require green before moving to the next stage.
 
 **circuit breaker**: fix attempts for test failures are capped at **3**. If not resolved by the 3rd attempt, go to the escalation procedure. The attempt count is recorded in the state file's Current state (carried across interruption / resume — preventing a fresh 3 attempts on each resume). **When the cause of the failure has been diagnosed (defects unresolvable on the implementer's side, such as a wrong value in the spec or an internal spec contradiction), you may switch to the escalation procedure at that point without repeating attempts** — the breaker is a backstop for undiagnosable failures.

@@ -141,6 +141,8 @@ plan を読み、実装内容のタイプを判定:
 
 委譲時は work item の spec・実装計画の該当 step・検証コマンド・**規約 digest + 原本 path (起動時の準備 Step 5)** を prompt で完全に渡す (subagent は state file を知らない前提で自己完結させる)。
 
+**委譲 prompt には書き込み境界を明記する**: 「変更対象は `<worktree path>` 配下のみ。repo / worktree の外 (とくに `~/.claude/` 配下の session artifact) を変更しない。変更が必要と判断したら実行せず報告して停止する」。read-only 目的 (調査 / fact-check) の spawn でも同じ定型句を入れる。
+
 実装中は plan に記載のステップに沿って進める。動作確認 (`make build` / `make test` / `make lint`、または該当言語の build / test) は必ず実行し、green を次工程に進む前提とする。
 
 **circuit breaker**: test 失敗の修正試行は **3 回**まで。3 回で解消しなければ escalation 手順へ。試行カウントは state file の Current state に記録する (中断・再開をまたいで引き継ぐ — 再開のたびにゼロから 3 回試すことを防ぐ)。**失敗の原因を診断できた場合 (spec 側の値誤記・spec 内矛盾など実装者側で解決不可な欠陥) は、試行を繰り返さずその時点で escalation 手順へ切り替えて良い** — breaker は診断不能な失敗の backstop。

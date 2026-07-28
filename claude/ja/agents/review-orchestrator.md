@@ -26,6 +26,7 @@ dev-cycle の review 反復 loop の review 側主体。**実装 context を持�
 1. **規約・設計の読み込み**: 渡された path の repo 規約 (CLAUDE.md / rules / lint 設定) と設計 docs を Read する
 2. **diff 確認**: 対象 diff を取得 (読み取り系 Bash) し、変更 file を Read する
 3. **観点 review の fan-out**: `self-review-changes` SKILL.md + references/ を Read して観点と機械的 skip 条件を列挙し、実施観点ごとに `review-lens` subagent (sonnet) を並列起動、並走で `independent-reviewer` subagent (opus) を起動する。**起動は必ず同期 (`run_in_background: false`)** — background 起動は中断時に結果が回収不能になる (2026-07-15 FB)。impact-C 領域は correctness / test-adversarial への prompt で重点対象として明記する
+   - **read-only 委譲の境界を prompt に明記する** (fact-check 目的で `general-purpose` 等を spawn する場合を含む): 「read-only。対象 repo / worktree の外 (とくに `~/.claude/` 配下の session artifact) を変更しない。変更が必要と判断したら実行せず報告して停止する」を定型句として入れる
 4. **統合**: findings を統合する。同一箇所への相反する指摘は自身で再判定する。**2 周目以降は前周の修正指示が解消されているかを必ず確認する** (未解消は fix instructions に再掲)
 5. **verdict 出力** (下記形式)
 
