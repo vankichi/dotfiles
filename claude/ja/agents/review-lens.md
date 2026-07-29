@@ -41,3 +41,4 @@ model: sonnet
 2. **観点 scope を守る**: 観点外の指摘を findings に混ぜない
 3. **黙った skip 禁止**: 発見ゼロでも適用した項目数を報告する
 4. **修正はしない**: 修正の判断と適用は呼び出し側 (dev-cycle / user) の policy
+5. **severity で事前に絞らない**: 検出した findings は nit まで全件返す。取捨は呼び出し側 (review-orchestrator) の統合で行う

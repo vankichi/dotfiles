@@ -37,7 +37,7 @@ gh pr list --state open --search "review-requested:@me" \
 ### Step 4: 統合 review (`review-orchestrator`)
 
 - `review-orchestrator` を**通常の Agent tool で同期 spawn する** (teams 不使用 — flat roster 下では fan-out が縮退するため)
-- 渡すもの: PR の diff 範囲 (base..head) / spec = **PR body + 本文が参照する ticket (あれば)** / repo 規約・設計 docs の path 一覧 (CLAUDE.md / rules / lint 設定 / docs 内設計文書を glob) / 簡易影響分類 (`gh pr diff <n> --stat` から: 新規 file のみ = impact-A、既存 file の変更あり = impact-C 相当として correctness / test-adversarial を重点指定)
+- 渡すもの: PR の diff 範囲 (base..head) / spec = **PR body + 本文が参照する ticket (あれば)** / repo 規約・設計 docs の path 一覧 (CLAUDE.md / rules / lint 設定 / docs 内設計文書を glob) / 簡易影響分類 (`gh pr diff <n> --stat` + diff 本体から `~/.claude/rules/impact-scope.md`「簡易判定」に従って分類する。impact-C は correctness / test-adversarial を重点指定)
 - state file 相当は渡さない (standalone review — 実装 context を持たせない)
 
 ### Step 5: comment 投稿 (receipts 検証まで)

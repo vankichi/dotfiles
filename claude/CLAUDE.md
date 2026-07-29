@@ -37,6 +37,16 @@
 - 指示外の変更 (対象外 file / 設定 / dependency / 計算量・I/O パターン) が発生したら、summary で **独立項目として列挙** し commit 前に user 承認を取る。「副次的に〜も修正」と埋め込まない
 - TODO / FIXME を残したまま完了扱いにしない。security 関連の TODO は commit に残さない
 
+## 出力と委任の作法
+
+- 応答は結論先出し・簡潔。caveat / disclaimer は短く、字数は本題に割く。説明は要点のみ (深掘りは明示要求時)
+- narration は最小: 最初の tool 呼び出し前に 1 文、作業中は重要な発見 / 方針転換時のみ、完了時は結果を先に出す
+- 成果物 file (report / doc / summary) は実体のみ。filler section / 重複要約 / boilerplate で嵩上げしない
+- 訂正の表明は user の code / 結論 / 判断が変わる error のみ。無害な言い直しは黙って直す
+- 委任は分量があり真に独立な作業 (広域 multi-file 調査等) のみ。数回の tool 呼び出しで終わる作業は自前。1 体で足りるなら 1 体
+- **自分の作業の検証目的で subagent を使わない**。例外は dev loop の review 工程 (実装 context を持たない governance gate として設計。起動規模の gate は `review-orchestrator` が SoT)
+- effort は cost / latency の主制御を low / medium に置き、要求の厳しい coding / agent 作業で xhigh に上げる。**thinking は無効化しない** (無効化は tool 呼び出しの text 漏れ / 内部 XML tag 漏れを招く。低 effort + thinking 有効が同 cost で優位)
+
 ## push / PR の作法
 
 - push は user の literal 指示 (または `commit-push-branch` skill 経由) を待つ。「commit して」「amend して」は local 操作で stop し、push は提案だけする
@@ -59,3 +69,6 @@
 - project 固有用語 (repo 名 / service 名 / ticket prefix / 環境 URL / メンバー名) を agent / skill に hardcode しない。MEMORY.md の memory から取得する
 - 新規 agent / skill / hook に `Bash(*)` 等の広範 permission を default で与えない。外部送信を含む skill は user 承認後に追加。hook で自動実行される command は user に明示してから commit
 - **skill 粒度**: 1 skill = 1 責務。SKILL.md は薄い coordinator にし、観点 / checklist は `references/` に分割。発火条件は機械的 (grep / glob) に定義し、default-on + 理由付き skip + 全観点の実施状況出力を義務付ける
+- **model が自発的にやることを指示に書かない**: 自己検証 / 再チェック / 自己修正の重複指示は cost だけ増やす。検証は実コマンド (build / test / lint / 再 grep) の実行として書く
+- review 系の prompt に「重大度の高いものだけ報告」「保守的に」を書かない (報告が減る)。全件挙げさせ、取捨は後段の severity 判定で行う
+- 出力長の抑制は「section 構成 + 行数上限」で機械的に与える (「簡潔に」単独では効かない)

@@ -43,3 +43,4 @@ Handoff to another perspective: <none / 1 line>
 2. **Stay within the perspective scope**: don't mix out-of-perspective points into the findings
 3. **No silent skipping**: report the number of items applied even with zero findings
 4. **Don't fix**: the judgment and application of fixes are the caller's (dev-cycle / user) policy
+5. **Don't pre-filter by severity**: return every finding you detect, down to the nits. Triage happens in the caller's (review-orchestrator's) integration

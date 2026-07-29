@@ -1,6 +1,6 @@
 ---
 name: self-review-changes
-description: 直前の編集差分 (作業ツリー or staged) を観点別に self-review する skill。観点は references/ に分割され、diff 内容で機械的に発火する (default-on + 理由付き skip)。対話時は修正方針を提示し user 承認後に Edit。loop-mode では本 skill は直接起動されず、review-orchestrator agent が本 skill の観点体系 (references/) を読んで review-lens への fan-out を主管する。「self review して」「review して」「修正箇所ないか確認して」等で使う。
+description: 直前の編集差分 (作業ツリー or staged) を観点別に self-review する skill。観点は references/ に分割され、diff 内容で機械的に発火する (default-on + 理由付き skip)。対話時は修正方針を提示し user 承認後に Edit。loop-mode では本 skill は直接起動されず、review-orchestrator agent が本 skill の観点体系 (references/) を読んで観点 review を主管する (規模 gate で review-lens への fan-out / 自身の inline 逐次を切替)。「self review して」「review して」「修正箇所ないか確認して」等で使う。
 ---
 
 # self-review-changes
@@ -45,7 +45,7 @@ self-review の最大バイアスは「自分の intent が見えて actual gap 
 | code-quality.md | code diff が 0 |
 
 - 実施する観点の references を Read し、checklist を diff に適用する
-- **loop-mode**: 本 skill は直接起動されず、`review-orchestrator` agent が本 SKILL.md と references/ を Read して観点 fan-out を主管する (`review-lens` へ観点 reference path + diff 範囲 + spec を渡し並列・**同期**起動)。対話時は inline で順に実施
+- **loop-mode**: 本 skill は直接起動されず、`review-orchestrator` agent が本 SKILL.md と references/ を Read して観点 review を主管する。規模 gate が fan-out なら `review-lens` へ観点 reference path + diff 範囲 + spec を渡し並列・**同期**起動、inline なら reviewer 自身が観点 references を逐次適用する (gate の SoT は review-orchestrator 手順 3-4)。対話時は inline で順に実施
 - dependency 観点が新規依存を検出した場合、loop-mode では即 escalation (CLAUDE.md の壁)
 
 ## Phase 3: Action (統合レポート → 承認 → 修正 → 再検証)
@@ -86,7 +86,7 @@ self-review の最大バイアスは「自分の intent が見えて actual gap 
 
 1. **Phase 0 の mindset shift を skip しない**: 「自分の intent」で読まず「外部 reviewer として code とコメントだけ」で判断
 2. **観点の実施状況表を必ず出力**: 黙った skip 禁止。skip は機械的条件 + 理由付きのみ
-3. **致命的 / 望ましい / nit を区別**: 取捨選択できるように
+3. **致命的 / 望ましい / nit を区別**: 取捨選択できるように。**severity で事前に絞らず全件挙げてから 3 段階に分類する** (「重大なものだけ」の絞り込みは報告そのものを減らす。Phase 1-5 の SoT 突合は事実照合であり severity 絞りではない — 維持する)
 4. **memory feedback は関連 entry を中身まで read**: index 行だけで判断しない
 5. **spec 逸脱は明示・承認・記録**: 「prototype だから OK」を暗黙正当化に使わない (CLAUDE.md「変更の作法」)
 6. **副作用検証**: 修正後にビルド / テスト / lint を再実行

@@ -60,10 +60,7 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 
 **loop-mode**:
 - 自前で計画を導出する: ticket fetch → DoD/既存docsの literal cross-check → 関連docs探索 (Explore subagent 最大3並列) → Plan agentで設計 → 主要ファイル直接確認 → state fileへ書き出し
-- **影響範囲調査**: 導出した計画の変更予定 file / symbol を列挙し、参照元を grep して 3 分類する:
-  - **impact-A**: 新規 file / 葉領域のみ (既存 code からの参照なし)
-  - **impact-B**: 既存 code に使用が足される (新要素の呼び出し追加等)
-  - **impact-C**: 既存 logic の変更 (デグレ risk — 挙動変更 / 共有 path の変更)
+- **影響範囲調査**: 導出した計画の変更予定 file / symbol を列挙し、参照元を grep して 3 分類する。**分類定義と判定手順は `~/.claude/rules/impact-scope.md` を SoT とする** (本ファイルで再掲しない)。
 
   分類と「対象 symbol → 参照元」の対応を state file の「影響範囲」section に記録し、**draft PR body に転記する** (commit-push-branch へ渡す)。impact-C 領域は review 工程で correctness / test-adversarial 観点の重点対象として reviewer に渡す
 - **DoD 全項目カバレッジ self-check**: spec の DoD 各項目を、導出した実装ステップに1:1で紐付ける。DoD に example / test 表や opaque な期待値 (hash / checksum 等) が含まれる場合は、spec-contract の検証観点に従い設計本体との突合・再計算照合をここで行う。紐付けられない項目・複数解釈が残る項目が1つでもあれば、**実装に進まず「escalation 手順」に従って停止する**
@@ -137,9 +134,9 @@ plan を読み、実装内容のタイプを判定:
 |---|---|---|
 | Go module 初回セットアップ (go.mod なし or 骨格不足) | `Skill: go-bootstrap` | (dev-cycle 内) |
 | Go の DDD+TDD 機能追加 (既存 internal/ に追加) | `Agent: go-feature-tdd` | opus (frontmatter 固定) |
-| docs 変更 (設計 doc / README / runbook 等) | `Agent: general-purpose` subagent に委譲 | **opus** (spawn 時に指定) |
-| Go 以外の code / 設定ファイル変更 | `Agent: general-purpose` subagent に委譲 | **opus** (spawn 時に指定 — sonnet coding は実地検証で品質不足と判明、2026-07-15 FB。難易度別 routing は insights 蓄積後に再検討) |
-| 数行の軽微な edit | 自前で `Read` / `Edit` / `Write` | (dev-cycle 内。subagent overhead に見合わない場合のみ) |
+| docs 変更 (設計 doc / README / runbook 等) で分量のあるもの | `Agent: general-purpose` subagent に委譲 | **opus** (spawn 時に指定) |
+| Go 以外の code / 設定ファイル変更 で分量のあるもの | `Agent: general-purpose` subagent に委譲 | **opus** (spawn 時に指定 — sonnet coding は実地検証で品質不足と判明、2026-07-15 FB。難易度別 routing は insights 蓄積後に再検討) |
+| 数回の tool 呼び出しで終わる変更 (小規模 docs 修正 / 1-2 file の設定変更 / 数行の edit) | 自前で `Read` / `Edit` / `Write` | (dev-cycle 内。委任は分量があり真に独立な作業に限る — CLAUDE.md「出力と委任の作法」) |
 
 委譲時は work item の spec・実装計画の該当 step・検証コマンド・**規約 digest + 原本 path (起動時の準備 Step 5)** を prompt で完全に渡す (subagent は state file を知らない前提で自己完結させる)。
 
@@ -177,6 +174,7 @@ plan を読み、実装内容のタイプを判定:
 - 修正で新たに触れた箇所も次周の reviewer が fresh で diff 全体を見るため、増分の見落としが構造的に出ない
 - 観点体系・checklist の SoT は `self-review-changes` SKILL.md と references/ (reviewer が自分で Read する。再列挙しない)
 - team (flat roster) 実行下など subagent の nested spawn が不可な環境では、reviewer は fan-out せず縮退規定 (inline 逐次適用 — review-orchestrator 鉄則 7) で動作する。verdict の「縮退実施」明記で判別できる
+- 小規模 diff (impact-A のみ かつ 3 file 以下 かつ 150 行以下) では reviewer が規模 gate で fan-out せず inline 逐次 + independent-reviewer で動作する (review-orchestrator 手順 3-4 が SoT)。**環境制約による縮退とは別物** — verdict の `gate:` 行で判別する
 
 **対話 mode**: 従来通り `Skill` tool で `self-review-changes` を起動し inline で実施。致命的なもの (memory feedback違反、設定形式誤り、spec逸脱の暗黙化、推測mapping) は必ず承認を取って修正、nitはユーザー判断。修正後に build / test / lint 再実行で副作用なしを確認
 
@@ -190,7 +188,8 @@ plan を読み、実装内容のタイプを判定:
 - nit: <件数> 件 → draft PR に注記
 - follow-up 提案: <件数> 件 → state file に記録
 - 新規dependency検出: [なし / あり→escalation]
-- fan-out: review-lens <N> 観点 + independent-reviewer (同期起動、reviewer 側で実施)。衝突: <なし / あり→reviewer 再判定 or escalation>
+- 委任規模 gate: <fan-out / inline> (根拠: impact-<A/B/C> / <n> file / <n> 行)
+- fan-out 時: review-lens <N> 観点 + independent-reviewer / inline 時: 観点 <N> 件を reviewer が逐次適用 + independent-reviewer (いずれも同期起動、reviewer 側で実施)。衝突: <なし / あり→reviewer 再判定 or escalation>
 ```
 
 ### security review (`security-review-local` skill)
@@ -312,7 +311,7 @@ dev-cycle (this)
   ├── go-bootstrap (skill)                        ← 実装 (初回セットアップ)
   ├── go-feature-tdd (subagent)                   ← 実装 (機能追加)
   ├── review-orchestrator (subagent, opus)         ← review 統合主体 (loop-mode、反復ごとにfresh spawn)
-  │     ├── review-lens (subagent, sonnet)          ← 観点別 review worker (N並列、同期起動)
+  │     ├── review-lens (subagent, sonnet)          ← 観点別 review worker (N並列、同期起動。規模 gate が fan-out の時のみ)
   │     └── independent-reviewer (subagent, opus)   ← 独立 review (spec + diffのみで判断)
   ├── self-review-changes (skill)                 ← review (対話 mode) / 観点体系のSoT (references/)
   ├── security-review-local (skill)                ← security review

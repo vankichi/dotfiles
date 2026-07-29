@@ -62,10 +62,7 @@ For other languages / frameworks, handle the implementation stage with your own 
 
 **loop-mode**:
 - Derive the plan yourself: ticket fetch → literal cross-check of DoD/existing docs → related-docs exploration (Explore subagents, max 3 in parallel) → design via the Plan agent → direct confirmation of key files → write out to the state file
-- **Impact analysis**: enumerate the files / symbols the plan will change, grep their referencing call sites, and classify into three buckets:
-  - **impact-A**: new files / leaf areas only (nothing existing references them)
-  - **impact-B**: usage added to existing code (e.g. new call sites of a new element)
-  - **impact-C**: changes to existing logic (regression risk — behavior changes / shared-path changes)
+- **Impact analysis**: enumerate the files / symbols the plan will change, grep their referencing call sites, and classify into three buckets. **`~/.claude/rules/impact-scope.md` is the SoT for the classification definitions and the judgment procedure** (don't restate them here).
 
   Record the classification and the "target symbol → referencing sites" mapping in the state file's "impact scope" section and **carry it into the draft PR body** (passed to commit-push-branch). impact-C areas are passed to the reviewer as priority targets for the correctness / test-adversarial perspectives in the review stage
 - **DoD full-coverage self-check**: map each DoD item in the spec 1:1 to a derived implementation step. When the DoD contains example / test tables or opaque expected values (hash / checksum etc.), perform the cross-check against the design body and the recomputation check here, per the spec-contract verification perspectives. If even one item cannot be mapped, or still has multiple interpretations, **do not proceed to implementation — stop following the "escalation procedure"**
@@ -139,9 +136,9 @@ Read the plan and determine the type of implementation:
 |---|---|---|
 | Go module initial setup (no go.mod or missing skeleton) | `Skill: go-bootstrap` | (within dev-cycle) |
 | Go DDD+TDD feature work (additions to existing internal/) | `Agent: go-feature-tdd` | opus (pinned in frontmatter) |
-| Docs changes (design docs / README / runbooks etc.) | delegate to an `Agent: general-purpose` subagent | **opus** (specified at spawn) |
-| Non-Go code / config changes | delegate to an `Agent: general-purpose` subagent | **opus** (specified at spawn — sonnet coding proved insufficient in field verification, 2026-07-15 FB; difficulty-based routing to be revisited once insights accumulate) |
-| Trivial few-line edits | your own `Read` / `Edit` / `Write` | (within dev-cycle; only when subagent overhead isn't worth it) |
+| Docs changes (design docs / README / runbooks etc.) with real volume | delegate to an `Agent: general-purpose` subagent | **opus** (specified at spawn) |
+| Non-Go code / config changes with real volume | delegate to an `Agent: general-purpose` subagent | **opus** (specified at spawn — sonnet coding proved insufficient in field verification, 2026-07-15 FB; difficulty-based routing to be revisited once insights accumulate) |
+| Changes that finish in a handful of tool calls (small docs fixes / config changes in 1-2 files / few-line edits) | your own `Read` / `Edit` / `Write` | (within dev-cycle; delegate only work with real volume that is genuinely independent — CLAUDE.md "出力と委任の作法") |
 
 When delegating, pass the work item's spec, the relevant plan steps, the verification commands, and the **conventions digest + source paths (startup preparation Step 5)** fully in the prompt (assume the subagent doesn't know the state file — make it self-contained).
 
@@ -179,6 +176,7 @@ During implementation, follow the steps written in the plan. Always run the chec
 - Since the next round's reviewer sees the whole diff fresh, areas newly touched by a fix are structurally covered too, so incremental oversights don't slip through
 - The SoT for the perspective system / checklists is `self-review-changes` SKILL.md and references/ (the reviewer Reads them itself; not re-enumerated)
 - Under team (flat roster) execution or other environments where subagents cannot spawn nested subagents, the reviewer operates in the degraded mode (inline sequential application — review-orchestrator iron rule 7) instead of fanning out; identifiable by the "degraded execution" note in the verdict
+- For small diffs (impact-A only and 3 files or fewer and 150 lines or fewer), the reviewer's scale gate makes it run inline sequentially + independent-reviewer instead of fanning out (review-orchestrator steps 3-4 are the SoT). **This is a different thing from environment-forced degradation** — tell them apart by the `gate:` line in the verdict
 
 **Interactive mode**: as before, launch `self-review-changes` via the `Skill` tool and run inline. Critical items (memory feedback violations, config format errors, implicit spec deviations, speculative mappings) always get approval before fixing; nits are the user's call. After fixes, re-run build / test / lint to confirm no side effects
 
@@ -192,7 +190,8 @@ During implementation, follow the steps written in the plan. Always run the chec
 - nits: <n> → noted in draft PR
 - follow-up proposals: <n> → recorded in the state file
 - new dependency detected: [none / yes → escalation]
-- fan-out: review-lens × <N> perspectives + independent-reviewer (synchronous launch, performed on the reviewer side). Conflicts: <none / yes → reviewer re-judged or escalated>
+- Delegation scale gate: <fan-out / inline> (basis: impact-<A/B/C> / <n> files / <n> lines)
+- With fan-out: review-lens × <N> perspectives + independent-reviewer / with inline: <N> perspectives applied sequentially by the reviewer + independent-reviewer (both launched synchronously, performed on the reviewer side). Conflicts: <none / yes → reviewer re-judged or escalated>
 ```
 
 ### security review (`security-review-local` skill)
@@ -314,7 +313,7 @@ dev-cycle (this)
   ├── go-bootstrap (skill)                               ← implementation (initial setup)
   ├── go-feature-tdd (subagent)                          ← implementation (feature work)
   ├── review-orchestrator (subagent, opus)               ← review integrating principal (loop-mode, fresh spawn per iteration)
-  │     ├── review-lens (subagent, sonnet)               ← per-perspective review worker (N in parallel, synchronous launch)
+  │     ├── review-lens (subagent, sonnet)               ← per-perspective review worker (N in parallel, synchronous launch; only when the scale gate says fan-out)
   │     └── independent-reviewer (subagent, opus)        ← independent review (judges from spec + diff only)
   ├── self-review-changes (skill)                        ← review (interactive mode) / SoT of the perspective system (references/)
   ├── security-review-local (skill)                      ← security review

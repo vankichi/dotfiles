@@ -98,6 +98,7 @@ Trace the rationale behind decisions at the commit granularity, and reflect it i
 - Where prose is required (Context / background / commentary), the plain declarative style (である/する form) is fine
 - Do not mix noun-ending phrasing and plain declarative style within the same bullet list
 - Keep bullet points short (in principle, 1 item per line, 2 lines maximum)
+- **Match the length to the subject matter**: stop once the substance is covered. Don't pad with filler sections, duplicated summaries, or boilerplate
 
 ## 6. Quality checklist (self-review after writing)
 
