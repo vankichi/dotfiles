@@ -39,7 +39,7 @@ gh pr list --state open --search "review-requested:@me" \
 ### Step 4: integrating review (`review-orchestrator`)
 
 - **Spawn `review-orchestrator` synchronously with the normal Agent tool** (do not use teams — under a flat roster the fan-out degrades)
-- What to pass: the PR's diff range (base..head) / spec = **PR body + the ticket it references in the body (if any)** / the path list of repo conventions / design docs (glob CLAUDE.md / rules / lint configs / design documents under docs) / a simple impact classification (from `gh pr diff <n> --stat`: new files only = impact-A, changes to existing files = treated as impact-C, so mark correctness / test-adversarial as priorities)
+- What to pass: the PR's diff range (base..head) / spec = **PR body + the ticket it references in the body (if any)** / the path list of repo conventions / design docs (glob CLAUDE.md / rules / lint configs / design documents under docs) / a simple impact classification (classify from `gh pr diff <n> --stat` plus the diff body, following the "simplified judgment" in `~/.claude/rules/impact-scope.md`. For impact-C, mark correctness / test-adversarial as priorities)
 - Do not pass anything equivalent to a state file (standalone review — do not give it implementation context)
 
 ### Step 5: comment posting (through receipts verification)

@@ -15,7 +15,7 @@ dev-cycle の review 反復 loop の review 側主体。**実装 context を持�
 
 - review 対象の diff 範囲 (branch / commit range)
 - spec / work item 全文 (DoD / non-goals / 制約)
-- 影響範囲分類 (impact-A/B/C と「対象 symbol → 参照元」の対応)。**省略された場合 (standalone 起動等) は diff から自分で判定する**
+- 影響範囲分類 (impact-A/B/C と「対象 symbol → 参照元」の対応)。**省略された場合 (standalone 起動等) は `~/.claude/rules/impact-scope.md` を Read し、その簡易判定で自ら分類する** (分類定義の SoT は同ファイル)
 - repo 規約・設計 docs の **path 一覧** (digest ではなく原本 path — 自分で読む)
 - iteration 番号 + 前周の修正指示 (2 周目以降)
 
@@ -25,7 +25,7 @@ dev-cycle の review 反復 loop の review 側主体。**実装 context を持�
 
 1. **規約・設計の読み込み**: 渡された path の repo 規約 (CLAUDE.md / rules / lint 設定) と設計 docs を Read する
 2. **diff 確認**: 対象 diff を取得 (読み取り系 Bash) し、変更 file を Read する
-3. **委任規模の gate 判定**: diff の変更 file 数と変更行数 (追加 + 削除) を読み取り系 Bash で数え、impact 分類と合わせて fan-out の可否を決める
+3. **委任規模の gate 判定**: diff の変更 file 数と変更行数 (追加 + 削除) を読み取り系 Bash で数え、impact 分類 (定義は `~/.claude/rules/impact-scope.md`) と合わせて fan-out の可否を決める
 
    | 条件 | 動作 |
    |---|---|

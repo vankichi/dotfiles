@@ -60,10 +60,7 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 
 **loop-mode**:
 - 自前で計画を導出する: ticket fetch → DoD/既存docsの literal cross-check → 関連docs探索 (Explore subagent 最大3並列) → Plan agentで設計 → 主要ファイル直接確認 → state fileへ書き出し
-- **影響範囲調査**: 導出した計画の変更予定 file / symbol を列挙し、参照元を grep して 3 分類する:
-  - **impact-A**: 新規 file / 葉領域のみ (既存 code からの参照なし)
-  - **impact-B**: 既存 code に使用が足される (新要素の呼び出し追加等)
-  - **impact-C**: 既存 logic の変更 (デグレ risk — 挙動変更 / 共有 path の変更)
+- **影響範囲調査**: 導出した計画の変更予定 file / symbol を列挙し、参照元を grep して 3 分類する。**分類定義と判定手順は `~/.claude/rules/impact-scope.md` を SoT とする** (本ファイルで再掲しない)。
 
   分類と「対象 symbol → 参照元」の対応を state file の「影響範囲」section に記録し、**draft PR body に転記する** (commit-push-branch へ渡す)。impact-C 領域は review 工程で correctness / test-adversarial 観点の重点対象として reviewer に渡す
 - **DoD 全項目カバレッジ self-check**: spec の DoD 各項目を、導出した実装ステップに1:1で紐付ける。DoD に example / test 表や opaque な期待値 (hash / checksum 等) が含まれる場合は、spec-contract の検証観点に従い設計本体との突合・再計算照合をここで行う。紐付けられない項目・複数解釈が残る項目が1つでもあれば、**実装に進まず「escalation 手順」に従って停止する**

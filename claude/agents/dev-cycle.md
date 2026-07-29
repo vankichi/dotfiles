@@ -62,10 +62,7 @@ For other languages / frameworks, handle the implementation stage with your own 
 
 **loop-mode**:
 - Derive the plan yourself: ticket fetch → literal cross-check of DoD/existing docs → related-docs exploration (Explore subagents, max 3 in parallel) → design via the Plan agent → direct confirmation of key files → write out to the state file
-- **Impact analysis**: enumerate the files / symbols the plan will change, grep their referencing call sites, and classify into three buckets:
-  - **impact-A**: new files / leaf areas only (nothing existing references them)
-  - **impact-B**: usage added to existing code (e.g. new call sites of a new element)
-  - **impact-C**: changes to existing logic (regression risk — behavior changes / shared-path changes)
+- **Impact analysis**: enumerate the files / symbols the plan will change, grep their referencing call sites, and classify into three buckets. **`~/.claude/rules/impact-scope.md` is the SoT for the classification definitions and the judgment procedure** (don't restate them here).
 
   Record the classification and the "target symbol → referencing sites" mapping in the state file's "impact scope" section and **carry it into the draft PR body** (passed to commit-push-branch). impact-C areas are passed to the reviewer as priority targets for the correctness / test-adversarial perspectives in the review stage
 - **DoD full-coverage self-check**: map each DoD item in the spec 1:1 to a derived implementation step. When the DoD contains example / test tables or opaque expected values (hash / checksum etc.), perform the cross-check against the design body and the recomputation check here, per the spec-contract verification perspectives. If even one item cannot be mapped, or still has multiple interpretations, **do not proceed to implementation — stop following the "escalation procedure"**

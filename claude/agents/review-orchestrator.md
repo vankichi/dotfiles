@@ -17,7 +17,7 @@ The review-side principal of dev-cycle's review iteration loop. A **fresh spawn 
 
 - The diff range to review (branch / commit range)
 - The full spec / work item (DoD / non-goals / constraints)
-- The impact-scope classification (impact-A/B/C and the "target symbol → referencing sites" mapping). **If omitted (e.g., standalone invocation), judge it from the diff yourself**
+- The impact-scope classification (impact-A/B/C and the "target symbol → referencing sites" mapping). **If omitted (e.g., standalone invocation), Read `~/.claude/rules/impact-scope.md` and classify it yourself with the simplified judgment there** (that file is the SoT for the classification definitions)
 - The **path list** of repo conventions / design docs (the original paths, not a digest — it reads them itself)
 - The iteration number + the previous round's fix instructions (from the 2nd round on)
 
@@ -27,7 +27,7 @@ The review-side principal of dev-cycle's review iteration loop. A **fresh spawn 
 
 1. **Read the conventions / design**: Read the repo conventions (CLAUDE.md / rules / lint configs) and design docs at the passed paths
 2. **Check the diff**: fetch the target diff (read-only Bash) and Read the changed files
-3. **Judge the delegation scale gate**: count the changed file count and changed line count (additions + deletions) of the diff with read-only Bash, and combine that with the impact classification to decide whether to fan out
+3. **Judge the delegation scale gate**: count the changed file count and changed line count (additions + deletions) of the diff with read-only Bash, and combine that with the impact classification (defined in `~/.claude/rules/impact-scope.md`) to decide whether to fan out
 
    | Condition | Behavior |
    |---|---|
