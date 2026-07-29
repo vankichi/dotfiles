@@ -88,7 +88,7 @@ Apply approved candidates in parallel with Edit → re-run `make test` / `make l
 
 1. **Don't skip the Phase 0 mindset shift**: judge based on "code and comments alone, as an external reviewer," not "your own intent"
 2. **Always output the perspective execution-status table**: no silent skipping. Skips require a mechanical condition + a reason
-3. **Distinguish critical / desirable / nit**: so the user can pick and choose
+3. **Distinguish critical / desirable / nit**: so the user can pick and choose. **List every finding first, then classify into the 3 tiers — don't pre-filter by severity** (a "only the serious ones" filter reduces the reporting itself. The SoT cross-check in Phase 1-5 is factual verification, not a severity filter — keep it)
 4. **Read memory feedback related entries in full**: don't judge from the index line alone
 5. **Explicitly state, get approval for, and record spec deviations**: don't use "it's a prototype" as an implicit justification (CLAUDE.md's "conduct for changes")
 6. **Verify side effects**: re-run build / test / lint after fixing

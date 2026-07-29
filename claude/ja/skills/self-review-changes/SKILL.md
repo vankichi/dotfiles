@@ -86,7 +86,7 @@ self-review の最大バイアスは「自分の intent が見えて actual gap 
 
 1. **Phase 0 の mindset shift を skip しない**: 「自分の intent」で読まず「外部 reviewer として code とコメントだけ」で判断
 2. **観点の実施状況表を必ず出力**: 黙った skip 禁止。skip は機械的条件 + 理由付きのみ
-3. **致命的 / 望ましい / nit を区別**: 取捨選択できるように
+3. **致命的 / 望ましい / nit を区別**: 取捨選択できるように。**severity で事前に絞らず全件挙げてから 3 段階に分類する** (「重大なものだけ」の絞り込みは報告そのものを減らす。Phase 1-5 の SoT 突合は事実照合であり severity 絞りではない — 維持する)
 4. **memory feedback は関連 entry を中身まで read**: index 行だけで判断しない
 5. **spec 逸脱は明示・承認・記録**: 「prototype だから OK」を暗黙正当化に使わない (CLAUDE.md「変更の作法」)
 6. **副作用検証**: 修正後にビルド / テスト / lint を再実行
