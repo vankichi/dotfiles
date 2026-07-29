@@ -1,6 +1,6 @@
 ---
 name: self-review-changes
-description: A skill that self-reviews the most recent edit diff (working tree or staged) by perspective. Perspectives are split into references/ and fire mechanically based on diff content (default-on + reasoned skip). In interactive mode it presents a fix plan and Edits only after user approval. In loop-mode this skill is not invoked directly; the review-orchestrator agent reads this skill's perspective system (references/) and orchestrates the fan-out to review-lens. Used for 「self review して」(self-review this)「review して」(review this)「修正箇所ないか確認して」(check whether there's anything to fix) etc.
+description: A skill that self-reviews the most recent edit diff (working tree or staged) by perspective. Perspectives are split into references/ and fire mechanically based on diff content (default-on + reasoned skip). In interactive mode it presents a fix plan and Edits only after user approval. In loop-mode this skill is not invoked directly; the review-orchestrator agent reads this skill's perspective system (references/) and orchestrates the perspective review (a scale gate switches between fanning out to review-lens and applying them inline itself). Used for 「self review して」(self-review this)「review して」(review this)「修正箇所ないか確認して」(check whether there's anything to fix) etc.
 ---
 
 > **Source of truth:** `claude/ja/skills/self-review-changes/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
@@ -47,7 +47,7 @@ All perspectives are default-on. **You may skip only when the mechanical conditi
 | code-quality.md | code diff is 0 |
 
 - Read the references for the perspectives you will perform, and apply the checklist to the diff
-- **loop-mode**: this skill is not invoked directly; the `review-orchestrator` agent Reads this SKILL.md and references/ and orchestrates the perspective fan-out (passing the perspective reference path + diff range + spec to `review-lens`, launched in parallel and **synchronously**). In interactive mode, perform them inline in order
+- **loop-mode**: this skill is not invoked directly; the `review-orchestrator` agent Reads this SKILL.md and references/ and orchestrates the perspective review. If the scale gate says fan-out, it passes the perspective reference path + diff range + spec to `review-lens`, launched in parallel and **synchronously**; if inline, the reviewer applies the perspective references itself, sequentially (review-orchestrator steps 3-4 are the SoT for the gate). In interactive mode, perform them inline in order
 - If the dependency perspective detects a new dependency, escalate immediately in loop-mode (a CLAUDE.md wall)
 
 ## Phase 3: Action (integrated report → approval → fix → re-verify)

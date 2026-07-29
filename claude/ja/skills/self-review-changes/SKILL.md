@@ -1,6 +1,6 @@
 ---
 name: self-review-changes
-description: 直前の編集差分 (作業ツリー or staged) を観点別に self-review する skill。観点は references/ に分割され、diff 内容で機械的に発火する (default-on + 理由付き skip)。対話時は修正方針を提示し user 承認後に Edit。loop-mode では本 skill は直接起動されず、review-orchestrator agent が本 skill の観点体系 (references/) を読んで review-lens への fan-out を主管する。「self review して」「review して」「修正箇所ないか確認して」等で使う。
+description: 直前の編集差分 (作業ツリー or staged) を観点別に self-review する skill。観点は references/ に分割され、diff 内容で機械的に発火する (default-on + 理由付き skip)。対話時は修正方針を提示し user 承認後に Edit。loop-mode では本 skill は直接起動されず、review-orchestrator agent が本 skill の観点体系 (references/) を読んで観点 review を主管する (規模 gate で review-lens への fan-out / 自身の inline 逐次を切替)。「self review して」「review して」「修正箇所ないか確認して」等で使う。
 ---
 
 # self-review-changes
@@ -45,7 +45,7 @@ self-review の最大バイアスは「自分の intent が見えて actual gap 
 | code-quality.md | code diff が 0 |
 
 - 実施する観点の references を Read し、checklist を diff に適用する
-- **loop-mode**: 本 skill は直接起動されず、`review-orchestrator` agent が本 SKILL.md と references/ を Read して観点 fan-out を主管する (`review-lens` へ観点 reference path + diff 範囲 + spec を渡し並列・**同期**起動)。対話時は inline で順に実施
+- **loop-mode**: 本 skill は直接起動されず、`review-orchestrator` agent が本 SKILL.md と references/ を Read して観点 review を主管する。規模 gate が fan-out なら `review-lens` へ観点 reference path + diff 範囲 + spec を渡し並列・**同期**起動、inline なら reviewer 自身が観点 references を逐次適用する (gate の SoT は review-orchestrator 手順 3-4)。対話時は inline で順に実施
 - dependency 観点が新規依存を検出した場合、loop-mode では即 escalation (CLAUDE.md の壁)
 
 ## Phase 3: Action (統合レポート → 承認 → 修正 → 再検証)
