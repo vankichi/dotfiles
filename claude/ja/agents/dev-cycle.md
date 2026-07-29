@@ -111,6 +111,8 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 
 **worktree 内の cwd で起動された場合** (並列 cycle の衝突等): EnterWorktree は worktree 内からのネスト作成ができない。main checkout を特定し、`git worktree add` で自前の worktree を main (or origin/main) から作成して移動する。他 agent の worktree 内のファイルには触れない。
 
+**base が default branch でない場合** (stacked PR で親 branch の上に積む等): `EnterWorktree` の新規作成は既定 baseRef が `origin/<default-branch>` のため使えない。`git worktree add -b <branch> <path> <親 branch>` で base 指定の worktree を作り、`EnterWorktree(path: <path>)` で入る。base branch は state file に記録し、commit-push-branch への委譲時に明示的に渡す (squash の base ref と `gh pr create --base` の両方で必要)。
+
 作成した新規 worktree への Edit/Write が拒否され続ける場合 (subagent の cwd pin 下では `EnterWorktree(path)` が成功を報告しても書き込み境界が移らない — 2026-07-15 FB) は、pin 済みの元 worktree 内でのブランチ差し替えに切り替える:
 
 1. 新規 worktree を `git worktree remove` で片付ける
@@ -141,6 +143,8 @@ plan を読み、実装内容のタイプを判定:
 
 委譲時は work item の spec・実装計画の該当 step・検証コマンド・**規約 digest + 原本 path (起動時の準備 Step 5)** を prompt で完全に渡す (subagent は state file を知らない前提で自己完結させる)。
 
+**委譲 prompt には書き込み境界を明記する**: 「変更対象は `<worktree path>` 配下のみ。repo / worktree の外 (とくに `~/.claude/` 配下の session artifact) を変更しない。変更が必要と判断したら実行せず報告して停止する」。read-only 目的 (調査 / fact-check) の spawn でも同じ定型句を入れる。
+
 実装中は plan に記載のステップに沿って進める。動作確認 (`make build` / `make test` / `make lint`、または該当言語の build / test) は必ず実行し、green を次工程に進む前提とする。
 
 **circuit breaker**: test 失敗の修正試行は **3 回**まで。3 回で解消しなければ escalation 手順へ。試行カウントは state file の Current state に記録する (中断・再開をまたいで引き継ぐ — 再開のたびにゼロから 3 回試すことを防ぐ)。**失敗の原因を診断できた場合 (spec 側の値誤記・spec 内矛盾など実装者側で解決不可な欠陥) は、試行を繰り返さずその時点で escalation 手順へ切り替えて良い** — breaker は診断不能な失敗の backstop。
@@ -156,18 +160,23 @@ plan を読み、実装内容のタイプを判定:
 
 ### review (loop-mode: `review-orchestrator` 反復 / 対話 mode: `self-review-changes` skill)
 
-**loop-mode — 反復 loop (上限 3 周)**:
+**loop-mode — 反復 loop (致命的 fix の cap 3 周 / 総 round 上限 6)**:
 
 1. `review-orchestrator` subagent を **fresh spawn** する (毎回新規 — 実装 context を持たない reviewer による判断の分離)。渡すもの: diff 範囲 / spec 全文 / 影響範囲分類 (impact-A/B/C) / repo 規約・設計 docs の path 一覧 (起動時の準備 Step 5 で列挙済み) / iteration 番号 + 前周の修正指示 (2 周目以降)。**state file は渡さない**
 2. verdict = `approve` → nit を draft PR 注記リストに積み、follow-up 提案を state file に記録して security review へ
-3. verdict = `fix-required` → 修正指示を実施する (軽微は自前 Edit、実質的な変更は実装 subagent = opus へ委譲) → build / test / lint green を確認 → 1 へ戻り再 spawn (iteration +1)
-4. verdict = `escalation`、または **iteration が上限 3 を超えても approve に至らない** → 「escalation 手順」に従って停止する
-5. **escalation 解消後の再開**: 解消後に適用した変更が reviewer 指定の remediation そのものであれば再 review は不要 (その旨を draft PR に明記する)。reviewer の指定を超える追加変更を伴う場合は iteration cap をリセットして 1 から再 spawn する
+3. verdict = `approve-with-notes` (致命的 0 / 望ましいのみ残存) → 次の 2 択。どちらでもよいが **cap は消費しない** (escalation risk なし)
+   - **(a) 修正しない**: 望ましい findings を nit / follow-up として draft PR 注記リストと state file に記録して security review へ
+   - **(b) 修正する**: 修正指示を実施 → build / test / lint green を確認 → 1 へ戻り再 spawn (総 round のみ +1)
+   - **(a) を選んだうえで望ましい findings を修正するのは禁止** — 最終 diff に reviewer 未確認の変更を残さない invariant。直すなら必ず (b) で再 review を通す
+4. verdict = `fix-required` (致命的を 1 件以上含む) → 修正指示を実施する (軽微は自前 Edit、実質的な変更は実装 subagent = opus へ委譲) → build / test / lint green を確認 → 1 へ戻り再 spawn (iteration +1、**cap を消費**)
+5. verdict = `escalation`、または **致命的を含む fix-required が cap 3 周を超えても解消しない** → 「escalation 手順」に従って停止する
+6. **総 round 上限 6 に到達したら打ち切る**: 致命的 0 が前提のため escalation せず 3(a) と同じ扱いで完走する (望ましい findings を注記に送って security review へ)。到達時点で致命的が残存している場合のみ 5 の cap 規定どおり escalation する
+7. **escalation 解消後の再開**: 解消後に適用した変更が reviewer 指定の remediation そのものであれば再 review は不要 (その旨を draft PR に明記する)。reviewer の指定を超える追加変更を伴う場合は iteration cap をリセットして 1 から再 spawn する。**本条項は escalation 解消後の復帰時に限る** — 通常の iteration で cap や round 上限に抵触した場合に「reviewer 指定どおりだから再 review 不要」と読み替える根拠には使えない (通常の iteration は 3-6 の規定で処理する)
 
 - **新規 dependency の検出は verdict に関わらず無条件で escalation** (CLAUDE.mdの既存の壁、loop-modeでも緩めない)
 - 修正で新たに触れた箇所も次周の reviewer が fresh で diff 全体を見るため、増分の見落としが構造的に出ない
 - 観点体系・checklist の SoT は `self-review-changes` SKILL.md と references/ (reviewer が自分で Read する。再列挙しない)
-- team (flat roster) 実行下など subagent の nested spawn が不可な環境では、reviewer は fan-out せず縮退規定 (inline 逐次適用 — review-orchestrator 鉄則 6) で動作する。verdict の「縮退実施」明記で判別できる
+- team (flat roster) 実行下など subagent の nested spawn が不可な環境では、reviewer は fan-out せず縮退規定 (inline 逐次適用 — review-orchestrator 鉄則 7) で動作する。verdict の「縮退実施」明記で判別できる
 
 **対話 mode**: 従来通り `Skill` tool で `self-review-changes` を起動し inline で実施。致命的なもの (memory feedback違反、設定形式誤り、spec逸脱の暗黙化、推測mapping) は必ず承認を取って修正、nitはユーザー判断。修正後に build / test / lint 再実行で副作用なしを確認
 
@@ -175,8 +184,9 @@ plan を読み、実装内容のタイプを判定:
 ```
 ## review 完了
 - mode: [loop-mode / 対話 mode]
-- iterations: <N> 周で approve (loop-mode のみ)
+- iterations: <N> 周で approve / approve-with-notes (loop-mode のみ。cap 消費 <n>/3 (致命的 fix) / 総 round <n>/6)
 - 致命的修正: <件数> 件 / 望ましい修正: <件数> 件 → 反復内で解消
+- approve-with-notes: [なし / あり → (a) 注記のみ (未修正) / (b) 修正して再 review 通過]
 - nit: <件数> 件 → draft PR に注記
 - follow-up 提案: <件数> 件 → state file に記録
 - 新規dependency検出: [なし / あり→escalation]
@@ -229,6 +239,7 @@ loop-mode で escalation 条件 (鉄則 2/3) に当たったら、以下を順�
 1. `retrospect` を実行する (停止事象は最優先の insight 源 — retrospect stage の既存規定)
 2. **WIP 保全**: worktree の未 commit 変更を `wip(<工程>): escalation 停止` で commit し、**cycle の作業 branch をそのまま push する** (draft PR は作らない。根拠: CLAUDE.md「loop-mode」節の escalation 既定)。branch 未作成 (実装前の escalation) なら本 step は skip
 3. **ticket コメント自動投稿**: 停止理由 / 停止工程 / WIP branch / state file path / 再開方法 (work-intake の resume mode) を ticket にコメントする。投稿手順と書式は work-intake `references/notion-adapter.md`「escalation コメント」を SoT とする。secret / spec 本文は転記しない
+   - **MCP tool が自分の tool schema に無い場合は全 tool を持つ subagent へ委譲する** (委譲 prompt に書き込み範囲 = 当該 ticket へのコメント追加のみを明記)。委譲もできない場合は receipt に「tool 不在により未実行」と明記する — 代替手段でごまかさず、未実行を隠さない
 4. **push 通知**: `PushNotification` で 1 行 (ticket id + 停止理由) を送る。tool が使えない環境では skip し、停止報告に「通知未達」を明記する
 5. **state file 更新**: Current state に「escalation 停止 (<工程> / <理由>)」を記録する (worktree 所有の逆引き判定で非 active となり、work-intake resume の受け皿と整合する)
 6. user への停止報告 (境界の報告と同形式 + 上記 1-5 の実施状況を表で。**各 step に receipt を添える** — WIP push = commit sha / コメント = comment URL / 通知 = 送信応答 or「未達」の明記 / state file = path。receipt を提示できない step は「未実施」と報告する)
@@ -243,7 +254,7 @@ loop-mode で escalation 条件 (鉄則 2/3) に当たったら、以下を順�
 | 実装計画導出 | ✓ (mode: loop-mode / 対話mode) |
 | 設計 review | ✓ (or skip 理由) |
 | 実装 | ✓ (worktree: <path>) |
-| review | ✓ (loop-mode: <N> 周で approve) |
+| review | ✓ (loop-mode: <N> 周で approve / approve-with-notes) |
 | security review | ✓ |
 | commit & push | ✓ |
 | retrospect | ✓ (or 記録なし) |
@@ -259,19 +270,19 @@ loop-mode で escalation 条件 (鉄則 2/3) に当たったら、以下を順�
 
 1. **工程境界で必ず報告 + WIP commit**: 各工程完了時にサマリを地の文で出す。「黙って次に進む」のは禁止。loop-mode では worktree 分離後の各工程完了時に `wip(<工程>): <summary>` を worktree 内で local commit する (外的中断からの痕跡保全。push はしない — ship 時に commit-push-branch が squash して clean な 1 commit にする)。**外向き操作に言及する報告には receipts (機械検証可能な証跡 — commit sha / PR URL / comment URL / state file path) を添え、receipt のない項目は「未実施」と報告する**
 2. **承認ポイントはモードで異なる**:
-   - loop-mode: escalation条件 (DoDカバレッジ曖昧 / 新規dependency検出 / security要対応 / test失敗未解消 / review 反復上限超過) に当たった時のみ停止。それ以外は自律進行
+   - loop-mode: escalation条件 (DoDカバレッジ曖昧 / 新規dependency検出 / security要対応 / test失敗未解消 / 致命的を含む review 反復の cap 超過) に当たった時のみ停止。それ以外は自律進行
    - 対話 mode: 従来の3箇所 (実装計画承認・self-review修正承認・commit直前確認)
 3. **致命的エラーで即停止** (loop-mode・対話mode共通):
    - DoDカバレッジが曖昧 (実装計画導出フェーズで検知)
    - 実装で test 失敗が解消できない
    - security review で要対応
    - 新規 dependency の検出
-   - review 反復が上限 (3 周) を超えても approve に至らない (loop-mode)
+   - 致命的を含む fix-required の反復が cap (3 周) を超えても解消しない (loop-mode。致命的 0 の `approve-with-notes` は cap を消費せず escalation 条件にもならない)
 4. **push / PR は CLAUDE.md「push / PR の作法」に従う**: `commit-push-branch` skill経由のpushはOK。loop-modeのdraft PR作成はCLAUDE.md loop-mode節の例外規定に従う。本PR化・mergeは人間のみ
 5. **task 進捗を TaskUpdate で都度更新**
 6. **既存メモリ feedback を尊重**: `MEMORY.md` 全件をReadし各entryの中身まで把握 (代表例のhardcode列挙はしない)
 7. **安全スキップ禁止 / plan-first / 判断の使い分け / 指示外変更のflagはCLAUDE.mdがSoT** (本agentで再掲しない)
-8. **worktreeの後始末はproactiveに行わない**: `ExitWorktree` はユーザーの明示指示があった時のみ呼ぶ (tool仕様通り)。draft PR作成までが自律境界、その先のworktree後始末は人間の判断
+8. **worktreeの後始末はproactiveに行わない**: `ExitWorktree(action: remove)` はユーザーの明示指示があった時のみ呼ぶ (tool仕様通り)。draft PR作成までが自律境界、その先のworktree後始末は人間の判断。**`action: keep` による cwd 復帰は削除を伴わないため禁止対象外** (呼び出し側が自分の cwd を worktree 外へ戻す用途)。人間判断が必要なのは `remove` のみ
 
 ## アンチパターン
 
@@ -280,6 +291,8 @@ loop-mode で escalation 条件 (鉄則 2/3) に当たったら、以下を順�
 - loop-modeで実装フェーズのworktree分離をスキップして共有checkoutを直接編集する
 - review / security review をスキップしてcommitする
 - loop-modeで `fix-required` の修正後に再 review せず commit に進む (反復の打ち切り)
+- `approve-with-notes` で (a) を選んだのに望ましい findings を直してしまう (reviewer 未確認の変更が最終 diff に残る)
+- 致命的 0 の `approve-with-notes` を cap 消費扱いにして escalation する / 逆に致命的を含む cap 超過を注記送りで完走する
 - review-orchestrator に state file を渡してしまう (独立性の破壊)
 - 新規dependency検出時にescalationせず追加してしまう
 - skill / subagentを使わず全部自前で実装する (各skillのロジックを再発明しない)

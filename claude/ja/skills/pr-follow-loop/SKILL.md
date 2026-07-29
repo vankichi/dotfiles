@@ -59,8 +59,10 @@ poll で拾った PR から 1 件選び（oldest created 優先）、現在の�
 - 起点は Step 2 の突き合わせ: local worktree が残っているのに対応 PR が merge 済のものを対象にする
 - **自動掃除**（事後報告）:
   1. 対象 worktree の `git status --porcelain` が空（clean）であることを確認。**dirty なら掃除せず escalation**（uncommitted 変更の喪失を防ぐ）
-  2. clean なら `git worktree remove <path>` + **merge 済 local branch を削除**
+  2. clean なら `git worktree remove <path>` + **merge 済 local branch を削除**（`git branch -d`。`-D` と `--force` 系は人間実行に残す）
   3. **remote branch と他の worktree は触らない**（merge 時の GitHub auto-delete に委ねる。remote 削除は outward action で本 skill の範囲外）
+- **掃除 command が permission classifier に deny された場合は迂回しない**: `--force` を含む複合 command や `git branch -D` は deny され得る。deny を受けたら残りの掃除を中止し、**未実行の command をそのまま人間に提示して終わる**。receipt には「deny により未実行」を明記する（消滅の機械確認が取れないものを「掃除完了」と報告しない）
+  - 掃除に必要な最小 permission（`Bash(git worktree remove:*)` / `Bash(git branch -d:*)` 等）を settings に追加するか否かは**人間の判断事項**。skill 側から settings を書き換えない
 - 掃除結果を通知（受領確認: worktree list から消滅・branch list から消滅を機械確認）
 
 ### Step 4: self-pacing（`ScheduleWakeup`）
@@ -90,7 +92,7 @@ poll で拾った PR から 1 件選び（oldest created 優先）、現在の�
 
 1. **approve / request-changes / merge は人間のみ** — loop は GitHub の review state を操作しない
 2. **bot 指摘は triage の提示まで** — 修正適用・decline 返信は user 承認後に対話で実施。loop が独断で fix / decline しない
-3. **掃除は clean 確認必須** — dirty worktree は掃除せず escalation。掃除対象は自 worktree + merge 済 local branch のみ（remote / 他 worktree は不変）
+3. **掃除は clean 確認必須** — dirty worktree は掃除せず escalation。掃除対象は自 worktree + merge 済 local branch のみ（remote / 他 worktree は不変）。deny された掃除 command は迂回せず人間に提示する
 4. **通知は receipts の実在確認後** — triage 通知・掃除後の消滅・Monitor 起動を機械確認してから報告
 5. **設定を hardcode しない** — bot 名 / 必須 reviewer / repo は reference memory から取得
 6. **tick report を省略しない** — 全項目を毎 tick 出力

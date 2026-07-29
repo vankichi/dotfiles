@@ -40,6 +40,7 @@ self-review の最大バイアスは「自分の intent が見えて actual gap 
 | test-adversarial.md | test ファイルの diff が 0 |
 | performance.md | code diff が 0 |
 | observability.md | 新規 code path なし (docs / config / test のみ) |
+| ops-docs-hazard.md | 運用手順 docs の diff が 0 (`docs/runbook/**` の変更が無く、docs 追加行に shell command の code fence が無い) |
 | dependency.md | 依存ファイル (go.mod / go.sum / lock / import 行) の diff が 0 |
 | code-quality.md | code diff が 0 |
 
@@ -75,7 +76,7 @@ self-review の最大バイアスは「自分の intent が見えて actual gap 
 ### 3.2 承認
 
 - **対話時**: 「進めて」を待つ (selective approval 可)
-- **loop-mode**: review-orchestrator の verdict (fix instructions) を dev-cycle が適用し、再 review の反復で解消を確認。nit は draft PR に注記
+- **loop-mode**: review-orchestrator の verdict (fix instructions) を dev-cycle が適用し、再 review の反復で解消を確認。致命的 0 で望ましいのみ残る場合の verdict は `approve-with-notes` (注記送り / 修正 + 再 review の選択は dev-cycle 側)。nit は draft PR に注記
 
 ### 3.3 修正 Edit (並列) → 3.4 再検証
 

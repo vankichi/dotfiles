@@ -54,6 +54,7 @@ The entry point of the dev loop. Picks a single ready ticket and normalizes it i
 ## On failure
 
 - Notion MCP unreachable / auth expired: do not retry; explicitly state "cannot reach Notion" and exit abnormally (notification is the caller's responsibility)
+- **If an MCP tool is not exposed in your own tool schema** (`claude mcp list` can say Connected while the tool is still absent from the main session's schema): delegate the execution to a subagent that has all tools (state read-only / the write scope — status updates + comment additions only — in the delegation prompt). If delegation isn't possible either, explicitly state "not executed due to a missing tool" and exit, and **do not fudge it with a workaround** (never report a ticket as updated without updating it)
 
 ## Iron rules
 

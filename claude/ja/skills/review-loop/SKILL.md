@@ -47,7 +47,7 @@ gh pr list --state open --search "review-requested:@me" \
 ```bash
 gh pr comment <number> --body '<!-- review-loop: <head-sha> -->
 ## 統合 review (review-loop)
-verdict: <approve / fix-required / escalation>
+verdict: <approve / approve-with-notes / fix-required / escalation>
 <findings 表 / 観点実施状況 / 総評>'
 ```
 

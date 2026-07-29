@@ -34,6 +34,7 @@ The dev loop's driver. **The loop's lifecycle is managed by the user's /loop ope
 - **Spawn `dev-cycle` with the normal Agent tool — do not use teams** (under a flat roster, nested spawn is not possible and the review fan-out degrades to inline. Nested fan-out via normal spawn is proven)
 - **Synchronous startup (`run_in_background: false`)** — wait until completion. At most 1 cycle per tick; do not start in parallel
 - Pass the full work item text in the prompt (dev-cycle judges it as loop-mode)
+- **Check your own cwd after the cycle completes**: when the dev-cycle subagent calls `EnterWorktree`, the caller's (this skill's) shell cwd is also moved under the worktree and pinned there (`cd`-ing back gets reverted with `Shell cwd was reset to ...`). If cwd is under the worktree, return via `ExitWorktree(action: keep)` — **the worktree stays, so this is a cwd return, not cleanup**. This keeps subsequent polls / notifications from resolving paths (the per-project plans dir, etc.) on the worktree side
 
 ### Step 4: Notification (after verifying the receipts actually exist)
 

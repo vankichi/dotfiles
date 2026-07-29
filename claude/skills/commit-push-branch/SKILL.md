@@ -169,9 +169,11 @@ PR creation is a separate task. If the user instructs it, continue with `gh pr c
 Applies **only when loop-mode is explicitly specified** at invocation time (basis: "loop-mode (exception rules for autonomous execution)" in CLAUDE.md):
 
 - The branch name / commit message in Steps 3-6 are decided automatically from conventions and past style, with no user confirmation
-- **WIP squash applicability check (mechanical execution)**: if `wip(<stage>):` commits are stacked on the working branch (dev-cycle's stage-boundary WIP commits), always run `git ls-remote --heads origin <branch>` before squashing; **only if the output is empty (= unpushed)** proceed to run `git reset --soft $(git merge-base HEAD origin/<default-branch>)` to return all changes to staged, then create the single conventional commit (never use `--hard`). In this case, Step 5's explicit add is reinterpreted as "confirm via `git status` that the staged contents contain no secrets / out-of-scope files"
+- **The base ref is the PR's base branch, not the default branch**: in a stacked PR (stacking on top of the parent PR's branch), base = the parent branch. Do not assume the default branch in either the squash or the `gh pr create` below (hardcoding `origin/<default-branch>` breaks the stack)
+- **WIP squash applicability check (mechanical execution)**: if `wip(<stage>):` commits are stacked on the working branch (dev-cycle's stage-boundary WIP commits), always run `git ls-remote --heads origin <branch>` before squashing; **only if the output is empty (= unpushed)** proceed to run `git reset --soft $(git merge-base HEAD <base>)` to return all changes to staged, then create the single conventional commit (never use `--hard`). In this case, Step 5's explicit add is reinterpreted as "confirm via `git status` that the staged contents contain no secrets / out-of-scope files"
+  - **Mechanically check the target scope before squashing**: confirm that the output of `git log --oneline <base>..HEAD` contains only your own WIP commits (no commits from the parent branch mixed in). If any are mixed in, the base was mistaken — don't squash; correct the base
 - **Do not squash a branch already pushed by escalation**: rewriting pushed history would require a force push, which conflicts with the ban. Stack the final commit on top of the wip commits and push as-is (fast-forward). The wip commits remain visible in the PR's commit list, but the default branch stays clean because of the squash-merge convention
-- After the push in Step 7, **create a draft PR**: `gh pr create --draft` (title = commit title, body = assembled per the "PR body construction rules" below)
+- After the push in Step 7, **create a draft PR**: `gh pr create --draft` (title = commit title, body = assembled per the "PR body construction rules" below). **If base is not the default branch, pass `--base <base branch>` explicitly** (omitting it creates a PR against the default branch, dragging in the parent's diff)
 - Never promote the draft (remove draft status) or merge
 - Interactive behavior without loop-mode is unchanged (PR creation only after user instruction)
 
@@ -179,8 +181,8 @@ Applies **only when loop-mode is explicitly specified** at invocation time (basi
 
 Materials passed from the caller (dev-cycle) = implementation plan / DoD check results / spec deviations (SD#) / impact scope / self-review & security-review results (including perspective completion status) / ticket URL. Turn these into the body with the following rules:
 
-1. **Look for the target repo's PR template**: the first one found in the order `.github/pull_request_template.md` → `.github/PULL_REQUEST_TEMPLATE.md` → `PULL_REQUEST_TEMPLATE.md` → `docs/pull_request_template.md`
-2. **If a template exists, follow its section structure**: delete the HTML comment hints (`<!-- ... -->`) and fill each section with the corresponding material. Section names vary by repo, so map by meaning (guideline):
+1. **Look for the target repo's PR template**: the first one found in the order `.github/pull_request_template.md` → `.github/PULL_REQUEST_TEMPLATE.md` → `.github/PULL_REQUEST_TEMPLATE/*.md` → `PULL_REQUEST_TEMPLATE.md` → `docs/pull_request_template.md` (`PULL_REQUEST_TEMPLATE/` is the directory form for multiple templates; if there is a single one, use it unconditionally, if there are several, pick the one matching loop-mode / the purpose)
+2. **If a template exists, its section structure is the SoT**: don't use the skill's own structure. Delete the HTML comments (`<!-- ... -->`) **only after reading them as filling instructions** (they may state filling criteria / sizing rules / explicit instructions for loop-mode). Fill each section with the corresponding material. Section names vary by repo, so map by meaning (guideline):
 
 | template section (example) | material to fill in |
 |---|---|
@@ -197,6 +199,14 @@ Materials passed from the caller (dev-cycle) = implementation plan / DoD check r
    If some material has no matching section in the template, append a section at the end of the body and record it in full (never drop it silently)
 3. **If there is no template, generate the default skeleton**: the 6 sections `## Summary` / `## Spec compliance` / `## Spec deviations` / `## Impact scope` / `## Verification` / `## References`
 4. **Branch ticket handling on repo visibility** (mechanically judged via `gh repo view --json visibility`): for a private repo, put the ticket URL in References (review-loop relies on "PR body + the ticket it references" as the spec). **For a public repo, never write internal URLs / the ticket body** (same spirit as the improve-harness iron rule — reference insights / tickets by name or ID only)
+5. **Don't delete a section you can't fill, either**: write "none" explicitly when not applicable (many templates are read as "a missing section = not declared")
+
+### Style conventions (loop-mode PR body; applies whether or not a template exists)
+
+- Write in **noun-ending phrasing** (体言止め: 「〜の追加」「〜は不変」). Don't close on the predicates 「〜する」/「〜した」/「〜になる」
+- **Bullets first**. Don't put prose paragraphs in. Enumerations are either a table or bullets, nothing else
+- **Don't enumerate every review nit / follow-up proposal**: compress to "count + a reference to the state file path" + "only the 2-3 items the reviewer needs to know before merge" (the SoT for the full list is the state file)
+- The guideline is **45-70 lines / 4-5k characters**. If you exceed it, first revisit the compression of nits and follow-ups (stay within budget by cutting redundancy, not by deleting sections)
 
 ## Iron rules
 

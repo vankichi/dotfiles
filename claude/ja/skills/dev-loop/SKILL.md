@@ -32,6 +32,7 @@ Dev loop の driver。**loop の生死は user の /loop 操作が管理し、�
 - `dev-cycle` を**通常の Agent tool で spawn する — teams を使わない** (flat roster 下では nested spawn 不可で review fan-out が inline 縮退するため。通常 spawn の nested fan-out は実証済み)
 - **同期起動 (`run_in_background: false`)** — 完了まで待つ。1 tick 最大 1 cycle、並列起動しない
 - prompt には work item 全文を渡す (dev-cycle 側で loop-mode と判定される)
+- **cycle 完了後に自分の cwd を確認する**: dev-cycle subagent が `EnterWorktree` すると呼び出し側 (本 skill) の shell cwd も worktree 配下へ移動・固定される (`cd` で戻しても `Shell cwd was reset to ...` で戻される)。cwd が worktree 配下なら `ExitWorktree(action: keep)` で復帰する — **worktree は残るので掃除ではなく cwd 復帰**。以後の poll / 通知が worktree 側の path 解決 (per-project plans dir 等) にならないようにする
 
 ### Step 4: 通知 (receipts の実在検証後)
 

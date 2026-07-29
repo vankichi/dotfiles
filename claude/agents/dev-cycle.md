@@ -113,6 +113,8 @@ If the plan includes a new service / new RPC / new enum / new ACL model / new AD
 
 **If launched with a cwd inside a worktree** (e.g., a parallel-cycle collision): EnterWorktree cannot create a nested worktree from inside one. Identify the main checkout and create your own worktree off main (or origin/main) with `git worktree add`, then move into it. Never touch files inside another agent's worktree.
 
+**If base is not the default branch** (e.g., stacking on top of a parent branch in a stacked PR): `EnterWorktree`'s create path is unusable because its default baseRef is `origin/<default-branch>`. Create a worktree with an explicit base via `git worktree add -b <branch> <path> <parent branch>`, and enter it with `EnterWorktree(path: <path>)`. Record the base branch in the state file and pass it explicitly when delegating to commit-push-branch (needed for both the squash base ref and `gh pr create --base`).
+
 If Edit/Write to the newly created worktree keeps being rejected (under subagent cwd pinning, `EnterWorktree(path)` may report success while the write boundary does not actually move — 2026-07-15 FB), switch to a branch swap inside the pinned original worktree:
 
 1. Clean up the new worktree with `git worktree remove`
@@ -143,6 +145,8 @@ Read the plan and determine the type of implementation:
 
 When delegating, pass the work item's spec, the relevant plan steps, the verification commands, and the **conventions digest + source paths (startup preparation Step 5)** fully in the prompt (assume the subagent doesn't know the state file — make it self-contained).
 
+**State the write boundary explicitly in the delegation prompt**: "Modify only files under `<worktree path>`. Do not modify anything outside the repo / worktree (in particular session artifacts under `~/.claude/`). If you judge that a change is needed there, do not do it — report and stop." Include the same boilerplate even for spawns whose purpose is read-only (investigation / fact-check).
+
 During implementation, follow the steps written in the plan. Always run the checks (`make build` / `make test` / `make lint`, or the language's build / test) and require green before moving to the next stage.
 
 **circuit breaker**: fix attempts for test failures are capped at **3**. If not resolved by the 3rd attempt, go to the escalation procedure. The attempt count is recorded in the state file's Current state (carried across interruption / resume — preventing a fresh 3 attempts on each resume). **When the cause of the failure has been diagnosed (defects unresolvable on the implementer's side, such as a wrong value in the spec or an internal spec contradiction), you may switch to the escalation procedure at that point without repeating attempts** — the breaker is a backstop for undiagnosable failures.
@@ -158,18 +162,23 @@ During implementation, follow the steps written in the plan. Always run the chec
 
 ### review (loop-mode: `review-orchestrator` iterative / interactive mode: `self-review-changes` skill)
 
-**loop-mode — iteration loop (max 3 rounds)**:
+**loop-mode — iteration loop (cap of 3 rounds for critical fixes / max 6 rounds total)**:
 
 1. **Fresh spawn** a `review-orchestrator` subagent (new every time — separating judgment via a reviewer with no implementation context). What to pass: the diff range / the full spec / the impact-scope classification (impact-A/B/C) / the path list of repo conventions / design docs (already enumerated in startup preparation Step 5) / the iteration number + the previous round's fix instructions (from the 2nd round on). **Do NOT pass the state file**
 2. verdict = `approve` → stack nits onto the draft PR notes list, record follow-up proposals in the state file, and move to security review
-3. verdict = `fix-required` → apply the fix instructions (trivial ones with your own Edit, substantive changes delegated to the implementation subagent = opus) → confirm build / test / lint green → go back to 1 and re-spawn (iteration +1)
-4. verdict = `escalation`, or **iteration exceeds the max of 3 without reaching approve** → stop following the "escalation procedure"
-5. **Resuming after escalation resolution**: if the change applied after resolution is exactly the reviewer-specified remediation, no re-review is needed (state this explicitly in the draft PR). If it involves additional changes beyond what the reviewer specified, reset the iteration cap and re-spawn from 1
+3. verdict = `approve-with-notes` (0 critical / only desirable findings remaining) → choose one of the two below. Either is fine, and **it does not consume the cap** (no escalation risk)
+   - **(a) Don't fix**: record the desirable findings as nits / follow-ups in the draft PR notes list and the state file, and move to security review
+   - **(b) Fix**: apply the fix instructions → confirm build / test / lint green → go back to 1 and re-spawn (only the total round count +1)
+   - **Fixing the desirable findings after choosing (a) is forbidden** — the invariant is that no reviewer-unverified change is left in the final diff. If you're going to fix them, always go through re-review via (b)
+4. verdict = `fix-required` (includes 1 or more critical findings) → apply the fix instructions (trivial ones with your own Edit, substantive changes delegated to the implementation subagent = opus) → confirm build / test / lint green → go back to 1 and re-spawn (iteration +1, **consumes the cap**)
+5. verdict = `escalation`, or **a fix-required with critical findings remains unresolved beyond the cap of 3 rounds** → stop following the "escalation procedure"
+6. **Cut off on reaching the total cap of 6 rounds**: since 0 critical findings is the premise, don't escalate — finish the same way as 3(a) (push the desirable findings to notes and move to security review). Escalate per the cap rule in 5 only if critical findings remain at that point
+7. **Resuming after escalation resolution**: if the change applied after resolution is exactly the reviewer-specified remediation, no re-review is needed (state this explicitly in the draft PR). If it involves additional changes beyond what the reviewer specified, reset the iteration cap and re-spawn from 1. **This clause applies only when resuming after an escalation has been resolved** — it cannot be reinterpreted as "the reviewer specified it, so no re-review is needed" when hitting the cap or the total round limit during a normal iteration (normal iterations are handled by rules 3-6)
 
 - **Detection of a new dependency escalates unconditionally regardless of the verdict** (an existing CLAUDE.md wall; not relaxed even in loop-mode)
 - Since the next round's reviewer sees the whole diff fresh, areas newly touched by a fix are structurally covered too, so incremental oversights don't slip through
 - The SoT for the perspective system / checklists is `self-review-changes` SKILL.md and references/ (the reviewer Reads them itself; not re-enumerated)
-- Under team (flat roster) execution or other environments where subagents cannot spawn nested subagents, the reviewer operates in the degraded mode (inline sequential application — review-orchestrator iron rule 6) instead of fanning out; identifiable by the "degraded execution" note in the verdict
+- Under team (flat roster) execution or other environments where subagents cannot spawn nested subagents, the reviewer operates in the degraded mode (inline sequential application — review-orchestrator iron rule 7) instead of fanning out; identifiable by the "degraded execution" note in the verdict
 
 **Interactive mode**: as before, launch `self-review-changes` via the `Skill` tool and run inline. Critical items (memory feedback violations, config format errors, implicit spec deviations, speculative mappings) always get approval before fixing; nits are the user's call. After fixes, re-run build / test / lint to confirm no side effects
 
@@ -177,8 +186,9 @@ During implementation, follow the steps written in the plan. Always run the chec
 ```
 ## review complete
 - mode: [loop-mode / interactive mode]
-- iterations: approve reached in <N> rounds (loop-mode only)
+- iterations: approve / approve-with-notes reached in <N> rounds (loop-mode only; cap consumed <n>/3 (critical fixes) / total rounds <n>/6)
 - critical fixes: <n> / desirable fixes: <n> → resolved within the iterations
+- approve-with-notes: [none / yes → (a) notes only (not fixed) / (b) fixed and passed re-review]
 - nits: <n> → noted in draft PR
 - follow-up proposals: <n> → recorded in the state file
 - new dependency detected: [none / yes → escalation]
@@ -231,6 +241,7 @@ When an escalation condition (iron rules 2/3) is hit **in loop-mode**, execute t
 1. Run `retrospect` (the stop event is the highest-priority insight source — an existing provision of the retrospect stage)
 2. **WIP preservation**: commit the worktree's uncommitted changes as `wip(<stage>): escalation stop`, and **push the cycle's working branch as-is** (do not create a draft PR; basis: the escalation provision in CLAUDE.md's "loop-mode" section). If no branch has been created yet (escalation before implementation), skip this step
 3. **Automated ticket comment**: comment on the ticket with the stop reason / stopped stage / WIP branch / state file path / how to resume (work-intake's resume mode). The posting procedure and format take work-intake `references/notion-adapter.md` "escalation comment" as the SoT. Never transcribe secrets / the spec body
+   - **If the MCP tool is not in your own tool schema, delegate to a subagent that has all tools** (state the write scope in the delegation prompt = adding a comment to that ticket only). If delegation isn't possible either, explicitly state "not executed due to a missing tool" in the receipt — don't fudge it with a workaround, and don't hide the non-execution
 4. **Push notification**: send one line (ticket id + stop reason) via `PushNotification`. In environments where the tool is unavailable, skip it and state "notification not delivered" in the stop report
 5. **State file update**: record "escalation stop (<stage> / <reason>)" in Current state (this makes the worktree non-active in the ownership reverse-lookup and aligns with the work-intake resume path)
 6. Stop report to the user (same format as the boundary report + a table of the execution status of 1-5 above. **Attach a receipt to each step** — WIP push = commit sha / comment = comment URL / notification = the send response or an explicit "not delivered" / state file = path. Any step for which a receipt cannot be shown must be reported as "not executed")
@@ -245,7 +256,7 @@ When an escalation condition (iron rules 2/3) is hit **in loop-mode**, execute t
 | Implementation-plan derivation | ✓ (mode: loop-mode / interactive) |
 | Design review | ✓ (or skip reason) |
 | Implementation | ✓ (worktree: <path>) |
-| review | ✓ (loop-mode: approved in <N> iterations) |
+| review | ✓ (loop-mode: approve / approve-with-notes in <N> iterations) |
 | security review | ✓ |
 | commit & push | ✓ |
 | retrospect | ✓ (or nothing recorded) |
@@ -261,19 +272,19 @@ Results:
 
 1. **Report at stage boundaries + WIP commit**: output a prose summary when each stage completes. "Silently moving on" is forbidden. In loop-mode, after worktree isolation, make a local `wip(<stage>): <summary>` commit inside the worktree at each stage completion (trace preservation against external interruption; no push — commit-push-branch squashes it into one clean commit at ship time). **Reports that mention outward operations must attach receipts (machine-verifiable evidence — commit sha / PR URL / comment URL / state file path); items without a receipt must be reported as "not executed"**
 2. **Approval points differ by mode**:
-   - loop-mode: stop only on escalation conditions (ambiguous DoD coverage / new dependency detected / security action-required / unresolved test failures / review iteration cap exceeded). Otherwise proceed autonomously
+   - loop-mode: stop only on escalation conditions (ambiguous DoD coverage / new dependency detected / security action-required / unresolved test failures / review iteration cap exceeded with critical findings). Otherwise proceed autonomously
    - interactive mode: the traditional 3 checkpoints (implementation-plan approval, self-review fix approval, pre-commit confirmation)
 3. **Stop immediately on critical errors** (common to both modes):
    - ambiguous DoD coverage (detected during plan derivation)
    - test failures that cannot be resolved during implementation
    - security review action-required
    - detection of a new dependency
-   - review iterations exceed the cap (3) without reaching approve (loop-mode)
+   - fix-required iterations with critical findings remain unresolved beyond the cap (3) (loop-mode; an `approve-with-notes` with 0 critical findings neither consumes the cap nor is an escalation condition)
 4. **push / PR follows CLAUDE.md "push / PR etiquette"**: pushing via the `commit-push-branch` skill is OK. Draft PR creation in loop-mode follows the exception rules in CLAUDE.md's loop-mode section. Promoting drafts / merging is humans-only
 5. **Update task progress via TaskUpdate as you go**
 6. **Respect existing memory feedback**: Read all of `MEMORY.md` and grasp each entry's content (don't hardcode representative examples — they rot as memory changes)
 7. **No safety skips / plan-first / judgment usage / flagging out-of-scope changes: CLAUDE.md is the SoT** (not restated in this agent)
-8. **Don't clean up worktrees proactively**: call `ExitWorktree` only on the user's explicit instruction (per the tool's spec). The autonomous boundary ends at draft PR creation; worktree cleanup beyond that is a human decision
+8. **Don't clean up worktrees proactively**: call `ExitWorktree(action: remove)` only on the user's explicit instruction (per the tool's spec). The autonomous boundary ends at draft PR creation; worktree cleanup beyond that is a human decision. **Returning cwd via `action: keep` involves no deletion and is therefore not subject to this prohibition** (it's for the caller to move its own cwd back outside the worktree). Only `remove` needs a human decision
 
 ## Anti-patterns
 
@@ -282,6 +293,8 @@ Results:
 - Skipping worktree isolation in loop-mode and directly editing the shared checkout
 - Committing while skipping review / security review
 - In loop-mode, proceeding to commit after a `fix-required` fix without re-review (cutting the iteration short)
+- Fixing the desirable findings of an `approve-with-notes` after choosing (a) (leaves reviewer-unverified changes in the final diff)
+- Treating an `approve-with-notes` with 0 critical findings as consuming the cap and escalating / conversely, finishing a cap-exceeded round with critical findings by pushing them to notes
 - Passing the state file to review-orchestrator (breaking its independence)
 - Adding a new dependency without escalating when one is detected
 - Implementing everything yourself without using the skills / subagents (don't reinvent each skill's logic)

@@ -42,6 +42,7 @@ All perspectives are default-on. **You may skip only when the mechanical conditi
 | test-adversarial.md | the test file diff is 0 |
 | performance.md | code diff is 0 |
 | observability.md | no new code path (docs / config / test only) |
+| ops-docs-hazard.md | the diff of operational-procedure docs is 0 (no changes under `docs/runbook/**`, and no shell-command code fence in the added docs lines) |
 | dependency.md | the diff of dependency files (go.mod / go.sum / lock / import lines) is 0 |
 | code-quality.md | code diff is 0 |
 
@@ -77,7 +78,7 @@ Severity has 3 tiers: **critical / desirable / nit**.
 ### 3.2 Approval
 
 - **Interactive mode**: wait for "go ahead" (selective approval OK)
-- **loop-mode**: review-orchestrator's verdict (fix instructions) is applied by dev-cycle and confirmed resolved through iterative re-review; nits are noted in the draft PR
+- **loop-mode**: review-orchestrator's verdict (fix instructions) is applied by dev-cycle and confirmed resolved through iterative re-review. When 0 critical findings remain and only desirable ones do, the verdict is `approve-with-notes` (whether to push them to notes or fix them + re-review is dev-cycle's choice); nits are noted in the draft PR
 
 ### 3.3 Fix via Edit (parallel) → 3.4 Re-verification
 
