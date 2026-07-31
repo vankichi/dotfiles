@@ -23,7 +23,7 @@ If a new source needs to be added in the future, create a `references/<source>-a
 ```
 work-intake: skipped due to unmet spec contract
 - <list only the deficient checklist items (item name + reason)>
-Reference: rules/spec-contract.md
+Reference: ~/.claude/rules/spec-contract.md
 ```
 
 - **Re-comment suppression (idempotency)**: before posting, check existing comments with `notion-get-comments`; if a work-intake skip comment already exists and the spec body has not been updated since, do not comment again (only report the skip verdict). This prevents comments from piling up on every poll once this runs in a loop.

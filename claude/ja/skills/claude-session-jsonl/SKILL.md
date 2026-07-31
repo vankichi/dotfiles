@@ -92,7 +92,7 @@ Claude Code がローカルに残すセッションログ (JSONL) の構造を *
 
 | パス | 型 | 用途 |
 |---|---|---|
-| `message.model` | string | 例: `claude-opus-4-7`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`. 大文字小文字混在 (`[1m]` で 1M context variant) |
+| `message.model` | string | 例: `claude-opus-4-7`, `claude-fable-5`, `claude-opus-5`, `claude-sonnet-5`, `claude-haiku-4-5-20251001`. 大文字小文字混在 (`[1m]` で 1M context variant)。usage が全 0 の `<synthetic>` 行も混在する (集計から除外) |
 | `message.usage.input_tokens` | u64 | このターンで billable な新規 input |
 | `message.usage.output_tokens` | u64 | アシスタント生成の output |
 | `message.usage.cache_creation_input_tokens` | u64 | キャッシュ書き込み合計 (5min + 1hr) |
@@ -117,15 +117,18 @@ tokens_per_minute  = (input + output + cache_creation) / elapsed_secs * 60
 cost_per_hour      = session_cost_usd / elapsed_secs * 3600
 ```
 
-## モデル別単価 (USD per million tokens, 2026-04 時点)
+## モデル別単価 (USD per million tokens, 2026-07 時点 — claude-api skill で照合)
 
-> ⚠ Anthropic のページで定期的に更新される値。tool 化したらコメントで「2026-04 時点」を残し、ハードコードを 1 箇所に集約 (例: `pricing.rs`) しておくこと。
+> ⚠ Anthropic のページで定期的に更新される値。SoT は claude-api skill (「LLM pricing は memory で答えない」trigger)。tool 化したらコメントで照合時点を残し、ハードコードを 1 箇所に集約 (例: `pricing.rs`) しておくこと。
 
-| family | input | output | cache_w 5min | cache_w 1hr | cache_read |
+| family | input | output | cache_w 5min (1.25×) | cache_w 1hr (2.00×) | cache_read (0.10×) |
 |---|---:|---:|---:|---:|---:|
-| Opus | 15.00 | 75.00 | **18.75** (1.25×) | **30.00** (2.00×) | 1.50 (0.10×) |
+| Fable | 10.00 | 50.00 | 12.50 | 20.00 | 1.00 |
+| Opus (4.6 以降 / 5) | 5.00 | 25.00 | 6.25 | 10.00 | 0.50 |
 | Sonnet | 3.00 | 15.00 | 3.75 | 6.00 | 0.30 |
 | Haiku | 1.00 | 5.00 | 1.25 | 2.00 | 0.10 |
+
+Opus 4.5 以前の旧単価 ($15/$75) のログが混在する期間は family 判定だけでは過小計上になる — 厳密さが要る場合は model 名で世代を分ける。
 
 cost 計算式:
 
@@ -149,7 +152,7 @@ cost = input × input_rate
 4. **`last-prompt` は最終 prompt のキャッシュ用**で集計には使わない (内容は user 発話と重複)。
 5. **`thinking` ブロックの token 数は `output_tokens` に含まれている** (別カウントしない)。
 6. **`iterations` 配列**は server-side の細分化情報。集計では一番外の `usage` を信用すれば十分。
-7. **model 名の判定は `to_ascii_lowercase().contains("opus" | "sonnet" | "haiku")`** で family を取る。完全一致は壊れる (`claude-opus-4-7`, `claude-opus-4-7[1m]`, `claude-3-opus-...` 等が混在)。
+7. **model 名の判定は `to_ascii_lowercase().contains("fable" | "opus" | "sonnet" | "haiku")`** で family を取る (fable を先に判定 — `claude-fable-5` は 2026-07 時点の log に実在)。完全一致は壊れる (`claude-opus-4-7`, `claude-opus-4-7[1m]`, `claude-3-opus-...` 等が混在)。fable は Opus より高単価の別 family — sonnet fallback に落とさず価格表の Fable 行を使う。
 8. **encoded-cwd を逆引きする必要があるか?** ある (どのリポジトリのセッションか表示する場合)。`-` を `/` に戻すだけだが、もとの cwd に `-` が含まれていた場合は不可逆 — `assistant.cwd` が原本としてイベント内に入っているのでそちらを参照するのが安全。
 9. **集計はセッション単位** が基本。「全セッション横断で today の累計コスト」を出したい場合は `<projects-dir>/**/*.jsonl` の各ファイル全行を読み、`timestamp` で当日フィルタ → usage 合算する (重め)。
 
