@@ -7,129 +7,54 @@ description: Reference skill for K8s manifests / workload design / RBAC / Securi
 
 # k8s-style
 
-A reference skill collecting Kubernetes-related idioms and conventions. Consult it as a criterion for creating manifests, reviews, and identifying refactor candidates.
+The house K8s conventions, plus detection signals for catching violations. Consulted as the basis for judgment when authoring / reviewing manifests or generating refactor candidates.
 
-## Applicability
+**General knowledge is not restated here** (Deployment vs StatefulSet, what each probe does, "base64 is not encryption", etc.) — this skill carries only the house's choices, the traps that cause incidents, and the signals that let you notice via grep.
 
-- Any situation dealing with K8s manifests (`*.yaml` / `*.yml` containing `apiVersion` / `kind`)
-- Situations dealing with Kustomize (`kustomization.yaml`) / Helm charts (`Chart.yaml` / `templates/` / `values.yaml`)
-- Referenced by the code-refactor-advisor agent / security-review-local skill
-- Situations where you're asked 「K8s 的にどう書く」「probe どうする」「最小権限」
+## 1. Basic stance
 
----
+- **Applying to production goes through CD (GitOps: ArgoCD / Flux) by default.** Running `kubectl apply` directly is taboo
+- **Always check the diff with `kubectl diff`** before a change
+- Don't leave behind resources created with imperative commands (`kubectl run` / `kubectl expose` / `kubectl edit`) — **state that doesn't exist in Git is taboo**
+- 1 YAML = 1 resource, or one logical unit (Deployment + Service + HPA + PDB)
 
-## 1. Basic stance on manifests
+**Detect**: resources on the cluster that aren't in the manifests (drift) / mismatch between the `last-applied-configuration` annotation and Git
 
-- 1 YAML = 1 resource, or group them as **one logical unit** (Deployment + Service + HPA + PDB)
-- Default to `kubectl apply -f` (`kubectl create` is not idempotent, so don't use it in CI)
-- **Always check the diff with `kubectl diff`** before making changes (recommended convention)
-- Default to applying to production via CD (GitOps: ArgoCD / Flux). Directly running `kubectl apply` is forbidden
-- Don't leave behind resources created with imperative commands (`kubectl run` / `kubectl expose` / `kubectl edit`) (state that doesn't exist in Git is forbidden)
+## 2. API version
 
-Detection signals:
-- Resources exist on the cluster that aren't in any manifest (drift)
-- Traces of `kubectl edit` (mismatch between the `last-applied-configuration` annotation and Git)
+Keep `apiVersion` on the latest stable (`apps/v1` / `batch/v1` / `networking.k8s.io/v1` / `autoscaling/v2` / `policy/v1`). `PodSecurityPolicy` is removed — migrate to **Pod Security Admission (PSA)**. Run `pluto` in CI to detect removed APIs.
 
----
+## 3. Naming / Labels / Selectors
 
-## 2. API version / deprecated APIs
+- Resource names are lowercase + `-` (RFC 1123), 63 characters or fewer. **Don't bake the environment into the name** (separate by namespace — `my-app` + namespace `prod`, not `my-app-prod`)
+- Put `app.kubernetes.io/*` on every resource: `name` (required) / `instance`, `version`, `component`, `managed-by` (recommended) / `part-of` (optional)
+- **A Deployment's `spec.selector.matchLabels` is immutable** — changing it later makes updates impossible. Stabilize a Service's selector on `name` + `instance`, and **never put volatile labels (commit SHA / build number) in a selector**
+- Namespace custom annotations with reverse DNS (`example.com/my-key`). Don't hand-write controller-managed annotations (`kubectl.kubernetes.io/*` / `meta.helm.sh/*`)
 
-- Don't use deprecated / removed APIs. Align `apiVersion` to **the latest stable**
-  - `Deployment` / `DaemonSet` / `StatefulSet` / `ReplicaSet` → `apps/v1`
-  - `Job` / `CronJob` → `batch/v1`
-  - `Ingress` → `networking.k8s.io/v1` (`extensions/v1beta1` / `v1beta1` have been removed)
-  - `HorizontalPodAutoscaler` → `autoscaling/v2`
-  - `PodDisruptionBudget` → `policy/v1`
-  - `PodSecurityPolicy` has been removed → migrate to **Pod Security Admission (PSA)**
-- Detect deprecated APIs in CI with `pluto`
-
----
-
-## 3. Naming / Labels / Annotations
-
-### Naming (resource name)
-- lowercase + `-` (RFC 1123). `_` is not allowed
-- Length must be 63 characters or fewer (because it becomes the Service / Pod hostname)
-- Don't embed the environment in the name (separate via namespace). Use `my-app` + namespace `prod` instead of `my-app-prod`
-
-### Recommended labels
-**Attach to all resources** (with the `app.kubernetes.io/*` prefix):
-
-| label | example | requirement level |
-|---|---|---|
-| `app.kubernetes.io/name` | `my-app` | Required |
-| `app.kubernetes.io/instance` | `my-app-prod` | Recommended |
-| `app.kubernetes.io/version` | `1.2.3` | Recommended |
-| `app.kubernetes.io/component` | `api` / `worker` | Recommended |
-| `app.kubernetes.io/part-of` | `my-platform` | Optional |
-| `app.kubernetes.io/managed-by` | `kustomize` / `argocd` | Recommended |
-
-### selector labels
-- Deployment's `spec.selector.matchLabels` is **immutable**. Changing it later makes updates impossible
-- Stabilize the Service's `selector` using `app.kubernetes.io/name` + `app.kubernetes.io/instance`
-- Don't put environment-varying labels (commit SHA / build number) into the selector
-
-### annotations
-- Namespace custom annotations using **reverse DNS** (`example.com/my-key`)
-- Don't hand-write controller-managed annotations such as `kubectl.kubernetes.io/*` / `meta.helm.sh/*`
-
-Detection signals:
-- Uppercase letters / underscores in names
-- Missing recommended labels
-- The selector includes a value that changes on rolling deploy
-
----
+**Detect**: uppercase / underscores in names / missing recommended labels / values that change on rolling deploy present in a selector
 
 ## 4. Resource requests / limits
 
-### Required settings
-- **Always set both `resources.requests` and `resources.limits`** (recommended convention)
-- Without them, the pod gets BestEffort QoS and is the first to be killed
+- **Always set both requests and limits** (without them the pod gets BestEffort QoS and is killed first)
+- **Use CPU limits with caution** (they cause throttling; running with requests only is a common pattern). **Always set a memory limit** (an OOM kill is safer than dragging down the whole node)
+- `requests = limits` gives Guaranteed QoS (for important workloads)
+- Don't guess at sizing — base it on **measured values** from `kubectl top` / Prometheus / the VPA recommender. Start conservative → observe and adjust
 
-### CPU vs Memory
-- **Use CPU limits with caution**: they cause throttling. Running with requests only is also a common pattern
-- **Always set a memory limit**: an OOM kill is safer than dragging down the entire node
-- requests ≤ limits. Setting `requests = limits` gives **Guaranteed QoS** (for important workloads)
+**Detect**: `resources:` empty / only `limits` / only `requests` / memory limits 10x requests or more (wasted headroom) / CPU limits under 100m with a latency requirement (guaranteed throttling)
 
-### Sizing
-- Don't guess. Base sizing **on measured values** from `kubectl top` / Prometheus / the VPA recommender
-- Start conservative → observe and adjust (over-provisioning hurts cost and scheduling efficiency)
-- For batch / job workloads, account for short-lived spikes
+## 5. Probes
 
-Detection signals:
-- `resources:` is empty / only `limits` / only `requests`
-- memory `limits` is 10x or more the requests (wasted headroom)
-- CPU `limits` is under 100m while there's a latency requirement (guaranteed to throttle)
+Use the three appropriately (**pointing all of them at the same endpoint is an anti-pattern**). Give each its own endpoint (`/healthz` / `/readyz` / `/startupz`).
 
----
+- **Keep liveness minimal**: don't look at internal app state or dependent DBs — only "does the process respond". **If liveness checks the DB, a DB outage restarts every pod and makes things worse**
+- **readiness may include dependencies** (reflecting DB / cache / dependent service health)
+- For slow-starting apps, **give grace time via the startup probe and keep liveness's `failureThreshold` short** (avoid the race of inflating liveness's `initialDelaySeconds`)
 
-## 5. Probes (liveness / readiness / startup)
-
-**Use the three types appropriately.** Pointing all of them at the same endpoint is an anti-pattern:
-
-| probe | role | behavior on failure |
-|---|---|---|
-| `startup` | Determines whether startup is complete. Required if there's heavy init work (DB migration / cache warmup) | On failure, **kill and restart** |
-| `liveness` | Health check. **Only catches deadlocks / hangs** | On failure, **kill and restart** |
-| `readiness` | Whether traffic can be accepted. Reflects connectivity to dependencies (DB / cache) | On failure, **removed from the Service** (not killed) |
-
-### Best practices
-- **Keep liveness minimal**: don't check internal app state / dependent DBs. Only "does the process respond"
-  - If liveness checks the DB, a DB outage causes all pods to restart, making things worse
-- **readiness may include dependencies**: reflect the health of DB connections / cache connections / dependent services
-- **Use the startup probe to avoid tuning liveness's `initialDelaySeconds`**: for slow-starting apps, give it grace time via startup, and keep liveness's `failureThreshold` short
-- Have a dedicated endpoint for each probe (`/healthz` / `/readyz` / `/startupz`)
-
-Detection signals:
-- liveness hits the DB
-- All three probes use the same endpoint
-- `initialDelaySeconds` is abnormally large (e.g. 300s)
-
----
+**Detect**: liveness hitting the DB / all three probes on the same endpoint / an abnormally large `initialDelaySeconds` (e.g. 300s)
 
 ## 6. SecurityContext / Pod Security
 
-### Required at the Pod / Container level
+The house baseline:
 
 ```yaml
 spec:
@@ -149,16 +74,9 @@ spec:
         drop: ["ALL"]
 ```
 
-### Forbidden
-- `privileged: true`
-- `hostNetwork: true` / `hostPID: true` / `hostIPC: true`
-- `hostPath` mounts (especially `/` / `/etc` / `/var/run/docker.sock`)
-- `runAsUser: 0` (root)
-- `allowPrivilegeEscalation: true`
-- Elevated capabilities such as `capabilities.add: ["SYS_ADMIN"]`
+**Forbidden**: `privileged: true` / `hostNetwork`, `hostPID`, `hostIPC` / `hostPath` mounts (especially `/`, `/etc`, `/var/run/docker.sock`) / `runAsUser: 0` / `allowPrivilegeEscalation: true` / elevated capabilities such as `capabilities.add: ["SYS_ADMIN"]`.
 
-### Pod Security Admission (PSA)
-Enforce **restricted** / **baseline** / **privileged** via a namespace label. Use `restricted` for production / general workloads:
+Enforce PSA via a namespace label; **use `restricted` for production and general workloads**:
 
 ```yaml
 metadata:
@@ -167,36 +85,19 @@ metadata:
     pod-security.kubernetes.io/enforce-version: latest
 ```
 
-Detection signals:
-- Missing `securityContext` / use of `hostPath` / running as root / `capabilities.drop` not specified
-
----
+**Detect**: missing `securityContext` / `hostPath` in use / running as root / `capabilities.drop` unspecified
 
 ## 7. RBAC (least privilege)
 
-### Start from default deny
-- **Always specify** a ServiceAccount explicitly (don't use the default SA)
-- If the pod doesn't need to call the K8s API, set `automountServiceAccountToken: false`
-- Role / ClusterRole should include **only the necessary verbs / resources**
+- **Always specify a ServiceAccount** (don't use the default SA). Set `automountServiceAccountToken: false` for pods that never call the K8s API
+- **Forbidden**: `verbs: ["*"]` / `resources: ["*"]` / `apiGroups: ["*"]` / binding `cluster-admin` / broad ClusterRoleBindings (first consider whether Role + RoleBinding can scope it to a namespace)
+- Where a token is needed, shorten its life with a projected token (TokenRequest API)
 
-### Forbidden
-- `verbs: ["*"]` / `resources: ["*"]` / `apiGroups: ["*"]`
-- Binding `cluster-admin` (don't grant it to people, let alone to SAs)
-- Broad ClusterRoleBindings (first consider whether a Role + RoleBinding scoped to a namespace would suffice)
-
-### Automatic token mounting
-- Only when necessary, use a short-lived projected token (TokenRequest API)
-
-Detection signals:
-- `serviceAccountName` not specified (using the default)
-- Wildcard verb / resource in a ClusterRole
-- Using a ClusterRoleBinding when a RoleBinding would suffice
-
----
+**Detect**: `serviceAccountName` unspecified / wildcards in a ClusterRole / a ClusterRoleBinding where a RoleBinding would do
 
 ## 8. NetworkPolicy
 
-### Introduce default deny
+Put one default-deny ingress / egress in each namespace and open only what's needed:
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -208,10 +109,8 @@ spec:
   policyTypes: ["Ingress", "Egress"]
 ```
 
-Add one **default deny ingress / egress** policy per namespace, and open up necessary traffic with allow rules.
-
-### Common pitfalls
-- **Forgetting egress to DNS (kube-dns)** → name resolution breaks and all pods die. Always allow it:
+**Traps**:
+- **Forgetting egress to DNS (kube-dns) kills name resolution and takes every pod down.** Always allow it:
   ```yaml
   egress:
   - to:
@@ -222,184 +121,76 @@ Add one **default deny ingress / egress** policy per namespace, and open up nece
     - protocol: UDP
       port: 53
   ```
-- Leaving egress fully open (`{}`) can't prevent data exfiltration
-- Without a network policy controller (Calico / Cilium, etc.) in the cluster, NetworkPolicy is **ignored**. Confirm the prerequisite is in place
+- Leaving egress wide open (`{}`) fails to prevent data exfiltration
+- **Without a network policy controller (Calico / Cilium etc.) in the cluster, NetworkPolicy is ignored.** Confirm it's deployed
 
-Detection signals:
-- A namespace with no NetworkPolicy at all / fully open egress / missing DNS allow rule
+**Detect**: a namespace with no NetworkPolicy at all / wide-open egress / missing DNS allow
 
----
+## 9. Workload design
 
-## 9. Pod / Workload design
+- 1 Pod = 1 main process. Add sidecars **only when the role is clear**. Limit init containers to work needed strictly before startup (migration / config fetch)
+- Production Deployments run `replicas >= 2` + a **PodDisruptionBudget** (`minAvailable: 1`, etc.). With multiple zones, spread via **topologySpreadConstraints**, and keep `maxUnavailable` conservative during rolling updates
+- **Graceful shutdown**: match `terminationGracePeriodSeconds` to the post-SIGTERM cleanup time, and have the app flip readiness to false on SIGTERM before draining (the preStop-hook sleep pattern)
 
-### Deployment vs StatefulSet vs DaemonSet vs Job
-- **stateless app** → Deployment
-- **Needs stable identity / persistent volumes** → StatefulSet (DB / Kafka / etcd, etc.)
-- **One pod per node** → DaemonSet (log collector / node exporter)
-- **Runs to completion once / runs periodically** → Job / CronJob
-
-### Pod design
-- 1 Pod = 1 main process. Don't cram multiple processes into a single container
-- Only add a sidecar (proxy / log shipper) **when its role is clear**. Don't add one just because
-- Limit init containers to **work that's only needed before startup** (migrations / fetching config)
-
-### Replicas / availability
-- Production Deployments should have `replicas >= 2` + **a PodDisruptionBudget**:
-
-```yaml
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-spec:
-  minAvailable: 1  # or maxUnavailable: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: my-app
-```
-
-- If the cluster spans multiple zones, spread across zones with **topologySpreadConstraints**
-- Keep `maxUnavailable` conservative so all pods don't go down simultaneously during a rolling update
-
-### Graceful shutdown
-- Match `terminationGracePeriodSeconds` to the cleanup time needed after SIGTERM (default 30s)
-- On the app side, set readiness to false upon receiving SIGTERM, then drain (a pattern of sleeping in a preStop hook)
-
-Detection signals:
-- `replicas: 1` in production / no PDB / in-flight requests get dropped due to no preStop hook
-
----
+**Detect**: `replicas: 1` in production / no PDB / in-flight requests dropped for lack of a preStop hook
 
 ## 10. ConfigMap / Secret
 
-### ConfigMap
-- Configuration values go in ConfigMap, secrets go in Secret (don't mix them)
-- Bulk-injecting with `envFrom` bloats the environment / causes name collisions. **Use `valueFrom` for only the keys you need**
-- Use immutable ConfigMaps (`immutable: true`) to suppress hot reload (reduces controller load)
+- Configuration in ConfigMaps, secrets in Secrets (never mixed). **Bulk injection via `envFrom` bloats the environment and causes name collisions** — inject only the keys you need with `valueFrom`
+- Use `immutable: true` ConfigMaps to suppress hot reload and reduce controller load
+- Production Secrets go through **External Secrets Operator / Sealed Secrets / Vault / a cloud secret manager**. **Secrets injected as environment variables are visible via `/proc/<pid>/environ`** — for sensitive material consider a volume mount + readOnly + tmpfs
+- **Never commit Secrets to Git** (base64-encoded is no different)
 
-### Secret
-- base64 is **not encryption**. Without encryption-at-rest configured, a Secret is effectively plaintext in etcd
-- In production, use **External Secrets Operator / Sealed Secrets / Vault / a cloud secret manager**
-- Injecting a Secret as an environment variable makes it visible via `/proc/<pid>/environ` → for sensitive values, consider **volume mount + readOnly + tmpfs**
-- Don't commit Secrets to Git (this applies even if already base64-encoded)
+**Detect**: password / token-like keys in a ConfigMap / a Secret committed as plain YAML / the same Secret value across all environments
 
-Detection signals:
-- A key that looks like a password / token in a ConfigMap
-- A Secret committed as **plain YAML**
-- The same Secret value used across all environments
+## 11. Image / Tag
 
----
+- **Don't use `:latest`.** A semver tag plus a digest (`@sha256:...`) is safest, and production manifests should **pin by digest** by default
+- Once a tag is pinned, write `pullPolicy` **explicitly as `IfNotPresent`** (`:latest` implies `Always`)
+- Default to distroless / chainguard / minimal bases. Don't leave build deps behind — use multi-stage builds. Scan for CVEs with `trivy` / `grype` and wire SBOM generation into CI
 
-## 11. Image / Tag / Pull policy
-
-### Tag
-- **Don't use** `:latest` (not reproducible / can't track what was deployed during a rolling update)
-- Combining a semver tag (`v1.2.3`) with a digest (`@sha256:...`) is safest
-- Defaulting production manifests to a **digest pin** keeps them safe even if the tag gets overwritten
-
-### Pull policy
-- If the tag is `:latest`, it implicitly becomes `Always` → when pinning a tag, **explicitly write `IfNotPresent`**
-- Explicitly set `imagePullSecrets` for private registries
-
-### Image size / vulnerabilities
-- Default to a distroless / chainguard / minimal base
-- Use multi-stage builds so build dependencies aren't left behind
-- Scan for CVEs with `trivy` / `grype`, and build SBOM generation into CI
-
-Detection signals:
-- `:latest` tag
-- pull policy not specified + a fixed tag
-- An image that runs as root
-
----
+**Detect**: a `:latest` tag / a pinned tag with no `pullPolicy` / an image that runs as root
 
 ## 12. Kustomize (default) / Helm
 
-**Kustomize is the default.** Reasons:
-- It reads as plain YAML (no template-engine quirks)
-- Overlays are sufficient for handling environment differences in our own apps
-- Partial overrides can be done locally via patches, without needing to expose every knob through values
+**Kustomize is the default.** Rationale = it stays readable as YAML (no template-engine quirks) / overlays are enough for environment differences / partial overrides stay local via patches instead of poking holes through values. **Use Helm only when importing an OSS chart or when distribution is required.**
 
-Use Helm only **when importing an OSS chart** / **when distribution is required**.
+- Structure as `base/` + `overlays/{dev,staging,prod}/`. **Keep base environment-independent — never pollute it with environment-specific values**
+- Keep overlay patches minimal. For values alone, override via `configMapGenerator` / `secretGenerator`
+- Default to strategic merge patches (`patches:` with `target:`); reserve JSON Patch for stronger changes
+- Apply labels in bulk with `commonLabels` / `commonAnnotations`. **Mind selector immutability** when using `namePrefix` / `nameSuffix`
+- Check production diffs with `kustomize build overlays/prod | kubectl diff -f -`
+- For OSS charts, inflating via Kustomize's `helmCharts:` then patching in an overlay is the easiest arrangement
 
-### Kustomize conventions
-- A `base/` + `overlays/{dev,staging,prod}/` structure
-- Keep **patches minimal** in overlays. For plain values, override via `configMapGenerator` / `secretGenerator`
-- Check the production diff with `kustomize build overlays/prod | kubectl diff -f -` → render with `kustomize build` in CI
-- Default to **strategic merge patch (`patches:` with `target:`)**. Use JSON Patch only for more forceful changes
-- Attach labels to all resources in bulk via `commonLabels` / `commonAnnotations`
-- Use `namePrefix` / `nameSuffix` for environment-specific suffixes (watch out for selector immutability)
-- Don't pollute the parent `base/` with environment-specific values (keep base environment-agnostic)
+**Detect**: cutting a new Helm chart for an in-house app (check whether Kustomize suffices first) / bloated overlay patches (a signal to revisit the base design) / a base polluted with environment values
 
-### Conventions when using Helm
-- `apiVersion: v2` in `Chart.yaml`
-- Distinguish chart version from app version (`version` / `appVersion`)
-- Make values.yaml **commented / typed** so users can read it
-- Render with `helm template` → check with `kubectl diff` before running `helm upgrade`
-- Even when pulling in an OSS chart, a structure where Kustomize's `helmCharts:` inflates values → overlay patch is easy to work with
+## 13. Lint / Validation (required in CI)
 
-Detection signals:
-- About to cut a new Helm chart for an in-house app (first consider whether Kustomize would suffice)
-- Patches bloating in an overlay (a signal to reconsider the base design)
-- base polluted with environment-specific values
-
----
-
-## 13. Lint / Validation
-
-Always wire these into CI:
-
-| tool | role |
+| tool | Role |
 |---|---|
-| `kubeconform` | schema validation (consistency of apiVersion / kind) |
-| `kube-linter` | configuration anti-patterns (no probes / privileged / no resources, etc.) |
-| `conftest` (OPA / Rego) | custom policies (enforcing internal conventions) |
-| `trivy config` | detects security misconfigurations in manifests |
-| `kustomize build` | renderability + feeds the result into kubeconform / kube-linter |
-| `pluto` | detects deprecated APIs |
+| `kubeconform` | Schema validation |
+| `kube-linter` | Configuration anti-patterns (no probes / privileged / no resources) |
+| `trivy config` | Security misconfiguration in manifests |
+| `conftest` (OPA / Rego) | Enforcing in-house policy |
+| `pluto` | Detecting removed APIs |
 
-**At minimum**, include `kubeconform` + `kube-linter` + `trivy config`. Feeding the output of `kustomize build` into these in CI is the standard flow.
-
----
+**At minimum, adopt `kubeconform` + `kube-linter` + `trivy config`.** Piping `kustomize build` output into them is the standard flow.
 
 ## 14. Observability
 
-- Expose a **metrics endpoint** (`/metrics` in Prometheus format) on every workload
-- Wire it up via a `prometheus.io/scrape` annotation on the pod, or a ServiceMonitor (Prometheus Operator)
-- Emit logs to stdout / stderr **as structured JSON**. Don't write to files (ephemeral containers disappear)
-- For traces, use the OpenTelemetry SDK + a sidecar / DaemonSet collector → backend (Tempo / Jaeger)
-- Precompute important SLIs with a **Recording Rule** (avoid heavy computation at request time)
-- Don't put high-cardinality labels / tags into metrics (it will break the time-series DB)
-
----
-
-## 15. Cost / efficiency
-
-- Unnecessary resource requests are a hidden cost. Base them on measured values from the VPA recommender
-- Use HorizontalPodAutoscaler (`autoscaling/v2`) to **track load**. Consider custom metrics in addition to CPU
-- Use Cluster Autoscaler / Karpenter for automatic node scaling
-- Use Spot / Preemptible nodes for batch / dev (also conditionally for stateless production workloads)
-
----
-
-## 16. Related skills / agents
-
-- security review → `security-review-local` skill
-- docs (ADR / Runbook / Design) → `tech-docs-writer` skill
-- layer boundaries / responsibilities (app side) → `ddd-clean-architecture` skill
-- Go app conventions → `go-style` / `go-test` skill
-
----
+Emit logs **to stdout / stderr as structured JSON** (never to files — ephemeral containers vanish). Give every workload a metrics endpoint, wired via a ServiceMonitor or a `prometheus.io/scrape` annotation. **Don't put high-cardinality labels in metrics** (it destroys the time-series DB). Precompute important SLIs with Recording Rules.
 
 ## Checklist (for manifest review)
 
 - [ ] `apiVersion` is stable / not deprecated
-- [ ] recommended labels (`app.kubernetes.io/*`) are present on all resources
-- [ ] `resources.requests` / `limits` are set (memory limit required)
-- [ ] `liveness` / `readiness` / `startup` are used appropriately (liveness doesn't check dependencies)
-- [ ] `securityContext` sets `runAsNonRoot` / `readOnlyRootFilesystem` / `capabilities.drop: ["ALL"]`
-- [ ] `serviceAccountName` is explicit + RBAC is minimal + `automountServiceAccountToken: false` (if not needed)
-- [ ] NetworkPolicy has default deny + necessary allows (watch out for forgetting the DNS allow)
-- [ ] production `replicas >= 2` + PDB + topologySpreadConstraints
-- [ ] image tag is pinned (digest recommended) + `pullPolicy` is explicit + distroless-based image
-- [ ] Secrets are not committed in plaintext (External Secrets / Sealed Secrets / Vault)
-- [ ] Kustomize's base is environment-agnostic / overlay patches are minimal
-- [ ] `kubeconform` / `kube-linter` / `trivy config` are run in CI
+- [ ] `app.kubernetes.io/*` present on every resource
+- [ ] `resources.requests` / `limits` set (memory limit required)
+- [ ] liveness / readiness / startup used appropriately (liveness doesn't touch dependencies)
+- [ ] `runAsNonRoot` / `readOnlyRootFilesystem` / `capabilities.drop: ["ALL"]`
+- [ ] `serviceAccountName` explicit + minimal RBAC + `automountServiceAccountToken: false` where unneeded
+- [ ] NetworkPolicy default deny + the necessary allows (**watch out for the missing DNS allow**)
+- [ ] Production `replicas >= 2` + PDB + topologySpreadConstraints
+- [ ] Image pinned by digest + explicit `pullPolicy` + distroless-style base
+- [ ] No Secrets committed in plaintext
+- [ ] Kustomize base is environment-independent / overlay patches are minimal
+- [ ] `kubeconform` / `kube-linter` / `trivy config` run in CI
