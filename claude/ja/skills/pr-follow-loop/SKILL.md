@@ -1,6 +1,7 @@
 ---
 name: pr-follow-loop
 description: /loop で回す「自分が author の open PR を見届ける」driver skill。1 tick = 自分の open PR を poll → 各 PR の段階を 1 歩進める（bot review 指摘の triage 提示 / human approve の watch / merge 後の自動掃除）→ 通知 → ScheduleWakeup で self-pace。「pr-follow-loop の tick を実行して」「PR 見届け loop 回して」等で使う（通常は /loop 経由）。dev-loop（PR を作る）/ review-loop（他人の PR をレビューする）の兄弟で、本 skill は自分が作った PR のその後を追う。
+disallowed-tools: AskUserQuestion
 ---
 
 > **Source of truth:** 本ファイル（日本語）。更新時は本ファイルを先に直し、英訳（`claude/skills/pr-follow-loop/SKILL.md`）に反映する。

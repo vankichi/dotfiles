@@ -1,6 +1,7 @@
 ---
 name: review-loop
 description: Driver skill for PR review run via /loop. 1 tick = poll open PRs where I'm assigned as reviewer → select one un-reviewed head sha → integrating review via reviewer → post findings as a neutral comment (does not approve / merge) → notify → ScheduleWakeup to self-pace. Use for 「review-loop の tick を実行して」("run the review-loop tick"), 「review loop 回して」("run the review loop"), etc. (normally via /loop). The review's substance is the reviewer's SoT — this skill only drives.
+disallowed-tools: AskUserQuestion
 ---
 
 > **Source of truth:** `claude/ja/skills/review-loop/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.

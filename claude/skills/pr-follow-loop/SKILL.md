@@ -1,6 +1,7 @@
 ---
 name: pr-follow-loop
 description: Driver skill run via /loop that shepherds the open PRs I authored. 1 tick = poll my open PRs → advance one PR by one step (triage-and-present bot review findings / watch for human approval / auto-clean up after merge) → notify → ScheduleWakeup to self-pace. Use for 「pr-follow-loop の tick を実行して」("run the pr-follow-loop tick"), 「PR 見届け loop 回して」("run the PR follow loop"), etc. (normally via /loop). Sibling of dev-loop (produces PRs) and review-loop (reviews others' PRs); this skill follows the PRs I produced through the rest of their life.
+disallowed-tools: AskUserQuestion
 ---
 
 > **Source of truth:** `claude/ja/skills/pr-follow-loop/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.

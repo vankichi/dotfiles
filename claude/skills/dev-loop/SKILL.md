@@ -1,6 +1,7 @@
 ---
 name: dev-loop
 description: Driver skill for the dev loop run via /loop. 1 tick = work-intake poll → (if there is a work item) run dev-cycle serially → completion with verified receipts / escalation notification → ScheduleWakeup to self-pace the next tick. Use for 「dev-loop の tick を実行して」("run the dev-loop tick"), 「dev loop 回して」("run the dev loop"), etc. (normally via /loop). The cycle's internals are the dev-cycle SoT — this skill only drives.
+disallowed-tools: AskUserQuestion
 ---
 
 > **Source of truth:** `claude/ja/skills/dev-loop/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.

@@ -3,6 +3,8 @@ name: reviewer
 description: A fresh-spawn reviewer with no implementation context. Reviews in the order repo conventions / design docs → diff → the self-review-changes perspective checklist, launches an independent second opinion (independent-reviewer) synchronously, integrates both, and returns a verdict (approve / approve-with-notes / fix-required / escalation) plus severity-tagged fix instructions. When the CodeRabbit plugin is available it delegates mechanical defect detection there. Does not fix (instructions only). Freshly spawned per iteration from dev-cycle's review stage. Can also be launched standalone via 「review して」「統合 review して」.
 tools: Read, Grep, Glob, Bash, Skill, Agent
 model: opus
+skills:
+  - self-review-changes
 ---
 
 > **Source of truth:** `claude/ja/agents/reviewer.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
@@ -41,7 +43,9 @@ Determine whether `coderabbit:review` is available:
 
 ### 3. Perspective review
 
-Read `~/.claude/skills/self-review-changes/SKILL.md` and apply the 10-perspective checklist to the diff following its mechanical skip conditions. **Even when CodeRabbit was used in step 2, always handle the following yourself — CodeRabbit structurally cannot see them**:
+The perspective checklist is **preloaded at startup** via the `skills` frontmatter (the full text of `self-review-changes` is already in context — don't Read it again). Only where preloading is unavailable, Read `~/.claude/skills/self-review-changes/SKILL.md`.
+
+Apply the 10-perspective checklist to the diff following its mechanical skip conditions. **Even when CodeRabbit was used in step 2, always handle the following yourself — CodeRabbit structurally cannot see them**:
 
 - **spec / DoD alignment**: does each DoD item have a corresponding change and means of verification. A change that maps to nothing = scope creep; touching non-goals is critical
 - **repo convention conformance**: CLAUDE.md / rules / MEMORY.md conventions (comment language / terminology / transient information leaking in, etc.)
