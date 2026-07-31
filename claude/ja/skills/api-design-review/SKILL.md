@@ -97,6 +97,7 @@ ACL / 可視性 / アクセス制御が絡む場合 (絡まない場合は「該
 - **認証 / 認可失敗の挙動** (403 vs 404 / 情報漏洩リスク)
 - **形式変換 / 推測** (mime_type の auto-inference / explicit / fallback / 推測失敗時)
 - **依存サービス障害時の挙動** (degraded / circuit breaker / fallback)
+- **状態遷移の運用再実行** (その状態に落ちた対象を運用者が再実行 / redrive するとどうなるか)
 
 **check phrasing**: ドメイン寄りに「X でこういう時どうするの?」を 5-10 件出す。回答が「未検討」「将来検討」になった場合は、design phase で答えを出すべき領域
 
@@ -110,14 +111,16 @@ ACL / 可視性 / アクセス制御が絡む場合 (絡まない場合は「該
 - 修正範囲を **全 file 一気に** 把握 (turn を跨いだ段階的発覚を防ぐ)
 - design 完了時に grep 検証条件を 5-10 件用意 (`grep -nE "..."` の literal、PR description / commit description / ADR appendix で記録)
 
-Bash で:
+Bash で **repo 全体**を対象に (dir 列挙で絞らない — 絞ると root の instruction file / cmd/ が漏れる):
 ```bash
-grep -rnE "<old-name-pattern>" docs/ apis/ internal/ cmd/ cli/
+git grep -nE "<old-name-pattern>"
 ```
 
-の hit list を design 結果に含めて、修正範囲を確定させる。
+の hit list を design 結果に含めて、修正範囲を確定させる。root の instruction file 群 (`CLAUDE.md` / `.github/copilot-instructions.md` / `.claude/rules/`) は agent が毎回 load するため、stale な契約が後続実装へ伝播する経路 — 必ず対象に含める。逆に改訂履歴 / changelog 行は immutable なので hit しても触らない。
 
-**名前 grep は必要だが不十分** — 設計対象が producer / worker 等の **process flow** を記述する場合、関連する Accepted ADR / design doc の **flow / lifecycle 記述**(どの行を誰がいつ作るか・dedup 方式・失敗時の観測境界)まで読み合わせ、設計案と矛盾しないか確認する。field / enum 名の grep は naming overlap を拾えても、ADR 本文の散文フロー(例「worker が受信時に INSERT」「content-based dedup」)と設計案の矛盾は検出できない。関連 ADR が Accepted の場合、その中核決定と設計案の flow を 1 つずつ突き合わせ、真逆になっていないか確認する。
+**名前 grep は必要だが不十分** — 設計対象が producer / worker 等の **process flow** を記述する場合、関連する Accepted ADR / design doc の **flow / lifecycle 記述**(どの行を誰がいつ作るか・dedup 方式・失敗時の観測境界)まで読み合わせ、設計案と矛盾しないか確認する。
+
+**新設する状態の書き手が、既存 runbook / 復旧手順の前提遷移を壊さないか**も同時に確認する: 新規に書く状態を列挙 → 各状態からの出口が state machine にあるか → 出口の無い状態 (terminal) を前提にした運用手順 (redrive / retry / 再実行で復帰する記述) が docs に存在しないか grep する。terminal 状態の書き手を新設した瞬間に「redrive で再処理」型の既存手順と矛盾する構造は、実装前のこの段階でしか安く検出できない。field / enum 名の grep は naming overlap を拾えても、ADR 本文の散文フロー(例「worker が受信時に INSERT」「content-based dedup」)と設計案の矛盾は検出できない。関連 ADR が Accepted の場合、その中核決定と設計案の flow を 1 つずつ突き合わせ、真逆になっていないか確認する。
 
 **check phrasing**: 「旧名 を grep して 0 hits になる条件は何か」「新名 が何箇所追加されるか」「関連 Accepted ADR の flow / lifecycle 記述(誰がいつ作る・dedup・観測境界)と設計案の flow が一致するか」
 
@@ -141,9 +144,7 @@ grep -rnE "<old-name-pattern>" docs/ apis/ internal/ cmd/ cli/
 | コメントは原文 literal 範囲 (推測 mapping 禁止) | コメントで原文 literal 範囲を超えた推測 mapping |
 | 多 file 改修は plan-first (CLAUDE.md) | 多 file 改修なのに plan 飛ばし |
 | spec 逸脱は明示・承認・記録 (CLAUDE.md) | spec literal 逸脱が plan に書かれていない |
-| substantive edit は subagent 経由 | 主体 agent が直接 Edit (substantive) |
 | PR は自動作成しない (CLAUDE.md) | PR 自動作成 |
-| subagent brief は state-file 参照型 | subagent brief に context 反復 |
 | 設計 phase checklist の遵守 | 本 checklist 自体の準拠漏れ |
 | プロダクト用語の正確性 | プロダクト名・用語の誤称 |
 | アーキ前提の遵守 | アーキテクチャ前提に反する用語混入 |
@@ -187,7 +188,7 @@ skill 完了時、以下を成果物として user に提示:
 - user 判断要 (trade-off 提示): Y 件 → ...
 ```
 
-main agent / dev-cycle / Plan agent / tech-docs-writer に引き継ぐ場合、上記を state-file に書き出すと subagent 再起動時の brief が薄くなる (state-file 参照型 brief)。
+dev-cycle の設計 review stage から呼ばれた場合、結果 summary は state file の「Design review」section に記録される (記録の規定は dev-cycle 側)。
 
 ## 適用しないこと
 
@@ -199,5 +200,4 @@ main agent / dev-cycle / Plan agent / tech-docs-writer に引き継ぐ場合、�
 
 - 日常 check (軽量版): CLAUDE.md「判断と質問の作法」
 - 関連 skill / agent: `tech-docs-writer` (ADR / Design Doc 起票時、本 skill を内部で通過)、`dev-cycle` (設計 review stage で本 skill 通過)、`ddd-clean-architecture` (層境界・依存方向、本 skill 観点 1 と関連)、`code-refactor-advisor` (実装面の refactor 候補、本 skill の implementation pass version)
-- 主 agent への引き継ぎ: state-file 参照型 brief
 - agent 側組み込み: `dev-cycle` agent の設計 review stage で本 skill を通過 (組み込み済)
