@@ -7,269 +7,141 @@ description: Reference skill for DDD + Clean Architecture (in Go, effectively sy
 
 # ddd-clean-architecture
 
-A reference skill collecting the idioms and principles of DDD + Clean Architecture. Consult it as a criterion for design decisions, reviews, and identifying refactor candidates.
+The house conventions for DDD + Clean Architecture, plus detection signals. Consulted as the basis for design judgment / review / refactor candidate generation.
 
-> **Clean Architecture vs. Hexagonal**: When implemented in Go, the two are effectively synonymous (same Dependency Rule: dependencies point inward, the inner layer defines Ports, the outer layer implements them). Clean Architecture's four rings (Entities / Use Cases / Interface Adapters / Frameworks & Drivers) map directly onto Domain / Application / Interfaces+Adapters / cmd in the table below.
+**General knowledge is not restated here** (the definitions of Entity and Value Object, what the Repository pattern is, etc.) — this skill carries the house layout and choices, where the YAGNI line sits, and the signals for catching violations via grep.
+
+> **Clean Architecture and Hexagonal are effectively synonymous** (the same mechanism: the Dependency Rule = inward dependency, with Ports defined on the inside and implemented on the outside). The four rings map onto Domain / Application / Interfaces+Adapters / cmd in the table below.
 >
-> **Not the same as classic Layered (N-tier)**: Layered architecture allows the Business layer to import concrete Data Access types directly and does not require the Dependency Inversion Principle. What §2/3 of this skill flag as a violation ("Application directly importing a concrete adapter") is not a violation under plain Layered. In Go, the layout looking like "stacked layers" is just physical placement — what actually distinguishes it is whether the dependency direction is inverted.
-
-## Applicability
-
-- Projects that adopt DDD + Clean Architecture (`internal/{domain,application,interfaces,adapters}/` layout)
-- Referenced by the code-refactor-advisor agent
-- Situations involving decisions about layer boundaries / port design / how to split adapters
+> **classic Layered (N-tier) is a different thing**: Layered permits the Business layer to import concrete Data Access types directly and does not require DIP. The "Application → concrete adapter direct import" this skill forbids is not a violation under Layered. **The essential difference is whether the dependency direction is inverted**, not that the physical arrangement looks like stacked layers.
 
 ## 1. Layer definitions
 
 | Layer | path | Responsibility | Inner layers it may depend on |
 |---|---|---|---|
-| **Domain** | `internal/domain/` | Entity / Value Object / Aggregate / Domain Service / Domain Event / sentinel errors. **Has no external dependencies** (pure logic) | (innermost layer, no dependencies) |
-| **Application** | `internal/application/` | Use case orchestration / Application Service / Port (interface definitions) / DTO | Domain |
-| **Interfaces** | `internal/interfaces/` | Inbound adapters (gRPC handler / HTTP handler / CLI / interceptors / wire shape ⇄ application DTO conversion) | Application + Domain |
-| **Adapters** | `internal/adapters/` | Outbound adapters (DB / vendor SDK / external API implementations, implement Ports) | Application (to implement Ports) + Domain (to reference types) |
+| **Domain** | `internal/domain/` | Entity / VO / Aggregate / Domain Service / Domain Event / sentinel errors. **Holds no external dependencies** | (innermost) |
+| **Application** | `internal/application/` | Use case orchestration / Application Service / Ports (interface definitions) / DTOs | Domain |
+| **Interfaces** | `internal/interfaces/` | Inbound adapters (gRPC / HTTP handlers / CLI / interceptors / wire shape ⇄ DTO conversion) | Application + Domain |
+| **Adapters** | `internal/adapters/` | Outbound adapters (DB / vendor SDKs / external APIs; implement Ports) | Application (to implement Ports) + Domain (to reference types) |
 
-Detection signals:
-- Domain imports adapter / application (dependency direction violation)
-- Adapter imports interfaces (lateral dependency, prevents reuse)
-- Application directly imports an adapter (= missing port abstraction)
+Dependencies always point inward. Communication with the outside goes **through Ports** (defined by Application, implemented by Adapters). When inner → outer communication is needed, invert it by having the domain publish a Domain Event that the outside subscribes to.
 
-## 2. Dependency direction (the inward-pointing principle)
+## 2. Port-Adapter
 
-```
-Interfaces ──┐                                  ┌── Adapters
-             ├──> Application ──> Domain <──────┤
-             └─────────────────────────────────┘
-```
+- **Ports are vendor-neutral.** Don't leak SDK-specific types (pass `[]float32`; never let `openai.EmbeddingResponse` appear in a port shape)
+- Keep port signatures to the **minimum necessary methods** (a single-method port is fine)
 
-- **Dependencies always point inward** (outer → inner). The inner layer (Domain) knows nothing about the outer layers (Application / Adapters)
-- Communication with the outside happens via a **Port (interface)**. Application defines the Port, Adapter implements it
-- When inner → outer communication is needed, invert it with a mechanism such as **Domain Event + subscription on the outside**
-
-Detection signals:
-- `import ".../adapters/..."` / `import ".../interfaces/..."` inside Domain code
-- `import ".../adapters/concrete-vendor"` inside Application code (= direct import of a concrete adapter, bypassing the port)
-
-## 3. Port-Adapter pattern
-
-- **Port** = an interface (defined in the Application layer). Example: `EmbeddingPort` / `VectorStorePort`
-- **Adapter** = an implementation of a Port (in the Adapters layer). Example: `openai.Adapter` (= implements `EmbeddingPort`) / `pinecone.Adapter` (= implements `VectorStorePort`)
-- Ports are **vendor-neutral**. They must not leak SDK-specific types (e.g. pass `[]float32`; never let `openai.EmbeddingResponse` appear in a port shape)
-- A Port's signature should have **only the minimum necessary methods**. Don't add methods to the port that the adapter doesn't use (a single-method port named with an `I` suffix or `xxxer` naming is fine)
-
-Example:
 ```go
 // Application layer: port definition
 type EmbeddingPort interface {
     Embed(ctx context.Context, req EmbedRequest) (*EmbedResult, error)
 }
 
-// Adapter layer: port implementation
+// Adapter layer: port implementation (SDK-specific logic stays inside the adapter)
 package openai
-type Adapter struct { ... }
-func (a *Adapter) Embed(ctx context.Context, req ports.EmbedRequest) (*ports.EmbedResult, error) {
-    // SDK-specific logic stays contained within the adapter
-}
+func (a *Adapter) Embed(ctx context.Context, req ports.EmbedRequest) (*ports.EmbedResult, error) { ... }
 ```
 
-Detection signals:
-- SDK-specific types appear in a Port shape (`*openai.EmbeddingResponse` / `*pinecone.QueryResponse`, etc.)
-- An Adapter does not implement a Port (= its role as an adapter is unclear, gets imported ad hoc and directly)
-- Application code receives an adapter as a concrete type (= cannot be mocked, a fake cannot be injected in tests)
+## 3. Anti-Corruption Layer (ACL)
 
-## 4. Anti-Corruption Layer (ACL)
+Translate **vocabulary / types / error models** at the boundary with external systems and vendors. At the adapter's boundary, convert vendor-specific → port-neutral and **wrap vendor-specific errors into port sentinel errors**. The same applies in the other direction (wire shape → application DTO).
 
-- A translation layer that converts **vocabulary / types / exception models** at the boundary with external systems / vendors
-- At the boundary inside the adapter, convert **vendor-specific → port-neutral** and wrap **vendor-specific errors → port sentinel errors**
-- The same applies in the opposite direction (interface → application): convert wire shape (proto / JSON) → application DTO
-
-Example:
 ```go
-// ACL inside the adapter
-func (a *Adapter) Embed(ctx context.Context, req ports.EmbedRequest) (*ports.EmbedResult, error) {
-    sdkResp, err := a.client.Embeddings.New(ctx, openai.EmbeddingNewParams{...})
-    if err != nil {
-        return nil, fmt.Errorf("openai: %w: %w", ports.ErrEmbeddingProviderUnavailable, err)
-    }
-    // convert sdkResp.Data → []ports.Vector
-    return toPortResult(sdkResp), nil
+sdkResp, err := a.client.Embeddings.New(ctx, openai.EmbeddingNewParams{...})
+if err != nil {
+    return nil, fmt.Errorf("openai: %w: %w", ports.ErrEmbeddingProviderUnavailable, err)
 }
+return toPortResult(sdkResp), nil
 ```
 
-Detection signals:
-- A handler takes/returns SDK types as arguments/return values (= missing ACL, application becomes vendor lock-in)
-- The Application layer receives a `pinecone.Client` directly (not via a Port)
-- Vendor-specific errors leak directly into the application layer / handler (no sentinel wrap)
+## 4. Ubiquitous Language
 
-## 5. Ubiquitous Language (UL)
+Domain terms use **the same vocabulary across business, docs, and code** (if the docs say "knowledge chunk", the code says `Chunk`). Wire shapes (proto field names / JSON keys) align to the UL too. When vocabulary is split across people, **unify it in the docs first** (settle it in an ADR).
 
-- Domain terminology must use **the same vocabulary across business / docs / code**
-- Example: if the docs call it a 「ナレッジチャンク」(knowledge chunk), the code should also use `Chunk` (avoid mixing aliases such as `Document` / `Item`)
-- Align wire shapes (proto field names / JSON keys) with the UL as well
-- If departments / stakeholders have diverging vocabulary → unify it in the docs first (fix the vocabulary via an ADR)
+**Detect**: one concept under different names per package (`User` / `Member` / `Account` mixed) / divergence between proto field names and Go struct field names / docs and code using different terms
 
-Detection signals:
-- Different names for the same concept across packages (`User` / `Member` / `Account` / `Principal` mixed together)
-- proto field names differ from Go struct field names (`product_ids` ⇔ `ProductIDList`)
-- Terminology differs between docs and code (docs: 「コレクション」("collection") / code: `Index` and `Collection` mixed)
+## 5. Where the YAGNI line sits
 
-## 6. Aggregate / Entity / Value Object
+- **Simple data with no business rule is fine as a plain struct.** Don't over-apply Aggregates / Value Objects
+- Start prototypes with plain structs like `Hit{ChunkID, Text, ...}` and promote them once a business rule appears
+- If you do carve out an Aggregate, **the Aggregate Root protects the business invariant** (the shape where `Document.AddChunk(c)` guarantees chunk_sequence continuity)
+- **Domain Events are also easy to over-introduce** — unnecessary in the prototype phase; consider them once audit / metrics / integrations accumulate
 
-- **Entity**: an object that has an identity (ID). E.g. `Chunk{ID, Text, ...}`
-- **Value Object**: has no identity, judged by value equality. E.g. `Vector []float32` / `EmbedRequest{Inputs []string}`
-- **Aggregate**: a consistency boundary. Internal entities are only manipulated via the Aggregate Root
-- The Aggregate Root **protects business invariants**. Example: if `Document` is the root, `Document.AddChunk(c)` guarantees the continuity of chunk_sequence
+**Detect**: internal entities edited directly from outside, bypassing the Aggregate Root
 
-Note:
-- Over-applying Aggregate / Value Object modeling is YAGNI. **Simple data with no business rules** is fine as a plain struct
-- During the Phase 1 prototype period, start with a plain struct like `Hit{ChunkID, Text, ...}` and promote it once business rules emerge
+## 6. Application Service vs Domain Service
 
-Detection signals:
-- No distinction between Entity and Value Object (= everything is a plain struct, identity isn't handled via ID comparison)
-- Internal entities are edited directly from the outside, skipping the Aggregate Root
+- **Application Service**: orchestration per use case (calling multiple ports / entities to accomplish one business operation). Dependencies (the ports + logger) are injected
+- **Domain Service**: domain logic that doesn't fit inside a single entity. Takes only domain objects
+- Both are stateless
 
-## 7. Application Service vs Domain Service
+**Detect**: a Domain Service importing a port (dependency direction violation) / an Application Service that only validates (no business orchestration — it could fold into the handler)
 
-- **Application Service**: orchestration at the use-case level. Achieves one business operation by calling multiple ports / domain entities
-- **Domain Service**: domain logic that doesn't fit inside a single entity (operations between entities / domain rule validation)
-- Both are stateless. Application Service receives injected dependencies (a set of ports + logger); Domain Service only receives domain objects
+## 7. Repository
 
-Example:
-```go
-// Application Service (recommended pattern)
-type Service struct {
-    embedding   ports.EmbeddingPort
-    vectorStore ports.VectorStorePort
-}
-func (s *Service) Search(ctx, in SearchInput) (*SearchOutput, error) {
-    // Embed → vector search → convert to hits (use case orchestration)
-}
-```
+The abstraction over a DB / persistent store (a special form of port). **Scope it per entity** (`ChunkRepository` / `DocumentRepository`); a search-only read model may be a separate repository. Keep it **vendor-neutral** — don't leak SQL, table names, or SDK details.
 
-Detection signals:
-- Domain Service imports a port (dependency direction violation)
-- Application Service only does validation (= no business orchestration, could be folded into the handler)
-- Application Service has only one method (= only a single use case; sometimes there's little value in making it a struct)
+**Detect**: SQL strings in a repository's arguments or return values / a repository containing business logic rather than CRUD (responsibility confused with Application Service)
 
-## 8. Repository pattern
+## 8. DTO conversion
 
-- Abstraction over DB / persistent stores is the **Repository** (a specialized form of port)
-- Split granularity per entity: `ChunkRepository` (CRUD on Chunk) / `DocumentRepository`
-- Search-only / read models are sometimes split into a separate Repository (`ChunkSearchRepository`)
-- **Vendor-neutral**. Must not leak SQL / table names / SDK details
+Insert a conversion at each layer boundary: wire shape ⇄ Application DTO at the `Interfaces` boundary, DTO ⇄ Domain entity at the `Application` boundary, Domain ⇄ vendor SDK shape at the `Adapters` boundary (= the ACL). Conversion helpers live in the boundary layer and are **pure functions** (easy to test).
 
-Example:
-```go
-type ChunkRepository interface {
-    Save(ctx context.Context, c Chunk) error
-    GetByID(ctx context.Context, id string) (*Chunk, error)
-    Delete(ctx context.Context, id string) error
-}
-```
+**Detect**: a Domain entity carrying proto / JSON tags (wire shape and domain shape mixed) / a wire shape flowing through the application layer unconverted
 
-Detection signals:
-- SQL strings appear as arguments/return values on a Repository
-- A Repository contains business logic instead of CRUD (= responsibility confusion with Application Service)
+## 9. Cross-cutting concerns
 
-## 9. DTO / wire shape vs domain shape
+Logging / Tracing / Auth / Rate Limit / Recovery live **at the interfaces / adapters boundary** (a `UnaryServerInterceptor` for gRPC, middleware for HTTP). **Never import them directly into the Application / Domain layers.** Context keys and the logger factory go in `internal/observability/` for each interceptor to consume.
 
-- Insert a **DTO conversion** at each layer boundary:
-  - `Interfaces` boundary: wire shape (proto message / JSON request) ⇄ Application DTO (`SearchInput` / `SearchOutput`)
-  - `Application` boundary: Application DTO ⇄ Domain entity / Value Object
-  - `Adapters` boundary: Domain ⇄ vendor SDK shape (Anti-Corruption Layer)
-- Place DTO conversion helpers at the boundary layer (e.g. `toProtoResponse` inside `internal/interfaces/grpc/search_handler.go`)
-- DTO conversion should preferably be a pure function (easy to test)
+**Detect**: `slog.Info(...)` called directly inside an Application Service / Domain Service / an auth check written inline in a handler
 
-Detection signals:
-- A Domain entity has proto field tags / JSON tags (= wire shape and domain shape are mixed together)
-- Wire shape flows through the application layer unconverted (= missing DTO conversion)
+## 10. Configuration injection (functional option + ConfigMap)
 
-## 10. Cross-cutting concerns
-
-- **Logging / Tracing / Auth / Rate Limit / Recovery** are cross-cutting concerns; **place them at the interfaces / adapters boundary**
-- gRPC: `UnaryServerInterceptor` / HTTP: middleware
-- Do not import them directly into the Application / Domain layer (= keep them separate from business logic)
-- Example: place context keys / logger factories in `internal/observability/`, and have each interceptor consume them
-
-Detection signals:
-- `slog.Info(...)` is called directly inside an Application Service / Domain Service (= cross-cutting concern leaking into business logic)
-- An auth check is written inline inside a handler (= should be factored out into an interceptor / middleware)
-
-## 11. Domain Event (optional)
-
-- Publish state changes within an aggregate as events, and subscribe to them from an outer layer
-- To avoid a reverse-direction dependency: the domain only publishes events; subscribing happens in application / adapter
-- Watch out for over-introducing this: unnecessary during the Phase 1 prototype period; consider it in Phase 2 once audit / metrics / integrations increase
-
-## 12. Summary of detection signals (for identifying refactor candidates)
-
-When called from an agent, detect violations with the following grep patterns:
-
-| Violation | Detection grep |
-|---|---|
-| Domain → outer-layer import | `grep -r 'import.*adapters\|import.*interfaces' internal/domain/` |
-| Application → concrete adapter import | `grep -r 'import.*adapters/[a-z]\+/' internal/application/ \| grep -v 'application/ports'` |
-| Adapter → interfaces import | `grep -r 'import.*interfaces' internal/adapters/` |
-| SDK-specific type in a Port shape | `grep -rn 'pineconego\.\|openaigo\.\|aws\.' internal/application/ports/` |
-| Direct logger call inside Application Service | `grep -rn 'slog\.Info\|slog\.Error' internal/application/ \| grep -v 'logger\.'` |
-| Direct SDK type import inside handler / service | `grep -rn 'pineconego\|openaigo' internal/interfaces/ internal/application/` |
-| SQL string in Repository | `grep -rn 'SELECT\|INSERT\|UPDATE\|DELETE' internal/application/ports/` |
-
-## 13. Configuration injection (functional option + ConfigMap)
-
-Expose configuration overrides in **three tiers**:
+Expose overrides in **three tiers**:
 
 | Priority | Path | Purpose |
 |---|---|---|
-| 1 | **default const** (`defaultXxx`, hardcoded in code) | Phase 1 verification, a safe base value |
-| 2 | **functional option** (injected via `WithXxx(...)` at construction time) | per-deployment override, the wiring path for global config |
-| 3 | **proto field** (injected per request) | **Exception**, only when individual per-request handling is truly unavoidable (requires user approval) |
+| 1 | **default const** (`defaultXxx`, hardcoded) | A safe base value |
+| 2 | **functional option** (`WithXxx(...)` injected at construction) | Per-deployment override; the wiring path for global configuration |
+| 3 | **proto field** (per request) | **The exception.** Only at the "we genuinely need per-request handling" level (requires user approval) |
 
-Normal operation uses (1) + (2). Extending the proto is a last resort.
+Normal operation is (1) + (2). **Extending the proto is a last resort.**
 
-Example:
 ```go
 const defaultRenderDPI = 150
 func WithDPI(dpi int) PDFOption { return func(pp *PDFParser) { pp.dpi = dpi } }
 
 // cmd/api-server/main.go (wiring)
-parser := adapters.NewPDFParser(vlm, adapters.WithDPI(cfg.Parser.DPI)) // ConfigMap value
+parser := adapters.NewPDFParser(vlm, adapters.WithDPI(cfg.Parser.DPI)) // value from the ConfigMap
 ```
 
-Detection signals (refactor candidates):
-- No `defaultXxx` const in the adapter / service → numeric literals scattered throughout the code
-- `WithXxx(...)` Option is not exported → the value cannot be overridden from the cmd side
-- An adapter struct field is public → direct assignment by the caller breaks immutability
-- Adapter-internal values are exposed via a proto field → wire surface bloats
+**Detect**: no `defaultXxx` const, with numeric literals scattered through the code / `WithXxx(...)` not exported, so cmd can't override / public adapter struct fields (direct assignment by callers breaks immutability) / adapter-internal values exposed as proto fields
 
-If the project has an ADR adopting functional options, refer to that as well.
+## 11. Detection signals (grep)
 
----
+| Violation | grep |
+|---|---|
+| Domain → outward import | `grep -r 'import.*adapters\|import.*interfaces' internal/domain/` |
+| Application → concrete adapter import | `grep -r 'import.*adapters/[a-z]\+/' internal/application/ \| grep -v 'application/ports'` |
+| Adapter → interfaces import | `grep -r 'import.*interfaces' internal/adapters/` |
+| SDK-specific types in a port shape | `grep -rn 'pineconego\.\|openaigo\.\|aws\.' internal/application/ports/` |
+| Direct logger calls in an Application Service | `grep -rn 'slog\.Info\|slog\.Error' internal/application/ \| grep -v 'logger\.'` |
+| SDK types imported into a handler / service | `grep -rn 'pineconego\|openaigo' internal/interfaces/ internal/application/` |
+| SQL strings in a repository | `grep -rn 'SELECT\|INSERT\|UPDATE\|DELETE' internal/application/ports/` |
 
-## False positive criteria
+Other signals: an adapter that implements no Port (its role is unclear and it gets imported ad hoc) / application code receiving an adapter as a concrete type (no fake can be injected in tests) / vendor-specific errors leaking into the application layer without a sentinel wrap.
 
-In the following cases, do not treat a hit on this skill's detection signals as a violation:
+## Identifying false positives
 
-- **Generated-code origin**: symbols / files generated by protoc / buf / openapi-generator / `go generate`, etc. (typically: the file starts with a `Code generated by ... DO NOT EDIT.` line). These should be fixed at the source schema, not by hand-editing the generated Go code
-- **Language / library idiomatic patterns**: things like named returns with defer-recover in `func(...) (resp any, err error)`, fixed signatures such as `http.Handler`, or the convention of taking `context.Context` as the first argument take priority over this skill's rules
-- **Intentional design exceptions**: design decisions whose intent is explicitly stated in code / docs (e.g. using `context.Background()` inside a library to detach a shutdown context from a signal-aware ctx)
-- **Public API compatibility**: exported symbols that cannot be changed for backward compatibility (prefer proposing a migration strategy over a rename)
+The following are **not violations** even when a detection signal fires:
 
-When in doubt, don't exclude it — flag it in the output as a "false positive candidate" and defer to the user's judgment.
+- **Generated code**: files containing `Code generated by ... DO NOT EDIT.` at the top (fix the source schema instead)
+- **Language / library idioms**: fixed signatures and the like. These take precedence over this skill's rules
+- **Deliberate design exceptions**: decisions whose intent is stated in code or docs
+- **Public API compatibility**: exported symbols that can't change for backward compatibility
 
-## What this skill should output
+When in doubt, don't exclude it — flag it as a "false positive candidate" and seek the user's judgment.
 
-When called from the code-refactor-advisor agent:
-- A **per-layer responsibility map** for the target codebase (file × layer × responsibility)
-- A list of **layer boundary / dependency direction violations** (file:line + description of the violation)
-- Pointing out **missing Port / Adapter / ACL**
-- Pointing out **Ubiquitous Language drift**
-- A remediation approach (moving to a different layer / extracting a port / adding a DTO conversion layer / etc.)
+## Output
 
-## References
-
-- Eric Evans, "Domain-Driven Design"
-- Vaughn Vernon, "Implementing Domain-Driven Design"
-- Robert C. Martin, "Clean Architecture: A Craftsman's Guide to Software Structure and Design"
-- Alistair Cockburn, "Hexagonal architecture": https://alistair.cockburn.us/hexagonal-architecture/ (source of the Port-Adapter vocabulary; structurally near-identical to Clean Architecture)
-- Mark Seemann, "Dependency Injection in .NET" (discussion of dependency direction)
-- Refer to the project's ADR (the decision to adopt DDD + Clean Architecture) if one exists
+When called from `code-refactor-advisor`, return a **per-layer responsibility map** (file × layer × responsibility), a **list of layer-boundary / dependency-direction violations** (file:line + what's violated), findings on **missing Port / Adapter / ACL**, and **UL drift**, along with a remediation stance (move layers / extract a port / add a DTO conversion layer, etc.).
