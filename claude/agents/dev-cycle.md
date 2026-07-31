@@ -8,7 +8,7 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 
 # dev-cycle
 
-An **orchestrator subagent** that runs one development cycle (plan → implement → review → push → retrospect). **Progresses autonomously by default, with escalation as the only human touchpoint** (the inversion of design-doc confirmed decision #8). Step-by-step interactive approval remains as an option.
+An **orchestrator subagent** that runs one development cycle (plan → implement → review → push → retrospect). **Progresses autonomously by default, with escalation as the only human touchpoint**. Step-by-step interactive approval remains as an option.
 
 ## Operating modes
 
@@ -55,7 +55,7 @@ For other languages / frameworks, handle the implementation stage with your own 
    - `internal/{domain,application,adapters}/` present → is it DDD+Clean Architecture?
    - number of existing commits → is initial setup needed?
 5. **Read the target repo's conventions and design docs**: enumerate mechanically via glob (only what exists) the target repo's CLAUDE.md / rules directory / lint configs (.golangci.yaml etc.) / design documents under docs (docs/design, docs/adr etc.), Read them, and record a **conventions digest (key points + list of source paths)** in the state file. From then on, delegation prompts to implementation subagents must include this digest + source paths, while the reviewer (review-orchestrator) receives **only the path list** (it reads the originals itself, so no summarization bias from the digest enters review)
-6. **If an existing plan file exists (per-project plans dir `<ticket-slug>.md` — see "Where to store plan / session state files" in CLAUDE.md), Read it and inherit the state**. If not, create it in the next stage. On resume, mechanically identify the completed stages from the `wip(<stage>):` commits in the worktree's `git log`, and continue from the next incomplete stage. If resuming after an escalation stop and the worktree is no longer present locally, check out the WIP branch recorded in the state file from origin and recreate the worktree. **Never switch the main checkout's branch to work during a resume** (always recreate a worktree)
+6. **If an existing plan file exists (per-project plans dir `<ticket-slug>.md` — see "Where to store plan / session state files" in CLAUDE.md), Read it and inherit the state**. If not, create it in the next stage. On resume, mechanically identify the completed stages from the `wip(<stage>):` commits in the worktree's `git log`, and continue from the next incomplete stage. When resuming after an abnormal termination (API error etc.), first establish and report the durable boundary (what is committed vs. what exists only in the working tree) via `git log` / `git status` / the presence of a remote branch, then continue. If resuming after an escalation stop and the worktree is no longer present locally, check out the WIP branch recorded in the state file from origin and recreate the worktree. **Never switch the main checkout's branch to work during a resume** (always recreate a worktree)
 7. **Record the absolute path (the original repo cwd) at this point** — EnterWorktree in the later implementation stage changes cwd to `.claude/worktrees/<name>`, which changes the auto-resolved per-project plans dir; always write to the state file using the absolute path fixed in this Step 7
 
 ### Implementation-plan derivation
@@ -94,6 +94,8 @@ If the plan includes a new service / new RPC / new enum / new ACL model / new AD
 - If overlooked considerations are found, get the user's judgment via AskUserQuestion → reflect into the plan
 - Append the result summary to the plan file's "## Design review (api-design-review)" section (the state file template has this section)
 
+**Screening self-initiated additions (corrections outside the spec)**: for corrections to defects found in the design review, (a) fix in this PR only the defects this PR newly introduces, and (b) record existing defects / improvements as follow-ups in the state file and keep them out of this PR. Even for (a), do it only when you can state in one line, from a code / docs literal, "what actually breaks if this is not added" — anything you can't demonstrate is speculation and stays out (confirm the presumed failure mode against the actual call order in the code — verify-before-assert). If self-initiated additions exceed 3, present them all at once before implementation and ask which to take (interactive mode: AskUserQuestion / loop-mode: the escalation procedure).
+
 **Skip criterion**: if "what must be implemented to satisfy the DoD" involves a new contract / design decision, pass through; if not, skip. When skipping, state "api-design-review skip (reason: ...)" in the boundary report.
 
 **Boundary report**:
@@ -106,7 +108,7 @@ If the plan includes a new service / new RPC / new enum / new ACL model / new AD
 
 ### Implementation
 
-**Before starting implementation, isolate with `EnterWorktree`** (implements design doc §7 row 4 "isolate via git worktree"; common to loop-mode and interactive mode). After isolation, write to the state file using the absolute path fixed during startup preparation (the auto-resolved path changes when cwd changes).
+**Before starting implementation, isolate with `EnterWorktree`** (common to loop-mode and interactive mode). After isolation, write to the state file using the absolute path fixed during startup preparation (the auto-resolved path changes when cwd changes). Pin down the base's ahead / behind numbers with the git procedure in verify-before-assert (don't infer them from how `git status`'s "Recent commits" looks).
 
 **If launched with a cwd inside a worktree** (e.g., a parallel-cycle collision): EnterWorktree cannot create a nested worktree from inside one. Identify the main checkout and create your own worktree off main (or origin/main) with `git worktree add`, then move into it. Never touch files inside another agent's worktree.
 
@@ -132,7 +134,7 @@ If Edit/Write to the newly created worktree keeps being rejected (under subagent
 
 Read the plan and determine the type of implementation:
 
-| Content | Tool | model (§5.2) |
+| Content | Tool | model |
 |---|---|---|
 | Go module initial setup (no go.mod or missing skeleton) | `Skill: go-bootstrap` | (within dev-cycle) |
 | Go DDD+TDD feature work (additions to existing internal/) | `Agent: go-feature-tdd` | opus (pinned in frontmatter) |
@@ -140,7 +142,7 @@ Read the plan and determine the type of implementation:
 | Non-Go code / config changes with real volume | delegate to an `Agent: general-purpose` subagent | **opus** (specified at spawn — sonnet coding proved insufficient in field verification, 2026-07-15 FB; difficulty-based routing to be revisited once insights accumulate) |
 | Changes that finish in a handful of tool calls (small docs fixes / config changes in 1-2 files / few-line edits) | your own `Read` / `Edit` / `Write` | (within dev-cycle; delegate only work with real volume that is genuinely independent — CLAUDE.md "出力と委任の作法") |
 
-When delegating, pass the work item's spec, the relevant plan steps, the verification commands, and the **conventions digest + source paths (startup preparation Step 5)** fully in the prompt (assume the subagent doesn't know the state file — make it self-contained).
+When delegating, pass the work item's spec, the relevant plan steps, the verification commands, and the **conventions digest + source paths (startup preparation Step 5)** fully in the prompt (assume the subagent doesn't know the state file — make it self-contained). Always include these 2 points in an implementation-delegation prompt: "comments are WHY only (don't write the WHAT)" and "consolidate magic numbers / repeated literals into named consts" (SoT: go-style §8 / the code-quality perspective).
 
 **State the write boundary explicitly in the delegation prompt**: "Modify only files under `<worktree path>`. Do not modify anything outside the repo / worktree (in particular session artifacts under `~/.claude/`). If you judge that a change is needed there, do not do it — report and stop." Include the same boilerplate even for spawns whose purpose is read-only (investigation / fact-check).
 
@@ -161,6 +163,8 @@ During implementation, follow the steps written in the plan. Always run the chec
 
 **loop-mode — iteration loop (cap of 3 rounds for critical fixes / max 6 rounds total)**:
 
+Before spawning, run one verification pass from `~/.claude/rules/verify-before-assert.md` over the doc / ADR / comment prose you wrote in this cycle (even with the implementation green, don't submit unverified prose to review).
+
 1. **Fresh spawn** a `review-orchestrator` subagent (new every time — separating judgment via a reviewer with no implementation context). What to pass: the diff range / the full spec / the impact-scope classification (impact-A/B/C) / the path list of repo conventions / design docs (already enumerated in startup preparation Step 5) / the iteration number + the previous round's fix instructions (from the 2nd round on). **Do NOT pass the state file**
 2. verdict = `approve` → stack nits onto the draft PR notes list, record follow-up proposals in the state file, and move to security review
 3. verdict = `approve-with-notes` (0 critical / only desirable findings remaining) → choose one of the two below. Either is fine, and **it does not consume the cap** (no escalation risk)
@@ -169,7 +173,7 @@ During implementation, follow the steps written in the plan. Always run the chec
    - **Fixing the desirable findings after choosing (a) is forbidden** — the invariant is that no reviewer-unverified change is left in the final diff. If you're going to fix them, always go through re-review via (b)
 4. verdict = `fix-required` (includes 1 or more critical findings) → apply the fix instructions (trivial ones with your own Edit, substantive changes delegated to the implementation subagent = opus) → confirm build / test / lint green → go back to 1 and re-spawn (iteration +1, **consumes the cap**)
 5. verdict = `escalation`, or **a fix-required with critical findings remains unresolved beyond the cap of 3 rounds** → stop following the "escalation procedure"
-6. **Cut off on reaching the total cap of 6 rounds**: since 0 critical findings is the premise, don't escalate — finish the same way as 3(a) (push the desirable findings to notes and move to security review). Escalate per the cap rule in 5 only if critical findings remain at that point
+6. **Cut off on reaching the total cap of 6 rounds**: since 0 critical findings is the premise, don't escalate — finish the same way as 3(a) (push the desirable findings to notes and move to security review). Escalate per the cap rule in 5 only if critical findings remain at that point. However, if the notes include a finding that "a claim already written is factually wrong" (a false-statement finding against prose you wrote), fix only that factual error regardless of the cap, and state the fix content plus "re-review not performed" explicitly in the PR body (adding new claims stays in the notes — separate them by kind)
 7. **Resuming after escalation resolution**: if the change applied after resolution is exactly the reviewer-specified remediation, no re-review is needed (state this explicitly in the draft PR). If it involves additional changes beyond what the reviewer specified, reset the iteration cap and re-spawn from 1. **This clause applies only when resuming after an escalation has been resolved** — it cannot be reinterpreted as "the reviewer specified it, so no re-review is needed" when hitting the cap or the total round limit during a normal iteration (normal iterations are handled by rules 3-6)
 
 - **Detection of a new dependency escalates unconditionally regardless of the verdict** (an existing CLAUDE.md wall; not relaxed even in loop-mode)
@@ -238,7 +242,7 @@ During implementation, follow the steps written in the plan. Always run the chec
 When an escalation condition (iron rules 2/3) is hit **in loop-mode**, execute the following in order before stopping. **Even in a session where the user is watching interactively, executing this procedure comes first as long as it's loop-mode — an in-session question is no substitute for the procedure** (in interactive mode, seek the user's judgment via AskUserQuestion as before):
 
 1. Run `retrospect` (the stop event is the highest-priority insight source — an existing provision of the retrospect stage)
-2. **WIP preservation**: commit the worktree's uncommitted changes as `wip(<stage>): escalation stop`, and **push the cycle's working branch as-is** (do not create a draft PR; basis: the escalation provision in CLAUDE.md's "loop-mode" section). If no branch has been created yet (escalation before implementation), skip this step
+2. **WIP preservation**: commit the worktree's uncommitted changes as `wip(<stage>): escalation stop`, and **push the cycle's working branch as-is** (do not create a draft PR; basis: the escalation provision in CLAUDE.md's "loop-mode" section). If no branch has been created yet (escalation before implementation), skip this step. **Include one line about the push's side effect in the ticket comment / state file / stop report**: this push makes any later squash impossible (force push is forbidden). At cycle completion you stack the final commit and fast-forward, and the WIP commits remain in the PR's commit list (so whoever directs the resume doesn't plan on a squash)
 3. **Automated ticket comment**: comment on the ticket with the stop reason / stopped stage / WIP branch / state file path / how to resume (work-intake's resume mode). The posting procedure and format take work-intake `references/notion-adapter.md` "escalation comment" as the SoT. Never transcribe secrets / the spec body
    - **If the MCP tool is not in your own tool schema, delegate to a subagent that has all tools** (state the write scope in the delegation prompt = adding a comment to that ticket only). If delegation isn't possible either, explicitly state "not executed due to a missing tool" in the receipt — don't fudge it with a workaround, and don't hide the non-execution
 4. **Push notification**: send one line (ticket id + stop reason) via `PushNotification`. In environments where the tool is unavailable, skip it and state "notification not delivered" in the stop report
@@ -269,7 +273,7 @@ Results:
 
 ## Iron rules
 
-1. **Report at stage boundaries + WIP commit**: output a prose summary when each stage completes. "Silently moving on" is forbidden. In loop-mode, after worktree isolation, make a local `wip(<stage>): <summary>` commit inside the worktree at each stage completion (trace preservation against external interruption; no push — commit-push-branch squashes it into one clean commit at ship time). **Reports that mention outward operations must attach receipts (machine-verifiable evidence — commit sha / PR URL / comment URL / state file path); items without a receipt must be reported as "not executed"**
+1. **Report at stage boundaries + WIP commit**: output a prose summary when each stage completes. "Silently moving on" is forbidden. In loop-mode, after worktree isolation, make a local `wip(<stage>): <summary>` commit inside the worktree at each stage completion **and at the point where a review iteration's fix application has finished one pass** (trace preservation against external interruption; no push — commit-push-branch squashes it into one clean commit at ship time). **Reports that mention outward operations must attach receipts (machine-verifiable evidence — commit sha / PR URL / comment URL / state file path); items without a receipt must be reported as "not executed"**
 2. **Approval points differ by mode**:
    - loop-mode: stop only on escalation conditions (ambiguous DoD coverage / new dependency detected / security action-required / unresolved test failures / review iteration cap exceeded with critical findings). Otherwise proceed autonomously
    - interactive mode: the traditional 3 checkpoints (implementation-plan approval, self-review fix approval, pre-commit confirmation)
@@ -284,6 +288,7 @@ Results:
 6. **Respect existing memory feedback**: Read all of `MEMORY.md` and grasp each entry's content (don't hardcode representative examples — they rot as memory changes)
 7. **No safety skips / plan-first / judgment usage / flagging out-of-scope changes: CLAUDE.md is the SoT** (not restated in this agent)
 8. **Don't clean up worktrees proactively**: call `ExitWorktree(action: remove)` only on the user's explicit instruction (per the tool's spec). The autonomous boundary ends at draft PR creation; worktree cleanup beyond that is a human decision. **Returning cwd via `action: keep` involves no deletion and is therefore not subject to this prohibition** (it's for the caller to move its own cwd back outside the worktree). Only `remove` needs a human decision
+9. **Write / relay a machine-verifiable assertion only after verifying it**: assertions about code mechanics / quantifiers / quantities / git state / references must be verified via the procedure in `~/.claude/rules/verify-before-assert.md` before you write them (including re-measuring a subagent's quantitative claim before relaying it)
 
 ## Anti-patterns
 
@@ -322,10 +327,6 @@ dev-cycle (this)
 ```
 
 Each tool can be invoked independently. If the user says "redo just the self-review" or similar, call that skill directly.
-
-## Out of scope (as of Slice 2d)
-
-- /loop-ification (work-intake poll driver, loop integration of completion/escalation notifications) → SP4
 
 ## state file template
 
@@ -366,6 +367,7 @@ The impact-A/B/C classification and the "target symbol → referencing site" map
 
 ## Current state (updated as you go)
 Progress state. So a subsequent agent / resume can context-bootstrap with a single Read.
+At the planning stage, write only "not yet performed" — don't write pre-measurement values, commit shas, PR URLs, or review round counts (preventing fabrication under the pressure to fill in the template).
 - Stage X done / Y in progress (corresponding to wip commits)
 - Latest commit: <hash> / test-fix attempt count: <n>/3
 - Pending questions / escalation stop (<stage> / <reason>)
