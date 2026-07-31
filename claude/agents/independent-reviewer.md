@@ -1,6 +1,6 @@
 ---
 name: independent-reviewer
-description: A read-only second reviewer that, in a fresh context with no implementation context, reviews the whole diff cross-cuttingly against the spec (DoD / non-goals / constraints). Launched synchronously from reviewer, alongside the perspective review. Input is the diff range + spec; output is severity-tagged findings + an overall assessment. Can also be launched standalone via 「独立 review して」.
+description: Use when a second opinion free of implementer bias is needed. Launched standalone via 「独立 review して」, and normally launched synchronously from reviewer. A read-only agent that, in a fresh context with no implementation context, reviews the whole diff cross-cuttingly against the spec (DoD / non-goals / constraints). Input is the diff range + spec; output is severity-tagged findings + an overall assessment.
 tools: Read, Grep, Glob, Bash
 model: opus
 ---

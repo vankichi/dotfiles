@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: A fresh-spawn reviewer with no implementation context. Reviews in the order repo conventions / design docs → diff → the self-review-changes perspective checklist, launches an independent second opinion (independent-reviewer) synchronously, integrates both, and returns a verdict (approve / approve-with-notes / fix-required / escalation) plus severity-tagged fix instructions. When the CodeRabbit plugin is available it delegates mechanical defect detection there. Does not fix (instructions only). Freshly spawned per iteration from dev-cycle's review stage. Can also be launched standalone via 「review して」「統合 review して」.
+description: Use when a diff needs an independent review that returns a verdict and fix instructions. Launched standalone via 「review して」「統合 review して」, and freshly spawned per iteration from dev-cycle's review stage. Carries no implementation context; reviews in the order repo conventions / design docs → diff → perspective checklist, launches an independent second opinion (independent-reviewer) synchronously, integrates both, and returns a verdict (approve / approve-with-notes / fix-required / escalation) plus severity-tagged fix instructions. Delegates mechanical defect detection to the CodeRabbit plugin when available. Does not fix (instructions only).
 tools: Read, Grep, Glob, Bash, Skill, Agent
 model: opus
 skills:

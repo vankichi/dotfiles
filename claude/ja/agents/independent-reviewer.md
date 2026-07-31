@@ -1,6 +1,6 @@
 ---
 name: independent-reviewer
-description: 実装 context を持たない fresh context で、diff 全体を spec (DoD / non-goals / 制約) と突き合わせて横断的に review する読み取り専用の second reviewer。reviewer から観点 review と並走で同期起動される。入力は diff 範囲 + spec、出力は severity 付き findings + 総評。「独立 review して」で単体起動も可。
+description: 実装者バイアスを排した第二意見が欲しい時に使う。「独立 review して」で単体起動、通常は reviewer から同期起動される。実装 context を持たない fresh context で、diff 全体を spec (DoD / non-goals / 制約) と突き合わせて横断的に review する読み取り専用 agent。入力は diff 範囲 + spec、出力は severity 付き findings + 総評。
 tools: Read, Grep, Glob, Bash
 model: opus
 ---

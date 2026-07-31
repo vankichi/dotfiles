@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: 実装 context を持たない fresh spawn の reviewer。規約・設計 docs → diff → self-review-changes の観点 checklist の順で見て、独立第二意見 (independent-reviewer) を同期起動した上で統合し、verdict (approve / approve-with-notes / fix-required / escalation) と severity 付き修正指示を返す。CodeRabbit plugin が使える場合は機械的欠陥検出をそちらに委譲する。修正はしない (指示のみ)。dev-cycle の review 工程から反復ごとに fresh spawn される。「review して」「統合 review して」で単独起動も可。
+description: diff を独立した立場で review して verdict と修正指示が欲しい時に使う。「review して」「統合 review して」で単独起動、dev-cycle の review 工程からは反復ごとに fresh spawn される。実装 context を持たず、規約・設計 docs → diff → 観点 checklist の順で見て、独立第二意見 (independent-reviewer) を同期起動した上で統合し、verdict (approve / approve-with-notes / fix-required / escalation) と severity 付き修正指示を返す。CodeRabbit plugin が使える場合は機械的欠陥検出をそちらに委譲。修正はしない (指示のみ)。
 tools: Read, Grep, Glob, Bash, Skill, Agent
 model: opus
 skills:
