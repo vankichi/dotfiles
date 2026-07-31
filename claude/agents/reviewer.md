@@ -39,7 +39,10 @@ Determine whether `coderabbit:review` is available:
 2. Otherwise check `command -v coderabbit`, and if present run `coderabbit review --plain` via read-only Bash
 3. If neither is available, skip this step — the perspective application in step 3 covers code defect detection yourself
 
-**Treat CodeRabbit's output as input, not something to transcribe.** Cross-check each finding against the actual diff and drop false positives (see "Identifying false positives" below and the same section in `self-review-changes`) before integrating. Never treat CodeRabbit's silence on an area as evidence that it is clean.
+**Handling CodeRabbit's output**
+
+- **Do**: cross-check each finding against the actual diff and drop false positives (`self-review-changes`, "Identifying false positives") before integrating
+- **Don't**: transcribe it unverified / treat CodeRabbit's silence on an area as evidence that it is clean
 
 ### 3. Perspective review
 
@@ -56,7 +59,10 @@ Treat impact-C areas as priority targets for the correctness / test-adversarial 
 
 ### 4. Independent second opinion (launch `independent-reviewer` synchronously)
 
-Launch the `independent-reviewer` subagent with **`run_in_background: false`** (a background launch makes results unrecoverable on interruption). Pass it **only the diff range and the full spec** — no perspective checklist, no conventions digest (so it concentrates on cross-checking the spec's promises against the diff rather than re-running the checklist).
+Launch the `independent-reviewer` subagent with **`run_in_background: false`** (a background launch makes results unrecoverable on interruption).
+
+- **Pass**: the diff range and the full spec, nothing else
+- **Don't pass**: the perspective checklist or the conventions digest — so it concentrates on cross-checking the spec's promises against the diff rather than re-running the checklist
 
 **Its purpose is to eliminate your own bias**, so don't dismiss its findings with "it looked fine to me". If you do dismiss one, write a one-line reason grounded in the actual diff.
 

@@ -37,7 +37,10 @@ review 工程の主体。**実装 context を持たない fresh spawn** とし�
 2. 無ければ `command -v coderabbit` を確認し、あれば `coderabbit review --plain` を read-only Bash で実行する
 3. どちらも使えなければ本 step を skip し、step 3 の観点適用で code の欠陥検出まで自分で担う
 
-CodeRabbit の出力は**入力として扱い、そのまま転記しない**。各指摘を diff の実体に突き合わせ、false positive (下記「false positive の識別」+ `self-review-changes` の同節) を落としてから統合する。CodeRabbit が沈黙した領域を「問題なし」の根拠にしない。
+**CodeRabbit の出力の扱い**
+
+- **Do**: 各指摘を diff の実体に突き合わせ、false positive (`self-review-changes` の「false positive の識別」) を落としてから統合
+- **Don't**: 検証せずそのまま転記 / CodeRabbit が沈黙した領域を「問題なし」の根拠にする
 
 ### 3. 観点 review
 
@@ -54,7 +57,10 @@ impact-C の領域は correctness / test-adversarial 観点の優先対象とし
 
 ### 4. 独立第二意見 (`independent-reviewer` を同期起動)
 
-`independent-reviewer` subagent を **`run_in_background: false` で起動**する (background 起動は中断時に結果を回収できない)。渡すのは **diff 範囲と spec 全文だけ** — 観点 checklist も規約 digest も渡さない (checklist の再実行ではなく、spec の約束と diff の突き合わせに専念させるため)。
+`independent-reviewer` subagent を **`run_in_background: false` で起動**する (background 起動は中断時に結果を回収できない)。
+
+- **渡すもの**: diff 範囲と spec 全文だけ
+- **渡さないもの**: 観点 checklist / 規約 digest — checklist の再実行ではなく、spec の約束と diff の突き合わせに専念させるため
 
 **目的は自分のバイアスの排除**なので、返ってきた findings を「自分が見た限り問題ない」で棄却しない。棄却する場合は diff の実体を根拠に 1 行で理由を書く。
 

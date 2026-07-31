@@ -114,10 +114,28 @@ Not bug detection but the "better way to write it" perspective.
 
 ## Mechanical checks (reinforcing correctness — run with grep)
 
-1. **Symmetry audit** — for each guard / validation / nil check added, confirm the symmetric counterparts carry the same guard (`grep "^func New" $(git diff --name-only)` for all constructors in the PR; also grep functions taking `opts ...Option`). Kills the class of omission where you fix one site and miss the rest
-2. **Interface contract trace** — re-read the godoc of external interfaces used in changed files and confirm the sentinel return cases (0 / "" / nil / -1 / a specific error) line up with the consumer's branching (`if x <= X`, `errors.Is(...)`). Example: `CountTokens` returns 0 on encoding error → the consumer's `tokens <= MaxTokens` misjudges it as "fits"
-3. **Doc last-write-wins** — after an implementation change, grep the changed files for strong claims (`grep -nE "(strictly|preserves|guarantees|ensures|always|never|returns|panics)"`) and cross-check each against the implementation's literal behavior at byte level (is "strictly under X" a `<` or a `<=`)
-4. **Authoritative verification of external constants** — when the diff contains externally-sourced hardcoded constants (LLM pricing / model IDs / API rate limits), **verify the number itself against an authoritative source**. "Byte-identical to where it was ported from" is not evidence. The `claude-api` skill is the SoT for Anthropic pricing / model IDs
+**1. Symmetry audit** — kills the omission where you fix one site and miss the rest
+
+- Target: every guard / validation / nil check added in the diff
+- How: `grep "^func New" $(git diff --name-only)` for all constructors in the PR, plus a grep for functions taking `opts ...Option`
+- Verdict: do the symmetric counterparts carry the same guard
+
+**2. Interface contract trace** — kills misjudged sentinel returns
+
+- How: re-read the godoc of external interfaces used in changed files
+- Verdict: do the sentinel return cases (0 / `""` / nil / -1 / a specific error) line up with the consumer's branching (`if x <= X` / `errors.Is(...)`)
+- Example: `CountTokens` returns 0 on encoding error → the consumer's `tokens <= MaxTokens` misjudges it as "fits"
+
+**3. Doc last-write-wins** — kills comments left stale by an implementation change
+
+- How: enumerate strong claims with `grep -nE "(strictly|preserves|guarantees|ensures|always|never|returns|panics)"`
+- Verdict: cross-check each claim against the implementation's literal behavior at byte level (is "strictly under X" a `<` or a `<=`)
+
+**4. Authoritative verification of external constants** — kills wrong externally-sourced values
+
+- Target: hardcoded constants in the diff (LLM pricing / model IDs / API rate limits)
+- How: **verify the number itself against an authoritative source**. The `claude-api` skill is the SoT for Anthropic pricing / model IDs
+- **Don't**: treat "byte-identical to where it was ported from" as evidence
 
 ## Identifying false positives
 

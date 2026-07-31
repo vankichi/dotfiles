@@ -112,10 +112,28 @@ bug 検出ではなく「より良い書き方」の観点。
 
 ## 機械 check (correctness の補強。grep で実行)
 
-1. **対称性 audit** — 差分で追加した guard / validation / nil check について、同種の対称対象が同じ guard を持つか確認 (`grep "^func New" $(git diff --name-only)` で同 PR 内 constructor を全列挙、`opts ...Option` を受ける関数も grep)。1 箇所だけ直して他を見逃す型の取りこぼしを潰す
-2. **interface 契約 trace** — 変更 file で使った external interface の godoc を再 read し、戻り値の sentinel ケース (0 / "" / nil / -1 / 特定 error) と consumer 側の分岐 (`if x <= X`, `errors.Is(...)`) で flow が一致するか確認。例: `CountTokens` が encoding error 時に 0 を返す → consumer の `tokens <= MaxTokens` が「fits」と誤判定
-3. **doc last-write-wins** — 実装変更後、変更 file 内の strong claim を grep (`grep -nE "(strictly|preserves|guarantees|ensures|always|never|returns|panics)"`) し、各 claim を impl の literal 動作と byte-level で照合 ("strictly under X" は `<` か `<=` か 等)
-4. **外部定数の権威検証** — 差分に外部由来の hardcoded 定数 (LLM pricing / model ID / API rate limit) がある場合、**authoritative source で数値そのものを検証**。「port 元と byte 一致」は正当性の根拠にならない。Anthropic の pricing / model ID の SoT は `claude-api` skill
+**1. 対称性 audit** — 1 箇所だけ直して他を見逃す型の取りこぼしを潰す
+
+- 対象: 差分で追加した guard / validation / nil check
+- 手順: `grep "^func New" $(git diff --name-only)` で同 PR 内 constructor を全列挙 + `opts ...Option` を受ける関数も grep
+- 判定: 同種の対称対象が同じ guard を持つか
+
+**2. interface 契約 trace** — sentinel 戻り値の誤判定を潰す
+
+- 手順: 変更 file で使った external interface の godoc を再 read
+- 判定: 戻り値の sentinel ケース (0 / `""` / nil / -1 / 特定 error) と consumer 側の分岐 (`if x <= X` / `errors.Is(...)`) で flow が一致するか
+- 例: `CountTokens` が encoding error 時に 0 を返す → consumer の `tokens <= MaxTokens` が「fits」と誤判定
+
+**3. doc last-write-wins** — 実装変更後のコメント update 漏れを潰す
+
+- 手順: `grep -nE "(strictly|preserves|guarantees|ensures|always|never|returns|panics)"` で strong claim を列挙
+- 判定: 各 claim を impl の literal 動作と byte-level で照合 (「strictly under X」は `<` か `<=` か 等)
+
+**4. 外部定数の権威検証** — 外部由来の値の誤りを潰す
+
+- 対象: 差分中の hardcoded 定数 (LLM pricing / model ID / API rate limit)
+- 手順: **authoritative source で数値そのものを検証**。Anthropic の pricing / model ID の SoT は `claude-api` skill
+- **Don't**: 「port 元と byte 一致」を正当性の根拠にする
 
 ## false positive の識別
 
