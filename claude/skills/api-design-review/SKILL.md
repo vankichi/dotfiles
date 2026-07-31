@@ -8,198 +8,84 @@ model: fable
 
 # api-design-review
 
-A systematic review skill for API / upstream system design that **prevents issues from surfacing piecemeal across turns**. Read-only (no Edit / Write; only grep via Bash is allowed). **Performed from a principal engineer's standpoint**: question not the adequacy of the expression but the rightness of the design decision itself — right for future extension, operations, and maintainers.
+A systematic review skill for **preventing piecemeal discovery across turns** in upstream design. Read-only (no Edit / Write; Bash for grep only). **Conducted from a principal engineer's standpoint**: not whether the expression is valid, but whether the design decision itself is right — right for future extension, for operations, for the maintainer.
 
-The source of overlooked considerations isn't the wire representation (proto / OpenAPI) but the **domain design / use-case analysis / ACL model / API experience design that precedes it** — so running this **before** starting to write proto is most effective. Reviewing after proto work has already begun is only supplementary.
+Overlooked considerations originate not in the wire representation (proto / OpenAPI) but in the domain design / use case analysis / ACL model that precedes it, so this is most effective **before you start writing proto**.
 
 ## Applicability
 
-Invoke in any of the following cases:
+**Do run it**: before drafting a new ADR / when creating a Design Doc or adding chapters / for the logical design of a new API contract (before committing to wire) / for new or revised domain models, Aggregates, Bounded Contexts / for use case analysis involving verbs beyond CRUD / for ACL, authorization, multi-tenant separation design. It also serves as a downstream supplement before structural changes to existing messages / enums and when reworking an SDK surface.
 
-### During upstream design (primary use)
-- **Before** drafting a new ADR, or when the draft is complete (MADR v3, `docs/adr/`)
-- When newly creating a Design Doc / System Design (arc42 / C4) or adding a section (`docs/design/`)
-- During the logical design of a new API contract (proto / OpenAPI / GraphQL schema), before committing it to wire form
-- When newly creating or revising a domain model / Aggregate / Bounded Context
-- During use-case / user-story analysis, especially when verbs other than CRUD are involved
-- When designing an ACL / authorization / multi-tenant isolation model
+**Don't run it**: bug fixes / typos / format / lint / internal refactors that don't affect existing contracts / minor docs updates. Minor changes are covered by CLAUDE.md's everyday checks (this skill is for heavy analysis only).
 
-### Downstream supplement (after starting to touch proto / OpenAPI)
-- Before a structural change to an existing message / enum (extracting a sub-message / renaming a field / adding an enum value)
-- When revising the SDK surface (TypeScript / Go, etc.)
-- When applying plan-first to a multi-file refactor, before ExitPlanMode
+## Approach (one pass ≈ 20-40 minutes)
 
-### When not to invoke
-- Bug fixes / typos / formatting / lint fixes
-- Internal refactors with no impact on an existing contract
-- Minor documentation-only updates
-
-For minor changes, the everyday checks in CLAUDE.md's 「判断と質問の作法」section suffice (this skill is **reserved for heavyweight analysis**).
-
-## Approach (one pass ≈ 20-40 minutes; allow more time the further upstream you are)
-
-After reviewing the design target (Read the ADR draft / Design Doc / proto / related docs), **work through the following 6 perspectives one at a time, writing each down**. For each perspective, explicitly state "not applicable" where relevant (a blank = not considered = an oversight).
+Read the design target (ADR draft / Design Doc / proto / related docs), then **write out each of the 6 perspectives below one at a time**. State "not applicable" explicitly where it applies (**a blank = not considered = an omission**).
 
 ### 1. Separating client abstraction from server-side expansion
 
-Enumerate the concepts / fields / enum values / RPC parameters that appear in the design target, and for each:
+Enumerate the concepts / fields / enum values / RPC parameters involved and determine: (a) is it a value the client can directly know or derive (its own id / user input / its own configuration), (b) is it a value the server derives from context (another tenant's id / auth information / internal resource ids / roles / cross-tenant fan-out targets), and (c) **is anything from (b) placed on the wire / contract / public surface**. If (c) exists, take it off the wire and move it to a server-side concept. Check SDK examples too.
 
-- (a) Is it **a value the client / caller / external user can directly know or derive** (their own id, user input, in-house configuration values)?
-- (b) Is it **a value the server / platform derives from context** (other tenants' ids, authentication info, internal resource ids, role / claims, cross-tenant fan-out targets)?
-- (c) Are there any places where (b) has been placed on the wire / contract / public surface?
-
-If (c) is found, remove it from the wire and move it to a server-side concept. Also check the SDK examples.
-
-**Check phrasing**: "How would the client come to know this concept?" / "Does the contract expose information the client shouldn't know?"
-
-**Past case**: a proposal to put `repeated string product_ids` in the proto → the client doesn't know other product_ids (information leak + ACL bypass); it was removed from the wire and moved to a server-side concept (collection-level config / access_group, etc.)
+- **Ask**: "how would the client know this concept?" / "are we exposing information the client must not have in the contract?"
+- **Case**: a proposal to put `repeated string product_ids` in the proto → clients don't know other product_ids (information leak + ACL bypass) → moved to a server-side concept
 
 ### 2. Both the read and write sides of ACL
 
-When ACL / visibility / access control is involved (state "not applicable" explicitly when it isn't):
+When ACL / visibility / access control is involved (state "not applicable" if not):
 
-- (a) The representation and server-side behavior of **reads** (search filter / fetch / row-level / collection ACL)
-- (b) The representation and server-side behavior of **writes** (who's authorized per visibility / scope / write authorization / role-based gating)
-- (c) Consider cases where, even for the same visibility, the authorized role differs between internal vs external submission, or admin vs regular
-- (d) Behavior on authorization failure (403 vs 404 / information leak risk)
+- The **read** side (search filter / fetch / row-level / collection ACL): its representation and server-side behavior
+- The **write** side (visibility / permitted principals per scope / write authorization / role-based gating): its representation and server-side behavior
+- Cases where the same visibility has different permitted roles for internal vs external submission, or admin vs regular
+- Behavior on authorization failure (403 vs 404 / information leak risk)
 
-Write authorization should be determined by the ACL domain layer (ReBAC / ABAC, etc.), not a wire field (baking it into a proto field makes it spoofable). Splitting endpoints (`/v1/upsert` vs `/v1/admin/upsert`) is an option for exposing the authorization boundary on the wire surface.
+Write permission belongs in the **ACL domain layer (ReBAC / ABAC), not a wire field** (baking it into a proto field makes it spoofable). Splitting endpoints (`/v1/upsert` vs `/v1/admin/upsert`) is one way to surface the permission boundary on the wire.
 
-**Check phrasing**: "**Who can write** this visibility / scope?" / "What's the risk of an individual caller writing a broad visibility?"
-
-**Past case**: the risk of an individual product client being able to write PRODUCT_WIDE went undiscussed → it was decided to handle the write side of ACL in a separate ADR (ReBAC/ABAC)
+- **Ask**: "**who can write** this visibility / scope?" / "what's the risk of an individual caller writing a broad visibility?"
 
 ### 3. Systematic forward-compat check
 
-How the design target might be extended in the future, and whether it can be handled non-breaking:
+List 3-5 foreseeable future extensions (cross-tenant / admin / batch / streaming / roles / scope groups / pre-signed URLs / async workers / multi-region, etc.) and write 1-3 lines on whether each can be handled **non-breaking**. Enum value additions / field additions / new RPCs / new messages are non-breaking in proto3 and OpenAPI. Cases that require breaking changes should be completed within the Phase.
 
-- Adding an enum value (non-breaking in proto3; appending is fine in OpenAPI too)
-- Adding a field (a new field number / property; non-breaking in proto3 / OpenAPI)
-- Adding a new RPC / new endpoint / new service
-- Adding a new message / new schema
-- Compatibility when an ADR is revised / withdrawn
+- **Case**: a design baking a transient label (an org name) into an enum rotted on reorganization → renamed to org-free names (CURATED / BOOK, etc.)
 
-List 3-5 foreseeable future extensions (cross-tenant / admin / batch / streaming / role / scope group / pre-signed URL / async worker / VLM / multi-region, etc.) and check whether each can be handled with a non-breaking extension. Cases that require a breaking change should be completed within the current Phase.
+### 4. Enumerating edge cases
 
-**Check phrasing**: for each extension case, write 1-3 lines answering "When X arrives in the future, how would the contract be extended?"
+From the axes below, **write out 5-10 domain questions and answer each one**. Any area whose answer is "not considered" or "later" is exactly what this phase must settle:
 
-**Past case**: a design that baked a transient label (e.g. an organization name like "academy") into an enum / field rotted when the organization changed; it was changed to organization-name-free naming (CURATED / BOOK, etc.)
+Re-submission of the same ID / duplication / idempotency (overwrite vs `AlreadyExists` vs version vs soft delete) / handling of empty, null, zero values (reject vs defaulting) / set operations (cross-tenant / wildcards / subsets) / boundary values (max payload / array length / pagination / rate limit / timeout / retry) / timezone, locale, encoding (UTF-8 / multi-byte / Japanese-specific concerns) / partial failure (compensation for mid-batch failure) / ordering and concurrency / behavior on authorization failure / format conversion and inference (what happens when inference fails) / behavior when a dependency is down (degraded / circuit breaker) / **operational re-execution of state transitions** (what happens when an operator redrives something that landed in this state)
 
-### 4. Enumerating edge cases ("what happens when...?")
+- **Case**: "what if the organization disappears?" and "how do we separate internal vs external FAQ?" for source_type surfaced at turn 4 → led to narrowing the classification axis to format
 
-**Write out 5-10** of the following domain questions against the design target **and answer each one**:
+### 5. Consistency with the existing SoT (grep-first)
 
-- **Resubmitting the same ID / duplicates / idempotency** (Upsert: overwrite / `AlreadyExists` / version / soft delete / version vector)
-- **empty / unspecified / null / zero value** (how each field handles it — reject via validation, or default it)
-- **Set operations** (cross-tenant / cross-company / global wildcard `*` / subset / select-all)
-- **Boundary values** (max payload / max array length / pagination / rate limit / timeout / retry policy)
-- **timezone / locale / encoding** (UTF-8 / multi-byte / collation / Japanese-specific concerns)
-- **Partial failure** (a batch operation failing partway through; idempotency / compensating transactions)
-- **Ordering / duplication / idempotency / concurrency**
-- **Authentication / authorization failure behavior** (403 vs 404 / information leak risk)
-- **Format conversion / inference** (mime_type auto-inference / explicit / fallback / when inference fails)
-- **Behavior when a dependent service fails** (degraded / circuit breaker / fallback)
-- **Operational re-execution of a state transition** (what happens when an operator re-runs / redrives a target that has landed in that state)
+**Before** introducing new naming / structure, grep the entire existing SoT. Check whether old field names / method names / enum values / ADR numbers / terminology remain in docs / metadata literals / SDK examples / proto / code / notes, targeting the **whole repo** (narrowing by directory misses root instruction files):
 
-**Check phrasing**: from a domain angle, come up with 5-10 instances of "what happens with X in this situation?" If the answer comes out as "not considered" or "to be considered later," that's an area where the design phase should produce an answer
-
-**Past case**: for source_type, the questions "what happens if the organization is deleted?" and "how do we separate internal FAQ vs external FAQ?" surfaced at turn 4 → led to the decision to narrow the classification axis to format
-
-### 5. Consistency with the existing source of truth (grep-first)
-
-**Before** introducing new naming / new structures, grep the entire existing source of truth:
-
-- Whether old field names / old method names / old enum values / old ADR numbers / old design-doc terminology still remain in docs / api.md / metadata literals / SDK examples / proto / Go code / Markdown notes
-- Grasp the scope of changes **across all files at once** (to prevent issues from surfacing piecemeal across turns)
-- When design is complete, prepare 5-10 grep verification conditions (the literal `grep -nE "..."` command, recorded in the PR description / commit description / ADR appendix)
-
-Via Bash, targeting the **whole repo** (don't narrow it with a dir list — narrowing misses the instruction files at the root and `cmd/`):
 ```bash
 git grep -nE "<old-name-pattern>"
 ```
 
-Include the resulting hit list in the design output to finalize the scope of changes. The instruction files at the root (`CLAUDE.md` / `.github/copilot-instructions.md` / `.claude/rules/`) are loaded by the agent every time, so they are a path by which a stale contract propagates into later implementation — always include them in the target. Conversely, revision-history / changelog lines are immutable, so don't touch them even when they hit.
+Root instruction files (`CLAUDE.md` / `.github/copilot-instructions.md` / `.claude/rules/`) are loaded by the agent every time and are therefore a path by which a stale contract propagates into later implementation — always include them. Conversely, revision history / changelog lines are immutable; don't touch them even on a hit.
 
-**Name grep is necessary but not sufficient** — when the design target describes a **process flow** (producer / worker, etc.), also read through the related Accepted ADR / design doc's **flow / lifecycle prose** (which row is created by whom and when, the dedup method, the failure-time observation boundary) and check that the design doesn't contradict it.
+**Grepping names is necessary but not sufficient.** When the design target describes a process flow (producer / worker, etc.), also read the **flow / lifecycle description** of the related Accepted ADRs and design docs (which row is created by whom and when / the dedup method / the observation boundary on failure) and confirm the design doesn't contradict them.
 
-**Also check at the same time whether a newly introduced state writer breaks the transitions an existing runbook / recovery procedure assumes**: enumerate the states you newly write → check whether the state machine has an exit from each of them → grep whether any operational procedure in the docs assumes a state with no exit (terminal), i.e. describes recovering via redrive / retry / re-execution. The structure where introducing a terminal-state writer instantly contradicts an existing "reprocess it with a redrive" procedure can only be detected cheaply at this pre-implementation stage. Grepping field / enum names catches naming overlap but can't detect contradictions between the ADR's prose flow (e.g. "the worker INSERTs on receive", "content-based dedup") and the design. When a related ADR is Accepted, compare its core decisions against the design's flow one by one and check they aren't inverted.
+Also check **whether a newly introduced state breaks the transitions an existing runbook assumes**: enumerate the states you'll newly write → confirm each has an exit in the state machine → grep for operational procedures ("redrive to reprocess") that assume a terminal state with no exit. A structure that contradicts existing procedures the moment you add a writer of a terminal state can only be caught cheaply at this pre-implementation stage.
 
-**Check phrasing**: "What condition makes grepping for the old name return 0 hits?" / "How many places will the new name be added to?" / "Does the design's flow match the related Accepted ADR's flow / lifecycle description (who creates what and when · dedup · observation boundary)?"
-
-**Past case (naming)**: the old `accessScopes` surface was left behind in the docs §11.2 SDK example, discovered at turn 4 → should have grepped during design to grasp every location up front
-
-**Past case (flow)**: a ticket's producer/worker flow (create status=PENDING before enqueue / explicit dedup / an idempotency key in the message) was the exact opposite of the related Accepted ADR's core decisions (the worker INSERTs on receive / content-based dedup / an enqueue failure is observed outside the DB); the `idempotency_key` field-name grep caught the naming overlap but the prose-flow contradiction was missed and only surfaced at the review-iteration cap → escalation; name matching alone wasn't enough — the ADR's flow prose should have been cross-checked too
-
-### 6. Compliance with memory conventions (check every time)
-
-Do one review pass to check the design target doesn't violate any of the following conventions (the source of truth is CLAUDE.md / each skill):
-
-| Convention | Common places it's violated |
-|---|---|
-| Don't leave Phase / ticket references in comments | Phase / ticket / PR references in proto / Go comments |
-| Commit titles are concise (1 line) | Commit title is a long sentence |
-| Code comments are in English | *.go / proto / Makefile / shell comments in Japanese |
-| Push only after explicit user instruction (CLAUDE.md) | A push proposal without user confirmation |
-| No inline comments inside tests | Inline comments inside a test |
-| Don't open docs with a preamble/assumptions section | A scope/preamble section at the top of docs |
-| Don't put individual ticket plans in the repo | An individual ticket plan under docs/plan/ |
-| Comments stay within the literal scope of the source text (no speculative mapping) | A comment with speculative mapping that goes beyond the literal scope of the source text |
-| Multi-file changes are plan-first (CLAUDE.md) | Skipping the plan despite a multi-file change |
-| Deviations from spec are stated explicitly, approved, and recorded (CLAUDE.md) | A literal deviation from spec not written into the plan |
-| PRs are not auto-created (CLAUDE.md) | Auto-creating a PR |
-| Adherence to the design-phase checklist | Failing to comply with this very checklist |
-| Accuracy of product terminology | Misnaming a product or term |
-| Adherence to architectural assumptions | Terminology creeping in that contradicts architectural assumptions |
-
-Also check for things like unused imports / mechanical consistency gaps under this perspective.
-
-## Output format
-
-When the skill completes, present the following to the user as the deliverable:
-
-```markdown
-# api-design-review results
-
-## Design target
-<path or name of the target ADR / Design Doc / proto / API spec / domain model>
-
-## Review by perspective
-
-### 1. Client abstraction vs server-side expansion
-- Findings: <content, or "not applicable">
-- Proposed fix: <proposal, or "fine as-is">
-
-### 2. Both sides of ACL read/write
-- Findings: ...
-
-### 3. forward-compat
-- Findings: ...
-
-### 4. Edge case enumeration
-5-10 items in question form, each with an answer
-
-### 5. Consistency with the existing source of truth (grep results)
-- `grep -rnE "..."` → hit list
+- **Ask**: "what condition makes grepping the old name return 0 hits?" / "does the flow description of the related Accepted ADR match the design's flow?"
+- **Case (naming)**: the old `accessScopes` surface remained in an SDK example in the docs and surfaced at turn 4
+- **Case (flow)**: a ticket's producer/worker flow (create PENDING before enqueue / explicit dedup) was the exact inverse of the related Accepted ADR's core decision (worker INSERTs on receipt / content-based dedup). Grepping the field name caught the naming overlap but missed the prose flow contradiction; it surfaced only at the review iteration cap → escalation
 
 ### 6. Compliance with memory conventions
-- Potential violations: <content, or "clear">
 
-## Summary
-- OK to proceed with the design (nothing found): ◯
-- Fixes needed (specific locations): X items → ...
-- Requires user judgment (trade-offs presented): Y items → ...
-```
+Do one pass for convention violations (CLAUDE.md and the individual skills are the SoT). Commonly violated:
 
-When called from dev-cycle's design-review stage, the results summary is recorded in the state file's "Design review" section (the recording rule lives on the dev-cycle side).
+Phase / ticket / PR references left in comments / code comments in Japanese / inline comments inside tests / a preamble section at the top of docs / per-ticket plans committed to the repo / speculative mapping in comments beyond the original's literal / skipping plan-first on a multi-file change / spec deviations missing from the plan / auto-creating PRs / misnaming product terminology / vocabulary that contradicts architectural premises. Mechanical issues like unused imports are also covered here.
+
+## Output
+
+For each perspective, write "detected (or not applicable)" and "proposed action (or fine as is)", then close with a summary (OK to proceed / N items need fixing / M items need user judgment). Perspective 4 takes the form of 5-10 questions with answers; perspective 5 includes the grep hit list.
+
+When called from dev-cycle, the result summary is recorded in the state file's "Design review" section (the recording rule lives on the dev-cycle side).
 
 ## What this skill does not do
 
-- Does not implement / Edit / Write (read-only review)
-- Does not perform git mutations / push / create PRs
-- Does not call AskUserQuestion within the skill (returns results to the main agent, which defers to the user's judgment)
-
-## Related artifacts
-
-- Everyday check (lightweight version): CLAUDE.md's 「判断と質問の作法」section
-- Related skills / agents: `tech-docs-writer` (passes through this skill internally when drafting an ADR / Design Doc), `dev-cycle` (passes through this skill in its design-review stage), `ddd-clean-architecture` (layer boundaries / dependency direction, related to this skill's perspective 1), `code-refactor-advisor` (implementation-facing refactor candidates, the implementation-pass version of this skill)
-- Built into the agent side: the `dev-cycle` agent's design-review stage passes through this skill (already integrated)
+No implementation / Edit / Write / git mutation / PR creation. It also does not call `AskUserQuestion` itself (it returns results to the caller, and the caller seeks the user's judgment).
