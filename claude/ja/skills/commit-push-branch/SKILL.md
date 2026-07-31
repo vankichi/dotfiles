@@ -75,6 +75,19 @@ git status   # 確認
 
 `.env` / `*.pem` / `credentials*` 等の secret パターンが含まれないこと確認。
 
+#### 同一 file 内に対象外の既存変更が同居する場合
+
+file 単位の `git add` では分離できない (`git add -p` は interactive flag のため agent 環境で不可)。**working tree を触らず** (checkout / stash 禁止 — 既存変更を壊さない)、index だけに自分の変更を載せる:
+
+```bash
+tmp=$(mktemp)
+git show HEAD:<path> > "$tmp"        # HEAD 版を起点に
+# "$tmp" へ自分の変更だけを適用 (Edit / sed / patch)
+git update-index --cacheinfo 100644,$(git hash-object -w "$tmp"),<path>
+```
+
+stage 後に `git diff --cached -- <path>` (= commit に載るのが自分の変更のみ) と `git diff -- <path>` (= working tree に既存変更が残存) の**双方**を出して分離結果を確認する。
+
 ### Step 6: commit
 
 **default は title 1 行のみ**。`-m "<title>"` で十分。HEREDOC + body は default にしない。
@@ -111,7 +124,7 @@ git commit -m "$(cat <<'EOF'
 
 <最小限の why。1-2 行。>
 
-Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+Co-Authored-By: <現行 model 名> <noreply@anthropic.com>
 EOF
 )"
 ```
