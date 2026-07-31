@@ -7,7 +7,7 @@ description: 「self review して」「review して」「修正箇所ないか
 
 編集差分を観点別に再走査し、修正候補を洗い出す skill。**観点 checklist の SoT は本ファイル** — 対話時の self-review と loop-mode の `reviewer` が同じ checklist を共有する。
 
-> **plugin との使い分け**: `/code-review`・`/simplify` は diff の bug / 簡素化に特化。本 skill は設定の正確性 / docs 整合 / memory 規約整合 / spec 整合まで含む広域 review。
+> **engine との使い分け**: `/code-review`・`/simplify`・CodeRabbit は**汎用のコード欠陥**に特化しており、correctness / test-adversarial / performance / code-quality の 4 観点は委譲できる。残る 6 観点 (filetype-checks / conventions / spec-alignment / observability / ops-docs-hazard / dependency) と下記「機械 check」は **spec・house 規約・運用 docs に依存するため engine では代替できない**。
 
 ## 適用条件
 

@@ -9,7 +9,7 @@ description: Use when you want the most recent edit diff inspected — 「self r
 
 A skill that re-scans the edit diff by perspective and surfaces fix candidates. **This file is the SoT for the perspective checklist** — interactive self-review and the loop-mode `reviewer` share the same checklist.
 
-> **Division of labor with plugins**: `/code-review` and `/simplify` specialize in diff bugs / simplification. This skill is a broad review covering configuration accuracy / doc consistency / memory-convention alignment / spec alignment.
+> **Division of labor with engines**: `/code-review`, `/simplify`, and CodeRabbit specialize in **generic code defects**, so the four perspectives correctness / test-adversarial / performance / code-quality can be delegated to them. The remaining six (filetype-checks / conventions / spec-alignment / observability / ops-docs-hazard / dependency) and the "mechanical checks" below **cannot be substituted, because they depend on the spec, house conventions, and operational docs**.
 
 ## Applicability
 
