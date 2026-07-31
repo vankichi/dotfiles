@@ -12,10 +12,19 @@ The apply side of the knowledge loop. Aggregates the insights retrospect has acc
 
 ## Applicability
 
-- Manual launch (scheduling comes in SP4 and later)
+- Manual launch (no scheduled execution yet)
 - Target harness repo = dotfiles. If cwd is not dotfiles, work against dotfiles as the target
 
 ## Procedure
+
+### Step 0: Inspect the live harness for drift
+
+The live harness (`~/.claude/{skills,agents,rules}`) is a symlink into the dotfiles working tree, so **the branch you have checked out is the harness itself**. After `git -C <dotfiles> fetch origin`, run the following and, if there is any divergence, **report it to a human before proposing improvements** (processing insights while diverged makes you rediscover and reapply problems already solved on master):
+
+```bash
+git rev-list --left-right --count origin/master...HEAD
+git diff --stat origin/master HEAD -- claude/
+```
 
 ### Step 1: Collect
 

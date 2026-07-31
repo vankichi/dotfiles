@@ -10,10 +10,19 @@ knowledge loop の反映側。retrospect が蓄積した insights を集約し�
 
 ## 適用条件
 
-- 手動起動 (定期化は SP4 以降)
+- 手動起動 (定期実行は未導入)
 - 対象 harness repo = dotfiles。cwd が dotfiles でない場合は dotfiles を対象に作業する
 
 ## 手順
+
+### Step 0: 稼働 harness の drift 検査
+
+稼働 harness (`~/.claude/{skills,agents,rules}`) は dotfiles working tree への symlink であり、**checkout している branch が harness の実体**。`git -C <dotfiles> fetch origin` 後に以下を実行し、乖離があれば**改善提案の前に人間へ報告する** (乖離したまま insight を処理すると、master で解決済みの問題を再発見・再適用する):
+
+```bash
+git rev-list --left-right --count origin/master...HEAD
+git diff --stat origin/master HEAD -- claude/
+```
 
 ### Step 1: 収集
 

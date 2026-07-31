@@ -1,6 +1,6 @@
 # 反映先の昇格基準 (memory → rules → skill → agent)
 
-improve-harness Step 4 の判定基準。**変更コストの小さい順に検討し、最初に条件を満たした先へ反映する** (design doc §5 の昇格原則)。
+improve-harness Step 4 の判定基準。**変更コストの小さい順に検討し、最初に条件を満たした先へ反映する**。
 `target` が明記された insight はこの表より優先してそれに従う。
 
 | 反映先 | 条件 (これで足りるなら昇格しない) | 例 | 変更手段 |

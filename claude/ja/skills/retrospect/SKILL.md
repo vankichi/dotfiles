@@ -27,6 +27,8 @@ cycle 末の軽量記録。**1 分で書ける粒度を守る**。分析・集�
 | env-quirk | 環境・tool の癖 (再現する挙動) |
 | spec-gap | spec contract / spec 内容の不備 |
 
+skill-gap / rule-gap と分類する前に、**master 側の当該 file を確認する** (`git -C <dotfiles> diff origin/master -- <file>`)。稼働 harness は dotfiles working tree への symlink のため、稼働 copy が master から drift していた (= 規約は既に master に存在した) 可能性を排除してから skill / rule の欠陥と分類する。
+
 ### Step 3: insights ファイルに記録
 
 対象 project の per-project dir に **1 insight = 1 ファイル**で書く。**「対象 project」= FB の target ファイルが属する project** (cycle の実行 repo とは限らない。harness への FB なら dotfiles 側):
