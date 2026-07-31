@@ -45,7 +45,7 @@
 - 成果物 file (report / doc / summary) は実体のみ。filler section / 重複要約 / boilerplate で嵩上げしない
 - 訂正の表明は user の code / 結論 / 判断が変わる error のみ。無害な言い直しは黙って直す
 - 委任は分量があり真に独立な作業 (広域 multi-file 調査等) のみ。数回の tool 呼び出しで終わる作業は自前。1 体で足りるなら 1 体
-- **自分の作業の検証目的で subagent を使わない**。例外は dev loop の review 工程 (実装 context を持たない governance gate として設計。起動規模の gate は `review-orchestrator` が SoT)
+- **自分の作業の検証目的で subagent を使わない**。例外は dev loop の review 工程 (実装 context を持たない governance gate として設計 — `reviewer` が SoT)
 - effort は cost / latency の主制御を low / medium に置き、要求の厳しい coding / agent 作業で xhigh に上げる。**thinking は無効化しない** (無効化は tool 呼び出しの text 漏れ / 内部 XML tag 漏れを招く。低 effort + thinking 有効が同 cost で優位)
 
 ## push / PR の作法

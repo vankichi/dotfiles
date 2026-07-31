@@ -1,6 +1,6 @@
 # 検証済み断定 (verify-before-assert)
 
-機械的に検証可能な事実の断定は、検証コマンドの実行後にのみ書く。対象は docs / ADR / comment / PR 記述 / user・subagent への報告の全て。書く側 (dev-cycle の各工程 / review-orchestrator / retrospect の insight 記述) は本ファイルを SoT とし、各所で手順を再掲しない。
+機械的に検証可能な事実の断定は、検証コマンドの実行後にのみ書く。対象は docs / ADR / comment / PR 記述 / user・subagent への報告の全て。書く側 (dev-cycle の各工程 / reviewer / retrospect の insight 記述) は本ファイルを SoT とし、各所で手順を再掲しない。
 
 ## 断定の種別と検証手順
 

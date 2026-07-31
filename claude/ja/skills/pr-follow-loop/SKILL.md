@@ -46,7 +46,7 @@ poll で拾った PR から 1 件選び（oldest created 優先）、現在の�
 - bot reviewer の review / inline comment を取得し、**各指摘を repo 規約（`.claude/rules/`）に照らして assess**: 妥当（fix 推奨）/ 誤検知（false-positive）/ 規約衝突・YAGNI（decline 推奨）を、severity と 1 行理由付きで判定
 - **triage サマリ（各指摘 → verdict + 理由 + 推奨アクション）を提示し user に通知**。marker を記録して当該 head sha を triaged 扱いに
 - **loop はここまで**: 修正の適用（commit+push）・decline 返信は **user 承認後に対話で実施**（loop が独断で fix / decline しない）。設計判断・規約衝突は必ず escalation として明示
-- 判定に fresh context が要る規模なら review-lens 相当を subagent で spawn 可（ただし本 skill の役割は triage の提示までで、適用はしない）
+- 判定に fresh context が要る規模なら `reviewer` を subagent で spawn 可（ただし本 skill の役割は triage の提示までで、適用はしない）
 
 #### b. approve 待ち（未 triage 指摘なし・必須 reviewer 未 approve）
 

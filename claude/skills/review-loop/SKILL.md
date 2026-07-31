@@ -1,6 +1,6 @@
 ---
 name: review-loop
-description: Driver skill for PR review run via /loop. 1 tick = poll open PRs where I'm assigned as reviewer → select one un-reviewed head sha → integrating review via review-orchestrator → post findings as a neutral comment (does not approve / merge) → notify → ScheduleWakeup to self-pace. Use for 「review-loop の tick を実行して」("run the review-loop tick"), 「review loop 回して」("run the review loop"), etc. (normally via /loop). The review's substance is the review-orchestrator's SoT — this skill only drives.
+description: Driver skill for PR review run via /loop. 1 tick = poll open PRs where I'm assigned as reviewer → select one un-reviewed head sha → integrating review via reviewer → post findings as a neutral comment (does not approve / merge) → notify → ScheduleWakeup to self-pace. Use for 「review-loop の tick を実行して」("run the review-loop tick"), 「review loop 回して」("run the review loop"), etc. (normally via /loop). The review's substance is the reviewer's SoT — this skill only drives.
 ---
 
 > **Source of truth:** `claude/ja/skills/review-loop/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
@@ -35,9 +35,9 @@ gh pr list --state open --search "review-requested:@me" \
 - **Skip any PR whose current head sha (`headRefOid`) matches the marker** — re-review only when a new push changes the sha
 - Select **one** PR from the un-reviewed ones (oldest created first). If all are skipped, go to Step 6 (idle)
 
-### Step 4: integrating review (`review-orchestrator`)
+### Step 4: integrating review (`reviewer`)
 
-- **Spawn `review-orchestrator` synchronously with the normal Agent tool** (do not use teams — under a flat roster the fan-out degrades)
+- **Spawn `reviewer` synchronously with the normal Agent tool** (do not use teams)
 - What to pass: the PR's diff range (base..head) / spec = **PR body + the ticket it references in the body (if any)** / the path list of repo conventions / design docs (glob CLAUDE.md / rules / lint configs / design documents under docs) / a simple impact classification (classify from `gh pr diff <n> --stat` plus the diff body, following the "simplified judgment" in `~/.claude/rules/impact-scope.md`. For impact-C, mark correctness / test-adversarial as priorities)
 - Do not pass anything equivalent to a state file (standalone review — do not give it implementation context)
 

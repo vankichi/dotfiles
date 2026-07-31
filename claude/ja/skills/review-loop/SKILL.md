@@ -1,6 +1,6 @@
 ---
 name: review-loop
-description: /loop で回す PR review の driver skill。1 tick = reviewer assign された open PR を poll → 未 review の head sha を 1 件選択 → review-orchestrator の統合 review → findings を中立 comment として投稿 (approve / merge はしない) → 通知 → ScheduleWakeup で self-pacing。「review-loop の tick を実行して」「review loop 回して」等で使う (通常は /loop 経由)。review の中身は review-orchestrator が SoT — 本 skill は駆動のみ。
+description: /loop で回す PR review の driver skill。1 tick = reviewer assign された open PR を poll → 未 review の head sha を 1 件選択 → reviewer の統合 review → findings を中立 comment として投稿 (approve / merge はしない) → 通知 → ScheduleWakeup で self-pacing。「review-loop の tick を実行して」「review loop 回して」等で使う (通常は /loop 経由)。review の中身は reviewer が SoT — 本 skill は駆動のみ。
 ---
 
 # review-loop
@@ -33,9 +33,9 @@ gh pr list --state open --search "review-requested:@me" \
 - **現 head sha (`headRefOid`) が marker に一致する PR は skip** — 新 push で sha が変わった時だけ再 review する
 - 未 review の PR から **1 件**選択する (作成が古い順)。全件 skip なら Step 6 (idle) へ
 
-### Step 4: 統合 review (`review-orchestrator`)
+### Step 4: 統合 review (`reviewer`)
 
-- `review-orchestrator` を**通常の Agent tool で同期 spawn する** (teams 不使用 — flat roster 下では fan-out が縮退するため)
+- `reviewer` を**通常の Agent tool で同期 spawn する** (teams 不使用)
 - 渡すもの: PR の diff 範囲 (base..head) / spec = **PR body + 本文が参照する ticket (あれば)** / repo 規約・設計 docs の path 一覧 (CLAUDE.md / rules / lint 設定 / docs 内設計文書を glob) / 簡易影響分類 (`gh pr diff <n> --stat` + diff 本体から `~/.claude/rules/impact-scope.md`「簡易判定」に従って分類する。impact-C は correctness / test-adversarial を重点指定)
 - state file 相当は渡さない (standalone review — 実装 context を持たせない)
 
