@@ -74,7 +74,11 @@
 
 - project 固有用語 (repo 名 / service 名 / ticket prefix / 環境 URL / メンバー名) を agent / skill に hardcode しない。MEMORY.md の memory から取得する
 - 新規 agent / skill / hook に `Bash(*)` 等の広範 permission を default で与えない。外部送信を含む skill は user 承認後に追加。hook で自動実行される command は user に明示してから commit
-- **skill 粒度**: 1 skill = 1 責務。**観点 / checklist は SKILL.md 内に収める** — `references/` への分割は「参照が任意」かつ「本文に置くと読めなくなる規模」の時だけにする (分割は読み手に file 間の往復を強いる)。発火条件は機械的 (grep / glob) に定義し、default-on + 理由付き skip + 全観点の実施状況出力を義務付ける
+- **skill 粒度**: 1 skill = 1 責務。発火条件は機械的 (grep / glob) に定義し、default-on + 理由付き skip + 全観点の実施状況出力を義務付ける
+- **`references/` 分割の判定基準は「常に全部読まれるか」の一点**:
+  - **常に全部読まれる → SKILL.md 内に inline** (分割しても progressive disclosure にならず、file 間の往復を強いるだけ)
+  - **条件分岐で一部しか読まれない → split** (doc 種別ごと / 言語ごと / 異常系手順など)
+- **`description` は発火判定用の field**: 冒頭に「いつ使うか」を置く (「何であるか」の説明を先に書かない)。上限 1,536 字で打ち切られる
 - **model が既に持つ知識を書かない**: 一般的な言語作法・広く知られた best practice の再掲は context を食うだけ。skill / agent に書くのは **house の選択・事故になる罠・grep で拾える検出シグナル**に限る
 - **同じ規定を 2 箇所に書かない**: SoT を 1 つ決めて他所からは参照する。再掲は必ず乖離する
 - **model が自発的にやることを指示に書かない**: 自己検証 / 再チェック / 自己修正の重複指示は cost だけ増やす。検証は実コマンド (build / test / lint / 再 grep) の実行として書く
