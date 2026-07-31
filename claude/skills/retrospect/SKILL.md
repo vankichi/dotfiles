@@ -29,6 +29,8 @@ Identify the following from the preceding cycle / work (if none apply, it's fine
 | env-quirk | an environment / tool quirk (reproducible behavior) |
 | spec-gap | a deficiency in the spec contract or spec content |
 
+Before categorizing something as skill-gap / rule-gap, **check the file in question on the master side** (`git -C <dotfiles> diff origin/master -- <file>`). Because the live harness is a symlink into the dotfiles working tree, rule out the possibility that the live copy had drifted from master (i.e. the convention already existed on master) before categorizing it as a skill / rule defect.
+
 ### Step 3: Record it in an insights file
 
 Write **one insight per file** in the per-project dir for the target project. **"Target project" = the project the feedback's target file belongs to** (not necessarily the repo the cycle ran in; feedback about the harness goes to the dotfiles side):

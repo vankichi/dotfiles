@@ -21,7 +21,7 @@
 ```
 work-intake: spec contract 未充足のため skip
 - <checklist の不備項目のみ列挙 (項目名 + 理由)>
-参照: rules/spec-contract.md
+参照: ~/.claude/rules/spec-contract.md
 ```
 
 - **再コメント抑止 (idempotency)**: 投稿前に `notion-get-comments` で既存コメントを確認し、既に work-intake の skip コメントが付いていて spec 本文がその後未更新なら再コメントしない (skip 判定の報告のみ行う)。loop 化した際に poll のたびコメントが積もるのを防ぐ

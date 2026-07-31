@@ -77,6 +77,19 @@ git status   # 確認
 
 Confirm no secret patterns like `.env` / `*.pem` / `credentials*` are included.
 
+#### When out-of-scope pre-existing changes live in the same file
+
+A file-granular `git add` can't separate them (`git add -p` is an interactive flag, so it's unavailable in an agent environment). **Without touching the working tree** (checkout / stash forbidden — don't destroy the pre-existing changes), put only your own changes into the index:
+
+```bash
+tmp=$(mktemp)
+git show HEAD:<path> > "$tmp"        # start from the HEAD version
+# apply only your own changes to "$tmp" (Edit / sed / patch)
+git update-index --cacheinfo 100644,$(git hash-object -w "$tmp"),<path>
+```
+
+After staging, print **both** `git diff --cached -- <path>` (= only your changes go into the commit) and `git diff -- <path>` (= the pre-existing changes remain in the working tree) to confirm the separation.
+
 ### Step 6: Commit
 
 **By default, use a single-line title only.** `-m "<title>"` is sufficient. Don't default to HEREDOC + body.
@@ -113,7 +126,7 @@ git commit -m "$(cat <<'EOF'
 
 <最小限の why。1-2 行。>
 
-Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+Co-Authored-By: <current model name> <noreply@anthropic.com>
 EOF
 )"
 ```

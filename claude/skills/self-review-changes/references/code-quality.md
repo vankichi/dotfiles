@@ -10,3 +10,5 @@ Skippable: code diff is 0. Not bug detection but the "better way to write it" pe
 - **Altitude**: whether the level of abstraction within a function is uniform (separate mixed low-level operations and high-level judgments)
 - **Convention compliance**: for Go, hold it against the criteria of the `go-style` / `go-test` reference skills, and for layer structure, `ddd-clean-architecture` (those are the SoT for details)
 - **Comments**: self-evident "what it does" comments / PR-oriented explanatory comments are removal targets. What should be written is only "constraints that can't be written in code"
+- **Constants**: whether magic numbers in expressions / identical literals appearing 2 or more times have been extracted into named consts. Whether related constants are gathered into a const block rather than scattered (`go-style` §2)
+- **Application consistency within the same PR**: whether a naming / const / helper introduced by this PR is applied at every applicable spot within the PR — re-grep the diff for the introduced name / value to detect the "only one side made a named const" kind of oversight

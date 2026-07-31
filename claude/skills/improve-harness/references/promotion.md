@@ -2,7 +2,7 @@
 
 > **Source of truth:** `claude/ja/skills/improve-harness/references/promotion.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
-The decision criteria for improve-harness Step 4. **Consider in ascending order of change cost, and apply to the first target whose condition is met** (the promotion principle in design doc §5).
+The decision criteria for improve-harness Step 4. **Consider in ascending order of change cost, and apply to the first target whose condition is met**.
 An insight with an explicit `target` takes precedence over this table and follows it.
 
 | apply to | condition (do not promote if this suffices) | example | means of change |

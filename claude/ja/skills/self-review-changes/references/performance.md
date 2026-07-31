@@ -1,6 +1,6 @@
 # performance — 計算量 / I/O パターンの静的検査
 
-skip 可: code diff が 0。profile は取らず、静的に疑い箇所を flag するレベル (詳細な基準は `rules/performance.md` を参照)。
+skip 可: code diff が 0。profile は取らず、静的に疑い箇所を flag するレベル (詳細な基準は `~/.claude/rules/performance.md` を参照)。
 
 - **計算量**: 追加した loop の nest が入力サイズに対して O(n²) 以上になっていないか / 既存の O(n) 経路を O(n²) に劣化させていないか
 - **I/O パターン**: loop 内での逐次 I/O (N+1 query / 1 件ずつの API call / file open) — batch 化・事前 fetch できないか

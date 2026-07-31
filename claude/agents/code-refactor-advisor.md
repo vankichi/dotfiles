@@ -1,6 +1,6 @@
 ---
 name: code-refactor-advisor
-description: A read-only agent that builds a responsibility map of the whole codebase and surfaces refactor candidates based on Go conventions / DDD conventions / test conventions. Triggered by things like 「refactor 候補出して」「責務曖昧さチェック」「層境界レビュー」「Go 的に怪しい箇所探して」. Does not Edit or perform git mutations. Writes out a plan file and hands off to the main agent / dev-orchestrator / direct implementation.
+description: A read-only agent that builds a responsibility map of the whole codebase and surfaces refactor candidates based on Go conventions / DDD conventions / test conventions. Triggered by things like 「refactor 候補出して」「責務曖昧さチェック」「層境界レビュー」「Go 的に怪しい箇所探して」. Does not Edit or perform git mutations. Writes out a plan file and hands off to the main agent / dev-cycle / direct implementation.
 tools: Read, Grep, Glob, Bash, Skill, TaskCreate, TaskUpdate, TaskList, AskUserQuestion, WebFetch
 model: claude-fable-5
 ---
@@ -165,7 +165,7 @@ Plan structure (template):
 - Places requiring a spec-deviation flag
 
 ## Handoff
-- Implementation is delegated to a separate agent (e.g. `dev-orchestrator`) / main session
+- Implementation is delegated to a separate agent (e.g. `dev-cycle`) / main session
 - Work begins after the plan is approved
 ```
 

@@ -99,6 +99,7 @@ List 3-5 foreseeable future extensions (cross-tenant / admin / batch / streaming
 - **Authentication / authorization failure behavior** (403 vs 404 / information leak risk)
 - **Format conversion / inference** (mime_type auto-inference / explicit / fallback / when inference fails)
 - **Behavior when a dependent service fails** (degraded / circuit breaker / fallback)
+- **Operational re-execution of a state transition** (what happens when an operator re-runs / redrives a target that has landed in that state)
 
 **Check phrasing**: from a domain angle, come up with 5-10 instances of "what happens with X in this situation?" If the answer comes out as "not considered" or "to be considered later," that's an area where the design phase should produce an answer
 
@@ -112,14 +113,16 @@ List 3-5 foreseeable future extensions (cross-tenant / admin / batch / streaming
 - Grasp the scope of changes **across all files at once** (to prevent issues from surfacing piecemeal across turns)
 - When design is complete, prepare 5-10 grep verification conditions (the literal `grep -nE "..."` command, recorded in the PR description / commit description / ADR appendix)
 
-Via Bash:
+Via Bash, targeting the **whole repo** (don't narrow it with a dir list — narrowing misses the instruction files at the root and `cmd/`):
 ```bash
-grep -rnE "<old-name-pattern>" docs/ apis/ internal/ cmd/ cli/
+git grep -nE "<old-name-pattern>"
 ```
 
-Include the resulting hit list in the design output to finalize the scope of changes.
+Include the resulting hit list in the design output to finalize the scope of changes. The instruction files at the root (`CLAUDE.md` / `.github/copilot-instructions.md` / `.claude/rules/`) are loaded by the agent every time, so they are a path by which a stale contract propagates into later implementation — always include them in the target. Conversely, revision-history / changelog lines are immutable, so don't touch them even when they hit.
 
-**Name grep is necessary but not sufficient** — when the design target describes a **process flow** (producer / worker, etc.), also read through the related Accepted ADR / design doc's **flow / lifecycle prose** (which row is created by whom and when, the dedup method, the failure-time observation boundary) and check that the design doesn't contradict it. Grepping field / enum names catches naming overlap but can't detect contradictions between the ADR's prose flow (e.g. "the worker INSERTs on receive", "content-based dedup") and the design. When a related ADR is Accepted, compare its core decisions against the design's flow one by one and check they aren't inverted.
+**Name grep is necessary but not sufficient** — when the design target describes a **process flow** (producer / worker, etc.), also read through the related Accepted ADR / design doc's **flow / lifecycle prose** (which row is created by whom and when, the dedup method, the failure-time observation boundary) and check that the design doesn't contradict it.
+
+**Also check at the same time whether a newly introduced state writer breaks the transitions an existing runbook / recovery procedure assumes**: enumerate the states you newly write → check whether the state machine has an exit from each of them → grep whether any operational procedure in the docs assumes a state with no exit (terminal), i.e. describes recovering via redrive / retry / re-execution. The structure where introducing a terminal-state writer instantly contradicts an existing "reprocess it with a redrive" procedure can only be detected cheaply at this pre-implementation stage. Grepping field / enum names catches naming overlap but can't detect contradictions between the ADR's prose flow (e.g. "the worker INSERTs on receive", "content-based dedup") and the design. When a related ADR is Accepted, compare its core decisions against the design's flow one by one and check they aren't inverted.
 
 **Check phrasing**: "What condition makes grepping for the old name return 0 hits?" / "How many places will the new name be added to?" / "Does the design's flow match the related Accepted ADR's flow / lifecycle description (who creates what and when · dedup · observation boundary)?"
 
@@ -143,9 +146,7 @@ Do one review pass to check the design target doesn't violate any of the followi
 | Comments stay within the literal scope of the source text (no speculative mapping) | A comment with speculative mapping that goes beyond the literal scope of the source text |
 | Multi-file changes are plan-first (CLAUDE.md) | Skipping the plan despite a multi-file change |
 | Deviations from spec are stated explicitly, approved, and recorded (CLAUDE.md) | A literal deviation from spec not written into the plan |
-| Substantive edits go through a subagent | The primary agent directly makes a substantive Edit |
 | PRs are not auto-created (CLAUDE.md) | Auto-creating a PR |
-| Subagent briefs reference a state file | Repeating context inline in a subagent brief |
 | Adherence to the design-phase checklist | Failing to comply with this very checklist |
 | Accuracy of product terminology | Misnaming a product or term |
 | Adherence to architectural assumptions | Terminology creeping in that contradicts architectural assumptions |
@@ -189,7 +190,7 @@ When the skill completes, present the following to the user as the deliverable:
 - Requires user judgment (trade-offs presented): Y items → ...
 ```
 
-When handing off to the main agent / dev-cycle / Plan agent / tech-docs-writer, writing the above out to a state file keeps the brief lightweight when a subagent restarts (a state-file-referencing brief).
+When called from dev-cycle's design-review stage, the results summary is recorded in the state file's "Design review" section (the recording rule lives on the dev-cycle side).
 
 ## What this skill does not do
 
@@ -201,5 +202,4 @@ When handing off to the main agent / dev-cycle / Plan agent / tech-docs-writer, 
 
 - Everyday check (lightweight version): CLAUDE.md's 「判断と質問の作法」section
 - Related skills / agents: `tech-docs-writer` (passes through this skill internally when drafting an ADR / Design Doc), `dev-cycle` (passes through this skill in its design-review stage), `ddd-clean-architecture` (layer boundaries / dependency direction, related to this skill's perspective 1), `code-refactor-advisor` (implementation-facing refactor candidates, the implementation-pass version of this skill)
-- Handoff to the main agent: a state-file-referencing brief
 - Built into the agent side: the `dev-cycle` agent's design-review stage passes through this skill (already integrated)
