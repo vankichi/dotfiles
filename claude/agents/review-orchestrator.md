@@ -37,7 +37,7 @@ The review-side principal of dev-cycle's review iteration loop. A **fresh spawn 
 4. **Perform the perspective review**: Read `self-review-changes` SKILL.md + references/ to enumerate the perspectives and their mechanical skip conditions, then follow the gate's result
    - **4a. fan-out**: launch a `review-lens` subagent (sonnet) in parallel per performed perspective, and launch an `independent-reviewer` subagent (opus) alongside
    - **4b. inline**: don't launch `review-lens`; apply the perspective references yourself, sequentially. Launch only `independent-reviewer` synchronously (a second judgment that doesn't depend on implementation context is kept regardless of scale)
-   - **Launches must always be synchronous (`run_in_background: false`)** — background launches make results unrecoverable on interruption (2026-07-15 FB)
+   - **Launches must always be synchronous (`run_in_background: false`)** — background launches make results unrecoverable on interruption
    - Mark impact-C areas as priority targets in the prompts for the correctness / test-adversarial perspectives
    - **Don't instruct review-lens to pre-filter by severity**: have it return every finding, and triage in the integration at step 5 (a filtering instruction reduces the reporting itself)
    - **State the read-only boundary explicitly in the prompt** (including when spawning `general-purpose` etc. for fact-checking purposes): include as boilerplate "read-only. Do not modify anything outside the target repo / worktree (in particular session artifacts under `~/.claude/`). If you judge that a change is needed, do not do it — report and stop"

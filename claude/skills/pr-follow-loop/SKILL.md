@@ -7,7 +7,7 @@ description: Driver skill run via /loop that shepherds the open PRs I authored. 
 
 # pr-follow-loop
 
-The driver for shepherding PRs (sibling of dev-loop / review-loop). **The loop's lifecycle is managed by the user's /loop operation; this skill defines the internals of one tick.** 1 tick = 1 poll + at most one step on one PR.
+The driver for shepherding PRs (sibling of dev-loop / review-loop). 1 tick = 1 poll + at most one step on one PR. **`~/.claude/skills/dev-loop/references/loop-driver-common.md` is the SoT for the common provisions — getting the time, the 3 notification categories, the wakeup baseline values, the 3-consecutive breaker, and the tick report** — not restated in this body.
 
 The three siblings:
 - **dev-loop** = I **produce** PRs (work-intake → dev-cycle → draft PR)
@@ -24,7 +24,6 @@ The three siblings:
 
 ### Step 1: precondition check
 
-- Run `date '+%Y-%m-%d %H:%M %Z'` for the current local time (for the tick report; never guess the time)
 - Must be inside a git repo / `gh auth status` must pass
 
 ### Step 2: poll (mechanical)
@@ -67,14 +66,9 @@ Select one PR from the poll (oldest created first) and, based on its current sta
 
 ### Step 4: self-pacing (`ScheduleWakeup`)
 
-| Immediately preceding result | Next wakeup | Reason |
-|---|---|---|
-| advanced one step (triage presented / cleanup done) | 60-120s | drain — consume the next PR / next stage right away |
-| moved to awaiting-approval | 1200-1800s | Monitor is the primary signal; this is the fallback heartbeat |
-| none applicable (0 or all skipped) | 1200-1800s | idle (20-30 min) |
-| error | 900s | retry interval |
-
-- **Consecutive-error breaker**: if a tick errors **3 consecutive** times, stop the wakeup (`ScheduleWakeup` stop), notify "loop stopped (3 consecutive errors)", and terminate. Resets on success
+- The baseline values come from loop-driver-common (advanced one step → drain / none applicable → idle / error → 900s)
+- Skill-specific: moved to awaiting-approval → 1200-1800s (Monitor is the primary signal; the wakeup is the fallback heartbeat)
+- The breaker's target = tick errors. It resets on a success
 
 ### Step 5: tick report (forced output)
 
@@ -93,7 +87,6 @@ Select one PR from the poll (oldest created first) and, based on its current sta
 1. **Approve / request-changes / merge are the human's only** — the loop never operates GitHub's review state
 2. **Bot findings go only as far as presenting the triage** — applying fixes / posting decline replies happen after the user approves, in dialogue. The loop never fixes / declines on its own
 3. **Cleanup requires a clean check** — a dirty worktree is not cleaned; escalate instead. Cleanup targets are the own worktree + the merged local branch only (remote / other worktrees are left untouched). A denied cleanup command is presented to the human, not worked around
-4. **Notify only after verifying the receipts exist** — mechanically confirm the triage notification / the removal / the Monitor start before reporting
-5. **Do not hardcode configuration** — bot names / required reviewers / repo come from the reference memory
-6. **Do not omit the tick report** — output all items every tick
-7. **Do not loosen the safety devices** — hooks / permission deny / least privilege are never relaxed in the loop
+4. **Do not hardcode configuration** — bot names / required reviewers / repo come from the reference memory
+5. **Do not loosen the safety devices** — hooks / permission deny / least privilege are never relaxed in the loop
+6. **Follow loop-driver-common for the common provisions** (receipts verification / breaker / tick report / stop authority)

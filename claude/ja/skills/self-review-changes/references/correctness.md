@@ -55,4 +55,4 @@ project context 上「適用不可」と判断して resolve するパターン:
 
 差分に外部由来の hardcoded 定数 (LLM pricing / model ID / API rate limit / 第三者サービスの定数) が含まれる場合、port 元・memory・既存コードとの一致確認で済ませず、**authoritative source で数値そのものを検証**する。Anthropic の pricing / model ID の SoT は claude-api skill (「LLM pricing は memory で答えない」trigger をコードレビュー文脈でも適用)。
 
-例: ccwatch から port した Opus レート $15/$75 は port 元と byte 一致だったが、現行レートは $5/$25 で 3x 過大計上 (2026-07-17 FB。「port 元と一致」は正当性の根拠にならない)。
+例: port 元と byte 一致の Opus レートが現行レートの 3 倍で過大計上 —「port 元と一致」は正当性の根拠にならない。

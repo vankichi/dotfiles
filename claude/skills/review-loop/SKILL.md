@@ -7,7 +7,7 @@ description: Driver skill for PR review run via /loop. 1 tick = poll open PRs wh
 
 # review-loop
 
-The driver for PR review (dev-loop's sibling). **The loop's lifecycle is managed by the user's /loop operation; this skill defines the internals of one tick.** 1 tick = 1 poll + at most 1 review.
+The driver for PR review (dev-loop's sibling). 1 tick = 1 poll + at most 1 review. **`~/.claude/skills/dev-loop/references/loop-driver-common.md` is the SoT for the common provisions — getting the time, the 3 notification categories, the wakeup baseline values, the 3-consecutive breaker, and the tick report** — not restated in this body.
 
 ## Applicability conditions
 
@@ -18,7 +18,6 @@ The driver for PR review (dev-loop's sibling). **The loop's lifecycle is managed
 
 ### Step 1: Precondition check
 
-- Run `date '+%Y-%m-%d %H:%M %Z'` to get the current local time — for the tick report; never guess the time
 - Must be inside a git repo / `gh auth status` must pass
 
 ### Step 2: poll (mechanical)
@@ -59,15 +58,8 @@ verdict: <approve / approve-with-notes / fix-required / escalation>
 
 ### Step 6: notification + self-pacing
 
-- **Notify on every review completion**: `PushNotification` "PR #<n> review complete: <verdict>". The outcome is recorded in the tick report in 3 categories — sent / **skipped (terminal active — normal, delivered only when unattended)** / not delivered (abnormal)
-
-| Immediately preceding result | Next wakeup (`ScheduleWakeup`) | Reason |
-|---|---|---|
-| review completed | 60-120s | drain — consume the next un-reviewed PR right away |
-| none applicable (0 or all skipped) | 1200-1800s | idle (20-30 min) |
-| review error | 900s | retry interval |
-
-- **Consecutive error breaker**: if a review fails **3 consecutive** times, stop the wakeup, notify "loop stopped (3 consecutive review failures)", and terminate. Resets on a success
+- **Notify on every review completion**: `PushNotification` "PR #<n> review complete: <verdict>"
+- The wakeup follows loop-driver-common's baseline values (review completed → drain / none applicable → idle / error → 900s). The breaker's target = review failures, resetting on a success
 
 ### Step 7: tick report (forced output)
 
@@ -85,6 +77,5 @@ verdict: <approve / approve-with-notes / fix-required / escalation>
 
 1. **Do not approve / request-changes / merge** — neutral comment only
 2. **Do not re-comment on the same head sha** — do not skip the marker check (Step 3)
-3. **Notify / report only after verifying the receipts (comment URL) actually exist** — do not claim "posted" on self-report
-4. **Do not transcribe the PR body / code verbatim into the comment**
-5. **Do not omit the tick report** — output all items every tick
+3. **Do not transcribe the PR body / code verbatim into the comment**
+4. **Follow loop-driver-common for the common provisions** (receipts verification / breaker / tick report / stop authority)

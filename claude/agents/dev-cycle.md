@@ -72,7 +72,7 @@ For other languages / frameworks, handle the implementation stage with your own 
 - Derive in-house using the same method as loop-mode (including impact analysis and the DoD self-check), write the plan to the state file, then **get approval via ExitPlanMode** before moving on (subsequent interactive-mode approval points unchanged)
 
 **Common**:
-- The state file is `<ticket-slug>.md` in the per-project plans dir (its structure takes the "state file template" at the end of this file as the SoT)
+- The state file is `<ticket-slug>.md` in the per-project plans dir. **The SoT for its structure is `~/.claude/skills/dev-loop/references/dev-cycle-state-file.md`** — Read it before writing out the plan and build the file exactly as the template says
 
 **Boundary report**:
 ```
@@ -110,25 +110,9 @@ If the plan includes a new service / new RPC / new enum / new ACL model / new AD
 
 **Before starting implementation, isolate with `EnterWorktree`** (common to loop-mode and interactive mode). After isolation, write to the state file using the absolute path fixed during startup preparation (the auto-resolved path changes when cwd changes). Pin down the base's ahead / behind numbers with the git procedure in verify-before-assert (don't infer them from how `git status`'s "Recent commits" looks).
 
-**If launched with a cwd inside a worktree** (e.g., a parallel-cycle collision): EnterWorktree cannot create a nested worktree from inside one. Identify the main checkout and create your own worktree off main (or origin/main) with `git worktree add`, then move into it. Never touch files inside another agent's worktree.
-
 **If base is not the default branch** (e.g., stacking on top of a parent branch in a stacked PR): `EnterWorktree`'s create path is unusable because its default baseRef is `origin/<default-branch>`. Create a worktree with an explicit base via `git worktree add -b <branch> <path> <parent branch>`, and enter it with `EnterWorktree(path: <path>)`. Record the base branch in the state file and pass it explicitly when delegating to commit-push-branch (needed for both the squash base ref and `gh pr create --base`).
 
-If Edit/Write to the newly created worktree keeps being rejected (under subagent cwd pinning, `EnterWorktree(path)` may report success while the write boundary does not actually move — 2026-07-15 FB), switch to a branch swap inside the pinned original worktree:
-
-1. Clean up the new worktree with `git worktree remove`
-2. **Ownership check**: mechanically confirm via reverse lookup that the original worktree is not owned by another active cycle — grep the state files in the per-project plans dir; if an active state file (= one whose Current state does not show all stages completed / terminated by escalation) records this worktree path under `worktree:`, treat it as owned (recent mtime as a secondary signal)
-3. If it is owned, do not swap; escalate and stop (the "never touch another agent's worktree" principle)
-4. Once confirmed safe, run `git fetch origin <base-ref>` to refresh the remote-tracking ref
-5. Continue by swapping only the branch inside the original worktree directory via `git checkout -b <branch> origin/<base-ref>` (the original branch's commits are preserved)
-
-**When cwd is pinned to the main checkout** (under a background job's bgIsolation guard): the branch swap above is not usable — swapping would hijack the user's checkout. The guard also rejects the Write/Edit tools for **every path under the repo root**, so a worktree created under `.claude/worktrees/` is not writable either. In this case create the worktree **outside the repo root**:
-
-1. **Probe what the guard actually blocks**: try a Write to `/tmp` and a write from a Bash subprocess. If both succeed, the guard is a path-scoped Write/Edit tool block rooted at the repo checkout, not a session-wide block
-2. `git worktree add <path as a sibling of the repo> origin/<base-ref>` to create the worktree outside the repo root (if one was already created inside, relocate it with `git worktree move`)
-3. From then on, Write/Edit via absolute paths. The shared checkout is never touched, so the guard's intent is honored
-
-**If Write/Edit is still rejected**, generate files with a Bash heredoc (`cat > <path> <<'EOF'`) or python, and run git / go etc. via `cd <worktree> && ...`. Do not change settings to disable the guard.
+**If worktree isolation fails or is rejected** (launched with a cwd inside a worktree / subagent cwd pinning / the bgIsolation guard / Write rejected): Read `~/.claude/skills/dev-loop/references/dev-cycle-worktree-recovery.md` for the recovery branches and follow it (don't read it on the normal path). The common principles = never touch another agent's worktree / never hijack the user's checkout / never disable the guard.
 
 **Tie-break when the spec contradicts itself**: when a spec demands "behavior unchanged (regression-guarded)" and separately prescribes a new internal behavior on the same shared code path, **the regression-guarded invariant wins**. Implement the new behavior only where it does not alter the guarded path, and flag the divergence as an SD (the spec itself should also be corrected by merge time).
 
@@ -139,7 +123,7 @@ Read the plan and determine the type of implementation:
 | Go module initial setup (no go.mod or missing skeleton) | `Skill: go-bootstrap` | (within dev-cycle) |
 | Go DDD+TDD feature work (additions to existing internal/) | `Agent: go-feature-tdd` | opus (pinned in frontmatter) |
 | Docs changes (design docs / README / runbooks etc.) with real volume | delegate to an `Agent: general-purpose` subagent | **opus** (specified at spawn) |
-| Non-Go code / config changes with real volume | delegate to an `Agent: general-purpose` subagent | **opus** (specified at spawn — sonnet coding proved insufficient in field verification, 2026-07-15 FB; difficulty-based routing to be revisited once insights accumulate) |
+| Non-Go code / config changes with real volume | delegate to an `Agent: general-purpose` subagent | **opus** (specified at spawn — pinned to opus because sonnet coding proved insufficient in field verification; difficulty-based routing to be revisited once insights accumulate) |
 | Changes that finish in a handful of tool calls (small docs fixes / config changes in 1-2 files / few-line edits) | your own `Read` / `Edit` / `Write` | (within dev-cycle; delegate only work with real volume that is genuinely independent — CLAUDE.md "出力と委任の作法") |
 
 When delegating, pass the work item's spec, the relevant plan steps, the verification commands, and the **conventions digest + source paths (startup preparation Step 5)** fully in the prompt (assume the subagent doesn't know the state file — make it self-contained). Always include these 2 points in an implementation-delegation prompt: "comments are WHY only (don't write the WHAT)" and "consolidate magic numbers / repeated literals into named consts" (SoT: go-style §8 / the code-quality perspective).
@@ -221,7 +205,7 @@ Before spawning, run one verification pass from `~/.claude/rules/verify-before-a
 - Launch `commit-push-branch` via the `Skill` tool
 - **loop-mode**: no approval wait — decide the branch name / commit message automatically → commit → push → **create a draft PR** (the loop-mode extension of `commit-push-branch`; its SKILL.md is the SoT for details). The draft PR body includes the implementation plan, DoD check results, and self-review / security review results (template defined on the commit-push-branch side)
 - **Interactive mode**: as before, confirm the skill's proposed branch name / commit message once via AskUserQuestion right before the commit. After push, obtain the PR creation URL but do not auto-create a draft PR (per CLAUDE.md "push / PR etiquette", PR creation happens separately after user instruction)
-- Commit messages **default to a single-line title, content only**. No why / background / impact scope
+- commit-push-branch is the SoT for the commit message convention (single-line title, content only)
 
 **Boundary report**:
 ```
@@ -310,87 +294,10 @@ Results:
 - Hijacking the main checkout's branch to work during a resume
 - Reporting an outward operation as "done" without a receipt
 
-## Appendix: skill / subagent dependencies
+## Appendix: invocation structure
 
-```
-dev-cycle (this)
-  ├── api-design-review (skill)                          ← design review (upstream; new contract / ADR / ACL model)
-  ├── go-bootstrap (skill)                               ← implementation (initial setup)
-  ├── go-feature-tdd (subagent)                          ← implementation (feature work)
-  ├── review-orchestrator (subagent, opus)               ← review integrating principal (loop-mode, fresh spawn per iteration)
-  │     ├── review-lens (subagent, sonnet)               ← per-perspective review worker (N in parallel, synchronous launch; only when the scale gate says fan-out)
-  │     └── independent-reviewer (subagent, opus)        ← independent review (judges from spec + diff only)
-  ├── self-review-changes (skill)                        ← review (interactive mode) / SoT of the perspective system (references/)
-  ├── security-review-local (skill)                      ← security review
-  ├── commit-push-branch (skill)                         ← commit & push (+ draft PR in loop-mode)
-  └── retrospect (skill)                                 ← end-of-cycle insight recording
-```
-
-Each tool can be invoked independently. If the user says "redo just the self-review" or similar, call that skill directly.
+The subordinate tools are exactly as in the "Subordinate tools" table. Nesting occurs only in the review stage: `review-orchestrator` (opus) synchronously spawns `review-lens` (sonnet, N in parallel only when the scale gate says fan-out) and `independent-reviewer` (opus) beneath itself. Each tool can be invoked independently — if the user says "redo just the self-review" or similar, call that skill directly.
 
 ## state file template
 
-The structure of the state file (`<ticket-slug>.md` in the per-project plans dir). It is the write target of implementation-plan derivation and the SoT for context bootstrap by subsequent agents / on resume:
-
-```
-# <Phase> / <Ticket ID>: <title> — implementation plan
-
-## Context
-Why this change is needed (DoD-based)
-
-## Confirmed decisions
-Enumerate the confirmed literals. Reference source on reimplementation; used by subsequent agents for context bootstrap. Put permanent design decisions here.
-| Decision item | Adopted literal | Basis (DoD / docs) |
-
-## Scope decisions (intentional limits derived from the DoD)
-Scope limits the DoD explicitly states as "stub only is OK" / "implement in a follow-up ticket". Not deviations, so don't flag them in the PR description.
-| Scope-limit item | DoD basis | Follow-up ticket |
-
-## Spec deviations (flagged in the PR description, reviewer-check targets)
-Only "permanent structural choices" where the implementation diverges from DoD / docs. Keep only the items you want the reviewer to check.
-| # | Deviation | Remediation policy (spec update / keep / revisit later) |
-
-## Phase 2+ migration (turned into follow-up tickets)
-Provisional implementations slated for future refactor. Recorded as follow-ups, not implemented in this PR.
-| Provisional implementation | Target form | Follow-up ticket / link |
-
-## Carryover (existing issues, separate ticket)
-Existing issues outside scope that this PR won't touch but are worth keeping in view.
-| Existing issue | Impact scope | Handling ticket |
-
-## Documentation updates (Tier classification)
-Tier-based organization of the contradictions extracted from the docs cross-check, and how they're handled in this ticket.
-| Target doc | Fix content | Tier (1/2/3/4) | Handling (same commit / same PR / separate ticket) |
-
-## Impact scope
-The impact-A/B/C classification and the "target symbol → referencing site" mapping table (output of the impact analysis in implementation-plan derivation)
-
-## Current state (updated as you go)
-Progress state. So a subsequent agent / resume can context-bootstrap with a single Read.
-At the planning stage, write only "not yet performed" — don't write pre-measurement values, commit shas, PR URLs, or review round counts (preventing fabrication under the pressure to fill in the template).
-- Stage X done / Y in progress (corresponding to wip commits)
-- Latest commit: <hash> / test-fix attempt count: <n>/3
-- Pending questions / escalation stop (<stage> / <reason>)
-
-## Design review (api-design-review)
-Result summary (detection status across the 6 perspectives / reflected / user-judged / remaining follow-up)
-
-## Key design decisions
-| Decision item | Decision | Basis |
-
-## Implementation steps (in execution order)
-### Step 1: ...
-- New / edited files + content overview
-
-## DoD-to-implementation-step mapping
-| DoD item | Corresponding Step | Verification method |
-
-## Anticipated pitfalls
-
-## Verification steps (after implementation)
-
-## Handoff to the next ticket (out of scope)
-
-## References
-- ticket URL / docs paths / original path of the repo conventions digest
-```
+The SoT for its structure is `~/.claude/skills/dev-loop/references/dev-cycle-state-file.md` (see "Common" under implementation-plan derivation). Not restated in this file.

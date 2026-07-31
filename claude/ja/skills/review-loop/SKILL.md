@@ -5,7 +5,7 @@ description: /loop で回す PR review の driver skill。1 tick = reviewer assi
 
 # review-loop
 
-PR review の driver (dev-loop の兄弟)。**loop の生死は user の /loop 操作が管理し、本 skill は 1 tick の中身を規定する**。1 tick = 1 poll + 最大 1 review。
+PR review の driver (dev-loop の兄弟)。1 tick = 1 poll + 最大 1 review。**時刻取得・通知 3 区分・wakeup 基準値・3 連続 breaker・tick 報告の共通規定は `~/.claude/skills/dev-loop/references/loop-driver-common.md` が SoT** — 本文で再掲しない。
 
 ## 適用条件
 
@@ -16,7 +16,6 @@ PR review の driver (dev-loop の兄弟)。**loop の生死は user の /loop �
 
 ### Step 1: 前提確認
 
-- `date '+%Y-%m-%d %H:%M %Z'` を実行して現在時刻 (現地) を取得する — tick 報告用。時刻を推測で書かない
 - git repo 内であること / `gh auth status` が通ること
 
 ### Step 2: poll (機械実行)
@@ -57,15 +56,8 @@ verdict: <approve / approve-with-notes / fix-required / escalation>
 
 ### Step 6: 通知 + self-pacing
 
-- **全 review 完了ごとに通知**: `PushNotification`「PR #<n> review 完了: <verdict>」。結果は 3 区分で tick 報告に記す — 送信 / **skip (terminal active — 正常、無人時のみ配達)** / 未達 (異常)
-
-| 直前の結果 | 次 wakeup (`ScheduleWakeup`) | 理由 |
-|---|---|---|
-| review 完了 | 60-120s | drain — 次の未 review PR をすぐ消化 |
-| 対象なし (0 件 or 全件 skip) | 1200-1800s | idle (20-30 分) |
-| review エラー | 900s | 再試行間隔 |
-
-- **連続エラー breaker**: review が **3 連続**で失敗したら wakeup を止め、「loop 停止 (review 3 連続失敗)」を通知して終了する。成功でリセット
+- **全 review 完了ごとに通知**: `PushNotification`「PR #<n> review 完了: <verdict>」
+- wakeup は loop-driver-common の基準値どおり (review 完了 → drain / 対象なし → idle / エラー → 900s)。breaker の対象 = review の失敗、リセットは成功
 
 ### Step 7: tick の報告 (強制出力)
 
@@ -83,6 +75,5 @@ verdict: <approve / approve-with-notes / fix-required / escalation>
 
 1. **approve / request-changes / merge をしない** — 中立 comment のみ
 2. **同一 head sha に再 comment しない** — marker 照合 (Step 3) を skip しない
-3. **通知・報告は receipts (comment URL) の実在検証後** — 自己申告で「投稿済み」と言わない
-4. **PR 本文・code を comment に丸ごと転記しない**
-5. **tick 報告を省略しない** — 全項目を毎 tick 出力する
+3. **PR 本文・code を comment に丸ごと転記しない**
+4. **共通規定 (receipts 検証 / breaker / tick 報告 / 停止権限) は loop-driver-common に従う**

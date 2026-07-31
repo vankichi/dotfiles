@@ -7,7 +7,7 @@ description: Driver skill for the dev loop run via /loop. 1 tick = work-intake p
 
 # dev-loop
 
-The dev loop's driver. **The loop's lifecycle is managed by the user's /loop operation; this skill defines the internals of one tick.** 1 tick = 1 poll + at most 1 cycle.
+The dev loop's driver. 1 tick = 1 poll + at most 1 cycle. **`references/loop-driver-common.md` is the SoT for the common provisions — getting the time, the 3 notification categories, the wakeup baseline values, the 3-consecutive breaker, and the tick report** — not restated in this body.
 
 ## Applicability conditions
 
@@ -18,7 +18,6 @@ The dev loop's driver. **The loop's lifecycle is managed by the user's /loop ope
 
 ### Step 1: Precondition check
 
-- Run `date '+%Y-%m-%d %H:%M %Z'` to get the current local time — for the tick report's time line; never guess the time
 - Must be inside a git repo
 - **Serial guard**: check the state files in the per-project plans dir, and ensure no active cycle exists (a state file whose Current state does not indicate all-stages-complete / escalation stop). If one exists, this tick does not start a cycle and goes to Step 5 (300s wakeup — waiting for the running cycle to finish)
 - Leave Notion reachability to work-intake (if unreachable, Step 2 terminates abnormally → notify "Notion unreachable" and 1800s wakeup)
@@ -46,19 +45,11 @@ Take the receipts from dev-cycle's report, and **notify via `PushNotification` o
 | escalation | Confirm the ticket comment / WIP branch (`git ls-remote`) | 「<ticket-id>: escalation (<one-line stop reason>)」 |
 | receipts do not actually exist | — | 「<ticket-id>: detected a divergence between report and reality」 + counted as escalation |
 
-- Notification outcomes are handled in **3 categories** and always recorded in the tick report: **sent** (issued) / **skipped (terminal active)** = the tool deliberately suppressed it because the user is active at the terminal — **normal** (notifications are only delivered when unattended, by design) / **not delivered** (tool unavailable / error — abnormal; never stay silent)
-
 ### Step 5: self-pacing (`ScheduleWakeup`)
 
-| Immediately preceding result | Next wakeup | Reason |
-|---|---|---|
-| cycle completed | 60-120s | drain — consume the next ready right away |
-| empty queue (none applicable) | 1200-1800s | idle (20-30 min) |
-| escalation | 1200-1800s | normal continuation (the target ticket is InProgress and won't be re-picked) |
-| serial guard hit | 300s | waiting for the running cycle to finish |
-| Notion unreachable | 1800s | waiting for recovery |
-
-- **Consecutive escalation breaker**: if escalation (including divergence detection) occurs **3 consecutive** times, stop the wakeup (`ScheduleWakeup` stop), notify "loop stopped (3 consecutive escalations)", and terminate. The consecutive count resets on a cycle completion
+- The baseline values come from loop-driver-common (completed → drain / empty queue → idle / serial guard hit → 300s)
+- Skill-specific: escalation → 1200-1800s (the target ticket is InProgress and won't be re-picked) / Notion unreachable → 1800s (waiting for recovery)
+- The breaker's target = escalation (including divergence detection). It resets on a cycle completion
 
 ### Step 6: tick report (forced output)
 
@@ -75,7 +66,5 @@ Take the receipts from dev-cycle's report, and **notify via `PushNotification` o
 ## Iron rules
 
 1. **Do not start parallel cycles** — do not skip the serial guard
-2. **Notify only after verifying the receipts actually exist** — do not forward dev-cycle's self-report as-is
-3. **Do not stop the loop on escalation** — the only exception is the 3-consecutive breaker
-4. **Permanent loop stop is the user's /loop operation** — even when the breaker fires, always send the "stopped" notification
-5. **Do not omit the tick report** — output all items every tick
+2. **Do not stop the loop on escalation** — the only exception is the 3-consecutive breaker
+3. **Follow loop-driver-common for the common provisions** (receipts verification / breaker / tick report / stop authority)

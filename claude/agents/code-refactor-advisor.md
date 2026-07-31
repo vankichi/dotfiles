@@ -2,7 +2,7 @@
 name: code-refactor-advisor
 description: A read-only agent that builds a responsibility map of the whole codebase and surfaces refactor candidates based on Go conventions / DDD conventions / test conventions. Triggered by things like 「refactor 候補出して」「責務曖昧さチェック」「層境界レビュー」「Go 的に怪しい箇所探して」. Does not Edit or perform git mutations. Writes out a plan file and hands off to the main agent / dev-cycle / direct implementation.
 tools: Read, Grep, Glob, Bash, Skill, TaskCreate, TaskUpdate, TaskList, AskUserQuestion, WebFetch
-model: claude-fable-5
+model: fable
 ---
 
 > **Source of truth:** `claude/ja/agents/code-refactor-advisor.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.

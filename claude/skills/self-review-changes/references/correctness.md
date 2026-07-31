@@ -57,4 +57,4 @@ Example: PR #30 C11/C12 — `carryOverlap`'s "kept strictly under overlap" was c
 
 When the diff contains hardcoded externally-sourced constants (LLM pricing / model IDs / API rate limits / third-party service constants), do not settle for matching the port source / memory / existing code — **verify the values themselves against an authoritative source**. The SoT for Anthropic pricing / model IDs is the claude-api skill (apply the "never answer LLM pricing from memory" trigger in code-review contexts too).
 
-Example: Opus rates $15/$75 ported from ccwatch matched the port source byte-for-byte, but the current rates are $5/$25 — a 3x overcount (2026-07-17 FB; "matches the port source" is not evidence of validity).
+Example: Opus rates that matched the port source byte-for-byte were 3x the current rates, producing an overcount — "matches the port source" is not evidence of validity.
