@@ -8,3 +8,5 @@ skip 可: code diff が 0。bug 検出ではなく「より良い書き方」の
 - **altitude**: 関数内の抽象度が揃っているか (低レベル操作と高レベル判断の混在は分離)
 - **規約準拠**: Go は `go-style` / `go-test`、層構造は `ddd-clean-architecture` の各 reference skill の基準に照らす (詳細はそちらが SoT)
 - **コメント**: 「何をするか」の自明コメント / PR 向け説明コメントは削除対象。書くべきは「code に書けない制約」のみ
+- **定数**: 式中の magic number / 2 回以上出現する同一 literal が named const に抽出されているか。関連する定数が散在せず const block にまとまっているか (`go-style` §2)
+- **同一 PR 内の適用一貫性**: 本 PR で導入した命名 / const / helper が PR 内の全該当箇所に適用されているか — 導入した名前・値で diff を再 grep し、「片方だけ named const」型の取りこぼしを検出

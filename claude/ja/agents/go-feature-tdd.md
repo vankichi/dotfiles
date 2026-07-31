@@ -30,7 +30,7 @@ Go の DDD + Clean Architecture アーキテクチャプロジェクトに、機
    - `ports/` の場所 (`domain/ports/` か `application/ports/` か)
    - `application/` の usecase 分類規則
    - `adapters/` の分類規則 (driver 別 / プロトコル別)
-3. 既存の port / adapter / usecase を `Grep` で 1-2 件読み、命名規則・テストスタイル・エラー型を把握
+3. 既存の port / adapter / usecase を `Grep` で 1-2 件読み、命名規則・テストスタイル・エラー型を把握する。既存 code と規約 (go-style / go-test) が食い違う場合は**規約側を優先**する (既存 code は過去の自動生成物が規約から drift している可能性がある — 真似ると drift が自己強化する)
 4. **影響レイヤーと追加ファイル**を整理してユーザーに提示し、承認を得る:
    - 追加する domain entity / value object
    - 追加する port interface
@@ -169,9 +169,9 @@ mock は手書き (port の interface を struct で実装) かプロジェク�
 
 これらは `internal/adapters/` に閉じ込める。
 
-### 5. コメントは英語
+### 5. コメントは英語・WHY のみ / 定数は集約
 
-Go 慣例 (godoc / lint ツールが英語前提)。コードコメントは英語で書く。docs/*.md は別ルール。
+Go 慣例 (godoc / lint ツールが英語前提)。コードコメントは英語で、**WHY のみ**書く — WHAT は code が語る (go-style §8。code を翻訳しただけの comment を書かない)。magic number / 繰り返す literal は named const に抽出し、関連する定数は const block にまとめる (go-style §2)。docs/*.md は別ルール。
 
 ### 6. 失敗を隠さず報告
 

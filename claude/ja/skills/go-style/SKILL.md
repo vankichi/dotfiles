@@ -40,8 +40,10 @@ Go の慣用句・お作法を集めた reference skill。実装 / review / refa
 - error 型・変数は `Err` / `err` 接頭辞 (`var ErrNotFound = ...` / `func ... (err error)`)
 - enum 値は型名接頭辞 (`type Model string` + `ModelTextEmbedding3Large Model = "..."`)
 - test 名は `TestX_When_..._Should_...` または `TestX_RejectsEmpty` 等の意図ベース (詳細は `go-test` skill)
+- **定数は集約する**: magic number / 繰り返し登場する literal (文字列 key / 閾値 / timeout / URL path 等) は named const に抽出する (自明な zero value `0` / `1` / `""` は除く)。関連する定数は 1 つの const block にまとめて宣言し、file / package 内に散在させない。値集合は型付き const block (上記 enum 規則) に揃える
 
 検出シグナル:
+- 式中の裸の数値 literal (timeout / limit / サイズ等) / 同一 string literal の 2 回以上の出現 / 同種の定数が複数の const 宣言に散在
 - `Url` / `Id` / `Http` / `Ai` / `Io` / `Ui` のような mixed case acronym
 - `openAIKey` のような商標 acronym と他文字の case mix (商標を unexported 先頭で使う場合は `openaiKey` 等に lowercase 化)
 - receiver が `this *X` / `self *X`
@@ -130,6 +132,7 @@ Go の慣用句・お作法を集めた reference skill。実装 / review / refa
 - exported symbol には godoc 必須 (`// FuncName ...` で symbol 名から始まる文)
 - package コメントは `// Package <name> ...` で各 package 1 ファイルに置く (大抵 doc.go or 主要 file)
 - コメントは **WHY を書く**。WHAT は code が語る (well-named identifier がある前提)
+- unexported symbol への doc comment は必須ではない — 書くなら WHY のみ 1-3 行。直下 code の逐語訳 block を習慣で付けない (隣接 code がそうなっていても真似ない — 過去の生成物が規約から drift している可能性)
 - 「将来 X したい」は `TODO:` で書く。Phase / ticket ID をコメントに残さない
 - `Deprecated:` は対象 symbol の godoc に明示 (`// Deprecated: use NewX instead.`)
 - multi-line block comment より行 comment (`//`) を好む
@@ -137,6 +140,7 @@ Go の慣用句・お作法を集めた reference skill。実装 / review / refa
 検出シグナル:
 - exported func / type / var で godoc なし
 - コメントが WHAT (code を翻訳しているだけ) しか書いていない
+- unexported method に機械的に付いた WHAT 説明の doc block (4 行以上の block は特に疑う)
 - `Phase 0` / リリースサイクル名付き ticket のような時系列 / ticket scope 言及
 
 ## 9. Import order

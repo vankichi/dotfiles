@@ -32,7 +32,7 @@ Since the layout may differ per project, **first confirm the actual paths with `
    - Where `ports/` lives (`domain/ports/` or `application/ports/`)
    - The usecase classification convention under `application/`
    - The classification convention under `adapters/` (by driver / by protocol)
-3. Read 1-2 existing port / adapter / usecase examples with `Grep` to grasp naming conventions, test style, and error types
+3. Read 1-2 existing port / adapter / usecase examples with `Grep` to grasp naming conventions, test style, and error types. When existing code and the conventions (go-style / go-test) disagree, **the conventions win** — existing code may be a past generated artifact that has drifted from the conventions, and imitating it makes the drift self-reinforcing
 4. Organize the **affected layers and files to add**, present them to the user, and get approval:
    - domain entity / value object to add
    - port interface to add
@@ -171,9 +171,9 @@ Under `internal/domain/`:
 
 These are confined to `internal/adapters/`.
 
-### 5. Comments Are in English
+### 5. Comments Are in English, WHY Only / Constants Are Consolidated
 
-Go convention (godoc / lint tools assume English). Write code comments in English. `docs/*.md` follows a separate rule.
+Go convention (godoc / lint tools assume English). Write code comments in English and write **WHY only** — the WHAT is told by the code (go-style §8; don't write a comment that merely translates the code). Extract magic numbers / repeated literals into named consts, and gather related constants into a single const block (go-style §2). `docs/*.md` follows a separate rule.
 
 ### 6. Report Failures Without Hiding Them
 

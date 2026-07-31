@@ -42,8 +42,10 @@ Detection signals:
 - Error types/variables get an `Err` / `err` prefix (`var ErrNotFound = ...` / `func ... (err error)`)
 - Enum values get the type name as a prefix (`type Model string` + `ModelTextEmbedding3Large Model = "..."`)
 - Test names should be intent-based, like `TestX_When_..._Should_...` or `TestX_RejectsEmpty` (see the `go-test` skill for details)
+- **Consolidate constants**: extract magic numbers / repeatedly appearing literals (string keys / thresholds / timeouts / URL paths, etc.) into named consts (excluding self-evident zero values `0` / `1` / `""`). Declare related constants together in a single const block instead of scattering them across the file / package. Align value sets with typed const blocks (the enum rule above)
 
 Detection signals:
+- A bare numeric literal in an expression (timeout / limit / size, etc.) / the same string literal appearing 2 or more times / constants of the same kind scattered across multiple const declarations
 - Mixed-case acronyms such as `Url` / `Id` / `Http` / `Ai` / `Io` / `Ui`
 - Case mixing between a brand-name acronym and other characters, like `openAIKey` (when using a brand name at the start of an unexported identifier, lowercase it to something like `openaiKey`)
 - Receiver is `this *X` / `self *X`
@@ -132,6 +134,7 @@ Detection signals:
 - Exported symbols require godoc (a sentence starting with the symbol name, `// FuncName ...`).
 - Package comments go in one file per package as `// Package <name> ...` (usually `doc.go` or the main file).
 - Comments should **explain WHY**. The WHAT is told by the code itself (assuming well-named identifiers).
+- A doc comment on an unexported symbol is not required — if you write one, keep it to 1-3 lines of WHY only. Don't habitually attach a block that transliterates the code right below it (don't imitate adjacent code that does this — a past generated artifact may have drifted from the conventions).
 - "Want to do X in the future" goes in a `TODO:`. Don't leave phase names or ticket IDs in comments.
 - Mark `Deprecated:` explicitly in the target symbol's godoc (`// Deprecated: use NewX instead.`)
 - Prefer line comments (`//`) over multi-line block comments.
@@ -139,6 +142,7 @@ Detection signals:
 Detection signals:
 - An exported func / type / var with no godoc
 - A comment that only states the WHAT (merely translating the code)
+- A doc block of WHAT explanations mechanically attached to an unexported method (be especially suspicious of blocks of 4 or more lines)
 - A comment referencing timeline/ticket scope, such as `Phase 0` or a release-cycle-named ticket
 
 ## 9. Import order
