@@ -30,7 +30,7 @@ The dev loop's driver. 1 tick = 1 poll + at most 1 cycle. **`references/loop-dri
 
 ### Step 3: cycle (run `dev-cycle` serially)
 
-- **Spawn `dev-cycle` with the normal Agent tool — do not use teams** (under a flat roster, nested spawn is not possible, so dev-cycle cannot spawn `reviewer`)
+- **Spawn `dev-cycle` with the normal Agent tool — do not use teams** (under a flat roster, nested spawn is not possible, so the two-level nesting `dev-cycle` → `reviewer` → `independent-reviewer` cannot form)
 - **Synchronous startup (`run_in_background: false`)** — wait until completion. At most 1 cycle per tick; do not start in parallel
 - Pass the full work item text in the prompt (dev-cycle judges it as loop-mode)
 - **Check your own cwd after the cycle completes**: when the dev-cycle subagent calls `EnterWorktree`, the caller's (this skill's) shell cwd is also moved under the worktree and pinned there (`cd`-ing back gets reverted with `Shell cwd was reset to ...`). If cwd is under the worktree, return via `ExitWorktree(action: keep)` — **the worktree stays, so this is a cwd return, not cleanup**. This keeps subsequent polls / notifications from resolving paths (the per-project plans dir, etc.) on the worktree side

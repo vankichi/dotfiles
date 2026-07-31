@@ -90,7 +90,7 @@ Go 以外の言語 / framework は実装工程を自前の Edit / Bash で扱う
 
 反復前に、本サイクルで自分が書いた docs / ADR / コメントの散文に `~/.claude/rules/verify-before-assert.md` の検証を 1 周かける (実装が green でも未検証の散文を review に出さない)。
 
-1. `reviewer` subagent を **fresh spawn** する (毎回新規)。渡すもの = diff 範囲 / spec 全文 / impact 分類 / repo 規約・設計 docs の path 一覧 / iteration 番号 + 前ラウンドの修正指示。**state file は渡さない**
+1. `reviewer` subagent を **fresh spawn** する (毎回新規)。渡すもの = diff 範囲 / spec 全文 / impact 分類 / repo 規約・設計 docs の path 一覧 / iteration 番号 + 前ラウンドの修正指示。**state file は渡さない**。`reviewer` は内部で `independent-reviewer` を同期起動して統合するため、nesting は 1 段深い (`dev-cycle` → `reviewer` → `independent-reviewer`)
 2. **致命的 finding が残る限り「修正 → 再 spawn」を繰り返す。3 周で解けなければ escalation 手順で停止する**。修正は軽微なら自前の Edit、実質的な変更は実装 subagent (opus) に委譲し、build / test / lint の green を確認してから再 spawn する
 3. **致命的 0 になった時点で review 完了**とし、残る「望ましい」finding と nit は draft PR の注記に送って security review へ進む。注記送りにしたものを後から直さない (reviewer 未検証の変更を最終 diff に残さないため)。直すなら再 spawn して verdict を取り直す
 4. **新規依存の検出は verdict によらず無条件 escalation** (CLAUDE.md の壁)
