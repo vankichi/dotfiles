@@ -30,10 +30,11 @@
 - 確定済みの判断は再質問しない。新規情報があった時のみ再考の必要性を 1 行で flag
 - 機械的修正 / 既知 best practice は推奨を出して進める。設計判断・security / performance trade-off は user 判断を仰ぐ (新規発見の複数案は比較形式で提示)
 - **plan-first**: 多ファイル refactor / 構造変更 / logic semantics 改訂 / 権限・secret・auth 変更 / performance 改修は、実装前に会話で合意 → `ExitPlanMode`。repo 内に plan markdown は書かない (ドキュメント化は user の明示指示時のみ)
-- **plan / session state file の保存先**: 現在の project の *per-project plans dir* に置く = `~/.claude/projects/<encoded>/plans/`。`<encoded>` = cwd 絶対パスの `/` と `.` を `-` に置換したもの (= session に注入される memory dir と同じ階層の `plans/`)。global な `~/.claude/plans/` には新規に書かない。各 skill / agent はこの規約を参照して plan / state file の path を決める
+- **plan / session state file の保存先**: 現在の project の *per-project plans dir* に置く = `~/.claude/projects/<encoded>/plans/`。`<encoded>` = cwd 絶対パスの `/` と `.` を `-` に置換したもの (= session に注入される memory dir と同じ階層の `plans/`)。global な `~/.claude/plans/` には新規に書かない。各 skill / agent はこの規約を参照して plan / state file の path を決める。例外: plan mode で harness が path を指定する plan file はその指定先に書く (承認 UI が当該 file を読むため。本規約は skill / agent が自ら path を決める file に適用)
 
 ## 変更の作法
 
+- 編集開始前に対象 repo の current branch を確認する。作業内容と無関係な branch に居る場合は編集前に報告し、default branch から切るかそこで続けるかの判断を仰ぐ (多 repo 横断の依頼では repo ごとに確認)
 - 指示外の変更 (対象外 file / 設定 / dependency / 計算量・I/O パターン) が発生したら、summary で **独立項目として列挙** し commit 前に user 承認を取る。「副次的に〜も修正」と埋め込まない
 - TODO / FIXME を残したまま完了扱いにしない。security 関連の TODO は commit に残さない
 
