@@ -57,19 +57,26 @@
 ## loop-mode (自律実行の例外規定)
 
 - loop-mode = dev-cycle agent が spec (`rules/spec-contract.md` を満たす work item) を起点に自律実行する mode。人間の承認手続きを各工程の機械的 policy に置換する
-- 例外として許可: `commit-push-branch` (loop-mode 拡張) 経由の feature branch push + **draft PR 作成**
-- improve-harness (knowledge loop) も同例外を使える: harness 改善の draft PR 作成まで (対象 repo は dotfiles のみ)
-- review-loop も同例外を使える: watch 対象 PR への **review comment 投稿**まで (approve / request-changes / merge は引き続き人間のみ)
-- pr-follow-loop も同例外を使える: 自 author PR の bot 指摘 **triage の提示** (idempotency marker comment を含む) + **merge 後の自 worktree / merge 済 local branch の自動掃除**まで (bot 指摘の修正適用・decline 返信は人間承認後の対話で行い、approve / request-changes / merge は引き続き人間のみ)
-- 引き続き禁止: merge / draft の本 PR 化 / main への直 push / 新規 dependency 追加 / 破壊的操作 / 外部送信の有効化 — 検出したら escalation (ticket コメント + 通知 + WIP branch push) して停止
+- **例外として許可される外向き操作** (いずれも各 skill が SoT):
+
+  | skill / agent | 許可範囲 |
+  |---|---|
+  | `commit-push-branch` (loop-mode 拡張) | feature branch への push + **draft PR 作成** |
+  | `improve-harness` | harness 改善の draft PR 作成まで (対象 repo は dotfiles のみ) |
+  | `review-loop` | watch 対象 PR への **review comment 投稿**まで |
+  | `pr-follow-loop` | 自 author PR の bot 指摘 **triage の提示** + **merge 後の自 worktree / merge 済 local branch の掃除**まで |
+
+- **引き続き禁止** (全 loop 共通): merge / draft の本 PR 化 / main への直 push / 新規 dependency 追加 / 破壊的操作 / 外部送信の有効化。approve / request-changes / merge は人間のみ。検出したら escalation (ticket コメント + 通知 + WIP branch push) して停止する
 - 安全装置 (hooks / permission deny / least privilege) は loop-mode でも一切緩めない
-- superpowers 棲み分け: 自律 pipeline (dev loop) では superpowers の process skill を使わない (背骨は自前 skill)。対話 session での brainstorming / TDD 参照は可
+- superpowers 棲み分け: 自律 pipeline では superpowers の process skill を使わない (背骨は自前 skill)。対話 session での brainstorming / TDD 参照は可
 
 ## agent / skill 設計の原則
 
 - project 固有用語 (repo 名 / service 名 / ticket prefix / 環境 URL / メンバー名) を agent / skill に hardcode しない。MEMORY.md の memory から取得する
 - 新規 agent / skill / hook に `Bash(*)` 等の広範 permission を default で与えない。外部送信を含む skill は user 承認後に追加。hook で自動実行される command は user に明示してから commit
-- **skill 粒度**: 1 skill = 1 責務。SKILL.md は薄い coordinator にし、観点 / checklist は `references/` に分割。発火条件は機械的 (grep / glob) に定義し、default-on + 理由付き skip + 全観点の実施状況出力を義務付ける
+- **skill 粒度**: 1 skill = 1 責務。**観点 / checklist は SKILL.md 内に収める** — `references/` への分割は「参照が任意」かつ「本文に置くと読めなくなる規模」の時だけにする (分割は読み手に file 間の往復を強いる)。発火条件は機械的 (grep / glob) に定義し、default-on + 理由付き skip + 全観点の実施状況出力を義務付ける
+- **model が既に持つ知識を書かない**: 一般的な言語作法・広く知られた best practice の再掲は context を食うだけ。skill / agent に書くのは **house の選択・事故になる罠・grep で拾える検出シグナル**に限る
+- **同じ規定を 2 箇所に書かない**: SoT を 1 つ決めて他所からは参照する。再掲は必ず乖離する
 - **model が自発的にやることを指示に書かない**: 自己検証 / 再チェック / 自己修正の重複指示は cost だけ増やす。検証は実コマンド (build / test / lint / 再 grep) の実行として書く
 - review 系の prompt に「重大度の高いものだけ報告」「保守的に」を書かない (報告が減る)。全件挙げさせ、取捨は後段の severity 判定で行う
 - 出力長の抑制は「section 構成 + 行数上限」で機械的に与える (「簡潔に」単独では効かない)
