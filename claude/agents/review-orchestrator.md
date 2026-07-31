@@ -75,6 +75,7 @@ gate: fan-out | inline (basis: impact-<A/B/C> / <n> files / <n> lines)
 - **Attach a constraint to any change that involves a value**: when instructing the introduction of a new constant / threshold / timeout / retry cap, always write either the value itself or the inequality / order of magnitude the value must satisfy (e.g. "sufficiently smaller than the heartbeat interval, and large enough for the SDK's internal retries to complete = on the order of 30s"). Without a constraint, the implementer reuses whatever existing constant is at hand and the original defect comes back in a different form
 - **State explicitly whether reusing an existing constant is acceptable**: when reuse is a trap, add a one-line reason (e.g. "the same value as the interval leaves no margin")
 - Cover not just "what to add" but "what range the value must be in" — don't settle for just file:line plus a description of the problem
+- **Attach the measurement command to any quantitative claim**: for claims about line counts / counts / ratios / provenance inside findings or the verdict, attach the measurement command you ran (`~/.claude/rules/verify-before-assert.md` is the SoT for the claim types and the procedure)
 
 ## Verdict decision rules
 
