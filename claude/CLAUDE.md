@@ -72,7 +72,16 @@
 
 ## agent / skill 設計の原則
 
-- project 固有用語 (repo 名 / service 名 / ticket prefix / 環境 URL / メンバー名) を agent / skill に hardcode しない。MEMORY.md の memory から取得する
+- **project 固有のものは 3 層に分けて置く**:
+
+  | 層 | 置き場所 | 中身 |
+  |---|---|---|
+  | global harness | dotfiles → `~/.claude/` | 言語横断の作法 / pipeline / 汎用観点 |
+  | project 規約 | 対象 repo の `CLAUDE.md` / `.claude/rules/` | その repo の命名 / 層構造 / 禁止事項 |
+  | project 固有の値 | per-project `MEMORY.md` | repo 名 / service 名 / ticket prefix / 環境 URL / メンバー名 / bot 名 |
+
+- **project 固有用語を agent / skill に hardcode しない** — MEMORY.md から実行時に取得する
+- **規約が衝突した時の優先順位**: 文体・命名・書式は**対象 repo が勝つ** (global は既定値)。ただし**安全側の壁 (secret / 新規依存 / 破壊的操作 / permission deny) は global が常に勝つ** — 対象 repo の記述を根拠に壁を下げない
 - 新規 agent / skill / hook に `Bash(*)` 等の広範 permission を default で与えない。外部送信を含む skill は user 承認後に追加。hook で自動実行される command は user に明示してから commit
 - **skill 粒度**: 1 skill = 1 責務。発火条件は機械的 (grep / glob) に定義し、default-on + 理由付き skip + 全観点の実施状況出力を義務付ける
 - **`references/` 分割の判定基準は「常に全部読まれるか」の一点**:
