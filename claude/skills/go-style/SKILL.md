@@ -7,32 +7,36 @@ description: Reference skill for Go idioms, naming, error handling, context, log
 
 # go-style
 
-The house Go conventions, plus detection signals for catching violations mechanically. The basis for judgment during implementation / review / refactor candidate generation.
+The house Go conventions. Each section is two blocks: **Do (the house's choice)** and **Don't (prohibitions, which double as detection signals)**.
 
 **General Go practice is not restated** (errors are values / ctx is the first argument / the sender closes the channel / wrap with `fmt.Errorf("%w")`). This skill carries only the house's choices and the signals that surface a violation via grep.
 
 ## 1. Package layout
 
+**Do**
 - `cmd/<bin>/main.go` is the binary entry point. One binary = one subdirectory
 - Implementation goes under `internal/` by default
-- `pkg/` is **only for what is meant to be imported externally**. No expected reuse → `internal/`
+- `pkg/` is only for what is meant to be imported externally
 - `apis/` separates the proto / OpenAPI / SDK public surface
 - With DDD, use `internal/{domain,application,interfaces,adapters}/` (`ddd-clean-architecture` is the SoT for layer boundaries)
-- One package = one responsibility. Catch-all packages named `util` / `common` / `helper` are **forbidden**
 
-**Detect**
+**Don't**
+- Catch-all packages named `util` / `common` / `helper` (one package = one responsibility)
 - Multiple responsibilities living in `internal/util/`
 - Business logic inside `cmd/`
-- `pkg/` in use with no actual external importer
+- Using `pkg/` with no actual external importer
 
 ## 2. Naming
 
-- exported vs unexported is decided solely by **whether it needs to be public now**. Capitalizing for "we might publish it later" is **forbidden**
-- Receiver names are **the same short name across every method of a type** (`s *Server`). `this` / `self` are **forbidden**
+**Do**
+- Decide exported vs unexported solely by **whether it needs to be public now**
+- Use the same short receiver name across every method of a type (`s *Server`)
 - Single-method interfaces take the `-er` suffix; multi-method ones are nouns
-- Enum values are prefixed with the type name (`type Model string` + `ModelTextEmbedding3Large Model = "..."`)
+- Prefix enum values with the type name (`type Model string` + `ModelTextEmbedding3Large Model = "..."`)
+- Extract magic numbers and repeated literals (string keys, thresholds, timeouts, URL paths) into named consts (trivial `0` / `1` / `""` excluded)
+- Group related constants into one const block
 
-### Acronyms stay fully capitalized
+**Acronyms stay fully capitalized**
 
 | Case | Correct | Wrong |
 |---|---|---|
@@ -41,39 +45,36 @@ The house Go conventions, plus detection signals for catching violations mechani
 | Trademarks / generalized spellings | `OpenAI` `OpenAPI` `gRPC` | — |
 | Trademark leading an unexported name | `openaiKey` `openapiSpec` | `openAIKey` |
 
-Note the last row — **when a trademark leads an unexported identifier, lowercase the trademark portion too**. A case mix inside the acronym is not acceptable.
+Note the last row — when a trademark leads an unexported identifier, lowercase the trademark portion too.
 
-### Consolidating constants
-
-- Extract magic numbers and repeated literals (string keys, thresholds, timeouts, URL paths) into named consts. Trivial `0` / `1` / `""` are out of scope
-- Group related constants into one const block. Scattering them across the file / package is **forbidden**
-
-**Detect**
-- Bare numeric literals in expressions
-- The same string literal appearing 2+ times
-- Constants of the same kind scattered across multiple const declarations
-- Mixed-case acronyms like `Url` `Id` `Http` `Ai` `Io` `Ui`, or case mixes like `openAIKey`
-- A receiver named `this *X`, or receiver names for one type varying by file
+**Don't**
+- A receiver named `this *X` / `self *X`
+- Receiver names for one type varying by file
 - Symbols exported only "in case we publish it later"
+- Mixed-case acronyms like `Url` `Id` `Http` `Ai` `Io` `Ui`, or case mixes like `openAIKey`
+- Bare numeric literals in expressions / the same string literal appearing 2+ times
+- Constants of the same kind scattered across multiple const declarations
 
 ## 3. Error handling
 
-- Sentinel errors are package-level `var Err... = errors.New("pkg: human message")`. The `package:` prefix keeps the wrap chain readable
-- **Separate the sanitized outward-facing message from the internal wrap chain at API boundaries.** Leaking upstream details to clients is **forbidden** — emit internal details via the logger
-- panic is only for truly exceptional states (invariant violations at startup). Use in normal flow is **forbidden**
+**Do**
+- Define sentinel errors as package-level `var Err... = errors.New("pkg: human message")` (the `package:` prefix keeps the wrap chain readable)
+- Separate the sanitized outward-facing message from the internal wrap chain at API boundaries; emit internal details via the logger
+- Reserve panic for truly exceptional states (invariant violations at startup)
 
-**Detect**
+**Don't**
 - `errors.New(fmt.Sprintf(...))`
 - String comparison of errors (`err.Error() == "..."`)
-- Upstream SDK errors leaking into a handler's or gRPC server's error response
+- Leaking upstream SDK errors into a handler's or gRPC server's error response
 - panic or `log.Fatal` outside `cmd/`
 
 ## 4. Context
 
-- `ctx.Value` is only for cross-cutting metadata (request_id / trace span / auth principal). Anything passable as an argument goes as an argument
-- Avoid ctx key collisions with a **package-private struct type** (`type requestIDKey struct{}`)
+**Do**
+- Use `ctx.Value` only for cross-cutting metadata (request_id / trace span / auth principal)
+- Avoid ctx key collisions with a package-private struct type (`type requestIDKey struct{}`)
 
-**Detect**
+**Don't**
 - `context.Background()` inside a library
 - `ctx.Value("string-key")` — a collision-prone string key
 - `ctx context.Context` as a struct field
@@ -81,24 +82,25 @@ Note the last row — **when a trademark leads an unexported identifier, lowerca
 
 ## 5. Logging
 
-- Adopt the standard `log/slog`. Structured JSON (`slog.NewJSONHandler`) recommended
+**Do**
+- Adopt the standard `log/slog`; structured JSON (`slog.NewJSONHandler`) recommended
 - Levels: `Error` (action required) / `Warn` (abnormal but continuing) / `Info` (normal operation) / `Debug` (development only)
-- Pass ctx via `LogAttrs(ctx, ...)` so interceptors / middleware can attach span and request_id
-- **Log messages are fixed strings; variable values go in attrs** — for cardinality control and greppability
-- **Logging PII or credentials is forbidden**
+- Pass ctx via `LogAttrs(ctx, ...)` so interceptors can attach span and request_id
+- Keep log messages as fixed strings with variable values in attrs (cardinality control + greppability)
 
-**Detect**
+**Don't**
+- **Logging PII or credentials**
 - Operational logs emitted via `fmt.Println` / `log.Print*`
 - Interpolated messages like `slog.Info(fmt.Sprintf(...))`
-- API keys, passwords, or personal identifiers in a log message
 
 ## 6. Concurrency
 
-- **Make explicit what a mutex protects** — a comment right before the struct field, or the protected fields listed right after `mu sync.Mutex`
+**Do**
+- Make explicit what a mutex protects (a comment right before the struct field, or the protected fields listed right after `mu sync.Mutex`)
 - Restrict channel direction in function signatures (`<-chan T` / `chan<- T`)
-- Prefer `errgroup.Group` for concurrent IO (context-linked cancellation + capture of the first error)
+- Use `errgroup.Group` for concurrent IO (context-linked cancellation + capture of the first error)
 
-**Detect**
+**Don't**
 - A goroutine observing neither `ctx.Done()` nor a channel receive — leak candidate
 - A `mu sync.Mutex` with no stated protection target
 - Bidirectional `chan T` in a signature
@@ -106,50 +108,57 @@ Note the last row — **when a trademark leads an unexported identifier, lowerca
 
 ## 7. Lint / format
 
+**Do**
 - `golangci-lint` **v2** (configured via `.golangci.yaml`). Required in CI
-- **Set `goimports`'s local prefix to each repo's module path**
+- Set `goimports`'s local prefix to each repo's module path
 - Recommended linters: `errcheck` / `govet` / `staticcheck` / `ineffassign` / `unused` / `gosimple` / `gofmt` / `goimports`
-- `// nolint:` **requires a reason comment** (`// nolint:errcheck // intentional fire-and-forget`)
 
-**Detect**
-- `// nolint:` with no reason
+**Don't**
+- `// nolint:` without a reason comment (correct: `// nolint:errcheck // intentional fire-and-forget`)
 - Import order mixing stdlib, third-party, and local
-- An error return discarded into `_`
+- Discarding an error return into `_`
 
 ## 8. godoc / Comments
 
-- Exported symbols require godoc. The package comment goes in one file per package as `// Package <name> ...`
-- **Comments say WHY; the code says WHAT**
-- Doc comments on unexported symbols are optional. If written, WHY only, 1-3 lines
-- **Verbatim restatements of the code below are forbidden.** Don't copy the neighboring code even if it does this — earlier output may have drifted from the conventions
-- "We want to do X later" goes in a `TODO:`. **Leaving Phase / ticket IDs in comments is forbidden**
-- `Deprecated:` is stated explicitly in the target symbol's godoc
+**Do**
+- Give every exported symbol godoc. The package comment goes in one file per package as `// Package <name> ...`
+- **Write WHY in comments; the code says WHAT**
+- Doc comments on unexported symbols are optional (if written, WHY only, 1-3 lines)
+- Put "we want to do X later" in a `TODO:`
+- State `Deprecated:` explicitly in the target symbol's godoc
 
-**Detect**
+**Don't**
+- **Leaving Phase / ticket IDs in comments** (timeline or ticket-scope references like `Phase 0`)
+- Verbatim restatements of the code below — **don't copy the neighboring code even if it does this** (earlier output may have drifted from the conventions)
 - Exported symbols without godoc
 - Comments that only restate WHAT
-- Mechanically attached WHAT-explaining doc blocks on unexported methods (4+ lines especially)
-- Timeline or ticket-scope references like `Phase 0`
+- Mechanically attached WHAT-explaining blocks on unexported methods (4+ lines especially)
 
 ## 9. Import order
 
-Separate the three groups — stdlib / third-party / local — with blank lines (automated by `goimports`'s `-local` setting). Alphabetical within each group.
+**Do**
+- Separate the three groups — stdlib / third-party / local — with blank lines (automated by `goimports`'s `-local` setting)
+- Sort alphabetically within each group
+- Use aliases only for collision avoidance (`pgsql "github.com/lib/pq"` is fine)
 
-**Aliases only when necessary** — collision avoidance only. `pgsql "github.com/lib/pq"` is acceptable; `f "fmt"` is not.
-
-**Detect**: no group separation / unnecessary aliases (`io2 "io"`)
+**Don't**
+- No group separation
+- Unnecessary aliases (`f "fmt"` / `io2 "io"`)
 
 ## 10. Type safety / nil safety
 
-- `interface{}` / `any` only when the type is genuinely undetermined (passthrough is fine)
-- Guard against nil pointers by **rejecting nil in the constructor**
-- **Mixing pointer and value receivers on one type is forbidden.** If there is a mutating method, all methods take a pointer receiver
+**Do**
+- Use `interface{}` / `any` only when the type is genuinely undetermined (passthrough is fine)
+- Guard against nil pointers by rejecting nil in the constructor
 
-**Detect**: `any` in business logic / mixed receivers on the same type / map assignment missing a nil check
+**Don't**
+- `any` in business logic
+- Mixing pointer and value receivers on one type (if there is a mutating method, all methods take a pointer receiver)
+- Map assignment missing a nil check
 
 ## Identifying false positives
 
-Even when a detection signal fires, the following are **not violations**.
+Even when a Don't matches, the following are not violations.
 
 | Category | Judgment |
 |---|---|
@@ -164,6 +173,5 @@ Excluding on suspicion alone is **forbidden**. Flag it as a "false positive cand
 
 When called from `code-refactor-advisor`, return a per-section list of violations / improvement opportunities, each carrying:
 
-- **The detection signal** — which pattern caught it
-- **The section number** it's based on
+- **Which Don't it matches** (with the section number)
 - **A remediation stance** — align with the convention / keep as an exception / discuss separately
