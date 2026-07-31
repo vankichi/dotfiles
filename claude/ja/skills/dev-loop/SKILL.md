@@ -5,7 +5,7 @@ description: /loop で回す dev loop の driver skill。1 tick = work-intake po
 
 # dev-loop
 
-Dev loop の driver。**loop の生死は user の /loop 操作が管理し、本 skill は 1 tick の中身を規定する**。1 tick = 1 poll + 最大 1 cycle。
+Dev loop の driver。1 tick = 1 poll + 最大 1 cycle。**時刻取得・通知 3 区分・wakeup 基準値・3 連続 breaker・tick 報告の共通規定は `references/loop-driver-common.md` が SoT** — 本文で再掲しない。
 
 ## 適用条件
 
@@ -16,7 +16,6 @@ Dev loop の driver。**loop の生死は user の /loop 操作が管理し、�
 
 ### Step 1: 前提確認
 
-- `date '+%Y-%m-%d %H:%M %Z'` を実行して現在時刻 (現地) を取得する — tick 報告の時刻欄用。時刻を推測で書かない
 - git repo 内であること
 - **直列 guard**: per-project plans dir の state file 群を確認し、active な cycle (Current state が全工程完了 / escalation 停止を示していない state file) が存在しないこと。存在するなら本 tick は cycle を起動せず Step 5 へ (300s wakeup — 実行中 cycle の完了待ち)
 - Notion 到達性は work-intake に委ねる (不達なら Step 2 が異常終了 → 「Notion 不達」を通知して 1800s wakeup)
@@ -44,19 +43,11 @@ dev-cycle の報告から receipts を取り、**実在を機械確認してか�
 | escalation | ticket コメント / WIP branch (`git ls-remote`) を確認 | 「<ticket-id>: escalation (<停止理由 1 行>)」 |
 | receipts が実在しない | — | 「<ticket-id>: 報告と実態の乖離を検出」+ escalation 扱いでカウント |
 
-- 通知結果は **3 区分**で扱い、tick 報告に必ず記す: **送信** (発行された) / **skip (terminal active)** = user が terminal で active なため tool が意図的に抑止 — **正常** (通知は無人時のみ配達される仕様) / **未達** (tool 不可・エラー — 異常。沈黙しない)
-
 ### Step 5: self-pacing (`ScheduleWakeup`)
 
-| 直前の結果 | 次 wakeup | 理由 |
-|---|---|---|
-| cycle 完走 | 60-120s | drain — 続きの ready をすぐ消化 |
-| 空 queue (該当なし) | 1200-1800s | idle (20-30 分) |
-| escalation | 1200-1800s | 通常継続 (対象 ticket は InProgress で再 pick されない) |
-| 直列 guard hit | 300s | 実行中 cycle の完了待ち |
-| Notion 不達 | 1800s | 復旧待ち |
-
-- **連続 escalation breaker**: escalation (乖離検出を含む) が **3 連続**したら wakeup を止め (`ScheduleWakeup` stop)、「loop 停止 (escalation 3 連続)」を通知して終了する。連続カウントは cycle 完走でリセット
+- 基準値は loop-driver-common (完走 → drain / 空 queue → idle / 直列 guard hit → 300s)
+- 固有: escalation → 1200-1800s (対象 ticket は InProgress で再 pick されない) / Notion 不達 → 1800s (復旧待ち)
+- breaker の対象 = escalation (乖離検出を含む)。リセットは cycle 完走
 
 ### Step 6: tick の報告 (強制出力)
 
@@ -73,7 +64,5 @@ dev-cycle の報告から receipts を取り、**実在を機械確認してか�
 ## 鉄則
 
 1. **並列 cycle を起動しない** — 直列 guard を skip しない
-2. **通知は receipts の実在検証後** — dev-cycle の自己申告をそのまま転送しない
-3. **escalation で loop を止めない** — 例外は 3 連続 breaker のみ
-4. **loop の恒久停止は user の /loop 操作** — breaker 発動時も「停止した」通知を必ず送る
-5. **tick 報告を省略しない** — 全項目を毎 tick 出力する
+2. **escalation で loop を止めない** — 例外は 3 連続 breaker のみ
+3. **共通規定 (receipts 検証 / breaker / tick 報告 / 停止権限) は loop-driver-common に従う**

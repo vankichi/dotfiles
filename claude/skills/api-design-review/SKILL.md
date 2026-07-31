@@ -1,7 +1,7 @@
 ---
 name: api-design-review
 description: A read-only review skill that surfaces overlooked considerations in API / upstream design (ADR / Design Doc / API contracts / domain models / ACL) across 6 axes. Invoke it at the logical design stage, before it's committed to a wire representation — before ExitPlanMode / when drafting an ADR / when a Design Doc draft is complete. Used for things like 「設計 review して」「考慮漏れチェック」.
-model: claude-fable-5
+model: fable
 ---
 
 > **Source of truth:** `claude/ja/skills/api-design-review/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.

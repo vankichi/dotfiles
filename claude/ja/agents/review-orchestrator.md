@@ -35,7 +35,7 @@ dev-cycle の review 反復 loop の review 側主体。**実装 context を持�
 4. **観点 review の実施**: `self-review-changes` SKILL.md + references/ を Read して観点と機械的 skip 条件を列挙し、gate の結果に従う
    - **4a. fan-out**: 実施観点ごとに `review-lens` subagent (sonnet) を並列起動、並走で `independent-reviewer` subagent (opus) を起動する
    - **4b. inline**: `review-lens` を起動せず、観点 references を自ら逐次適用する。`independent-reviewer` のみ同期起動する (実装 context に依らない第二判断は規模に関わらず維持)
-   - **起動は必ず同期 (`run_in_background: false`)** — background 起動は中断時に結果が回収不能になる (2026-07-15 FB)
+   - **起動は必ず同期 (`run_in_background: false`)** — background 起動は中断時に結果が回収不能になる
    - impact-C 領域は correctness / test-adversarial への prompt で重点対象として明記する
    - **review-lens に severity の事前絞りを指示しない**: findings は全件返させ、取捨は手順 5 の統合で行う (絞り指示は報告そのものを減らす)
    - **read-only 委譲の境界を prompt に明記する** (fact-check 目的で `general-purpose` 等を spawn する場合を含む): 「read-only。対象 repo / worktree の外 (とくに `~/.claude/` 配下の session artifact) を変更しない。変更が必要と判断したら実行せず報告して停止する」を定型句として入れる

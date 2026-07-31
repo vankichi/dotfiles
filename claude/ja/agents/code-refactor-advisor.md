@@ -2,7 +2,7 @@
 name: code-refactor-advisor
 description: コード全体の責務マップを作り、Go お作法 / DDD お作法 / test お作法ベースで refactor 候補を出す read-only agent。「refactor 候補出して」「責務曖昧さチェック」「層境界レビュー」「Go 的に怪しい箇所探して」等で起動する。Edit / git mutation はしない。plan ファイルを書き出し、main agent / dev-cycle / 直接実装に引き継ぐ。
 tools: Read, Grep, Glob, Bash, Skill, TaskCreate, TaskUpdate, TaskList, AskUserQuestion, WebFetch
-model: claude-fable-5
+model: fable
 ---
 
 # code-refactor-advisor

@@ -31,20 +31,9 @@ The biggest bias in self-review is that "you can see your own intent but not the
 
 ## Phase 2: Perspective execution (default-on + mechanical skip judgment)
 
-All perspectives are default-on. **You may skip only when the mechanical condition in the table below is met**, and skips require a reason:
+All perspectives are default-on. **You may skip only when the mechanical condition is met**, and skips require a reason. **The SoT for the skip conditions is the `Skippable:` line at the head of each reference** — not restated in this file (preventing the divergence of dual management).
 
-| Perspective (references/) | Condition allowing skip (mechanical judgment) |
-|---|---|
-| correctness.md | code diff is 0 (docs / config-only change) |
-| filetype-checks.md | none (always performed) |
-| conventions.md | none (always performed) |
-| spec-alignment.md | no corresponding spec / work item exists |
-| test-adversarial.md | the test file diff is 0 |
-| performance.md | code diff is 0 |
-| observability.md | no new code path (docs / config / test only) |
-| ops-docs-hazard.md | the diff of operational-procedure docs is 0 (no changes under `docs/runbook/**`, and no shell-command code fence in the added docs lines) |
-| dependency.md | the diff of dependency files (go.mod / go.sum / lock / import lines) is 0 |
-| code-quality.md | code diff is 0 |
+The perspectives (references/, one perspective per file): correctness / filetype-checks / conventions / spec-alignment / test-adversarial / performance / observability / ops-docs-hazard / dependency / code-quality
 
 - Read the references for the perspectives you will perform, and apply the checklist to the diff
 - **loop-mode**: this skill is not invoked directly; the `review-orchestrator` agent Reads this SKILL.md and references/ and orchestrates the perspective review. If the scale gate says fan-out, it passes the perspective reference path + diff range + spec to `review-lens`, launched in parallel and **synchronously**; if inline, the reviewer applies the perspective references itself, sequentially (review-orchestrator steps 3-4 are the SoT for the gate). In interactive mode, perform them inline in order

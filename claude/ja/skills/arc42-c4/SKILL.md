@@ -1,54 +1,54 @@
 ---
 name: arc42-c4
-description: Reference for architecture design docs combining arc42 (§1-12) with the C4 model (L1-L4) — which diagram goes in which section, top-level vs subsystem split. Use for "which section gets what", "§5 vs §6 vs §7", "ADR inside or separate". Reference skill, not a procedure.
+description: arc42 (§1-12) と C4 model (L1-L4) を組み合わせた architecture 設計ドキュメントの reference。どの diagram をどの section に置くか、top-level と subsystem の分割を扱う。「どの section に何を書くか」「§5 vs §6 vs §7」「ADR は本文内か別出しか」等の問いで使う。手順 skill ではない。
 ---
 
 # arc42-c4
 
-arc42 (sections) and C4 (diagrams) are independent conventions; neither spec says which C4 diagram belongs in which arc42 section. **This skill pins that mapping as a house standard** to kill per-doc ambiguity. Project-specific doc maps live in the project's top-level design doc, not here.
+arc42 (section 体系) と C4 (diagram 体系) は独立した規約であり、どちらの spec も「どの C4 diagram をどの arc42 section に置くか」を定めていない。**本 skill がその mapping を house standard として固定する** — doc ごとの揺れを排除するため。project 固有の doc map は project の top-level 設計ドキュメント側に置き、本 skill には書かない。
 
-Use when writing / reviewing an arc42 + C4 design doc, or deciding the ADR / runbook / README boundary. Supplies section judgment to `tech-docs-writer`; a review lens to `api-design-review`.
+arc42 + C4 の設計ドキュメントを書く / review する場面、および ADR / runbook / README の境界を決める場面で参照する。`tech-docs-writer` には section 判断を、`api-design-review` には review 観点を供給する。
 
 ## arc42 §1-12
 
 1 Introduction & Goals · 2 Constraints · 3 Context & Scope · 4 Solution Strategy · 5 Building Block View · 6 Runtime View · 7 Deployment View · 8 Crosscutting Concepts · 9 Architecture Decisions · 10 Quality Requirements · 11 Risks & Tech Debt · 12 Glossary
 
-- **§5 vs §6 vs §7** (same blocks, different axis): §5 = static structure ("is X a part?") · §6 = behavior over time ("what order do parts talk for use case Y?", insight-bearing scenarios only) · §7 = physical placement ("which node runs X?").
-- **§2 vs §4 vs §10** (same fact can appear in all three): §2 = limits you couldn't choose · §4 = fundamental choices you made · §10 = measurable quality scenarios. PostgreSQL: "policy mandates it" → §2; "we chose it for integrity" → §4; "reads < 50ms p95" → §10. §10 holds ends not means; §9 holds decision index not full ADRs.
+- **§5 vs §6 vs §7** (対象は同じ block、軸が違う): §5 = 静的構造 (「X は構成要素か」) · §6 = 時間軸の振る舞い (「use case Y で構成要素がどの順に対話するか」、洞察のある scenario のみ) · §7 = 物理配置 (「X はどの node で動くか」)。
+- **§2 vs §4 vs §10** (同じ事実が 3 つ全てに現れ得る): §2 = 選べなかった制約 · §4 = 自ら下した根本的な選択 · §10 = 計測可能な品質 scenario。PostgreSQL の例: 「方針で必須」→ §2 / 「整合性のために選んだ」→ §4 / 「read が p95 50ms 未満」→ §10。§10 は手段ではなく目的を置く。§9 は ADR 全文ではなく decision の index を置く。
 
-## arc42 × C4 mapping (house standard — decisive)
+## arc42 × C4 mapping (house standard — 決定事項)
 
 | C4 | arc42 |
 |----|-------|
 | L1 System Context | **§3** |
 | L2 Container | **§5** (top level) |
-| L3 Component | **§5** (lower level / subsystem doc) |
-| L4 Code | §5 deepest, or omit |
+| L3 Component | **§5** (下位 level / subsystem doc) |
+| L4 Code | §5 の最深部、または省略 |
 | dynamic diagram | **§6** |
 | deployment diagram | **§7** |
 
-The 4 numbered C4 levels are **all static**; runtime → §6, placement → §7. **Dedup:** container structure in §5, container-on-infra mapping in §7 — cross-reference, never paste twice.
+番号付きの C4 4 levels は**全て静的**。runtime は §6、配置は §7 へ。**重複排除**: container の構造は §5、container と infra の対応は §7 — 相互参照で繋ぎ、同じものを 2 度貼らない。
 
-## Multi-doc split (top-level ⇄ subsystem)
+## 複数 doc への分割 (top-level ⇄ subsystem)
 
-Fold line = container boundary. **Top-level doc** owns L1 + L2 (the subsystem map / hand-off seam). **Subsystem doc** (one per container) owns L3 (+ L4 if used). The Container diagram is the join: top lists all containers, each subsystem points at its own then expands to components. Subsystem docs may use a **mini** arc42 subset (full §1-12 only at top level).
+折り目 = container 境界。**top-level doc** が L1 + L2 を持つ (subsystem の地図 / 引き継ぎの継ぎ目)。**subsystem doc** (container 1 つに 1 本) が L3 (+ 使うなら L4) を持つ。Container diagram が接合点: top-level が全 container を列挙し、各 subsystem doc は自分の container を指してから component へ展開する。subsystem doc は arc42 の **mini** subset でよい (§1-12 全部は top-level のみ)。
 
-## Boundary with adjacent conventions
+## 隣接規約との境界
 
-arc42 = durable design-time "shape + rationale". Different audience / cadence → separate doc, arc42 only **links**.
+arc42 = 設計時点の「構造 + 根拠」を長期保持するもの。読者層 / 更新頻度が違うものは別 doc に切り、arc42 からは **link のみ**張る。
 
-| Convention | Location | arc42 touchpoint |
+| 規約 | 配置 | arc42 側の接点 |
 |-----------|----------|------------------|
-| MADR (ADR) | `docs/adr/NNNN-*.md` | **§9 = index only** (id/title/status/link); full rationale, alternatives, consequences in the file |
-| Diataxis (README/guides) | `docs/readme/` | link from §8 |
-| SRE Playbook (runbook) | `docs/runbook/` | link from §7 / §11 |
+| MADR (ADR) | `docs/adr/NNNN-*.md` | **§9 は index のみ** (id / title / status / link)。根拠・代替案・帰結の全文は file 側 |
+| Diataxis (README / guides) | `docs/readme/` | §8 から link |
+| SRE Playbook (runbook) | `docs/runbook/` | §7 / §11 から link |
 
-Cut an ADR when a decision is costly to reverse, contested, or constrains the future.
+ADR を切る基準は、覆すのに costly な決定・意見が割れた決定・将来を縛る決定。
 
-## Common mistakes
+## よくある間違い
 
-Flow in §5, or §7 re-pasting §5's diagram · treating a C4 level as "runtime" (all 4 are static) · freely-chosen tech filed under §2 · means in §10 instead of measurable ends · full ADR body in §9 · L1/L2 duplicated in subsystem docs · re-litigating the C4↔arc42 mapping as "just convention" (it's pinned above).
+§5 に flow を書く / §7 に §5 の diagram を貼り直す · C4 の level を「runtime」扱いする (4 つとも静的) · 自由に選べた技術を §2 に入れる · §10 に計測可能な目的ではなく手段を書く · §9 に ADR 本文を書く · subsystem doc に L1 / L2 を重複させる · C4↔arc42 の mapping を「単なる慣習」として再議論する (上で固定済み)。
 
-## Related skills
+## 関連 skill
 
-`tech-docs-writer` (writes the doc) · `api-design-review` (reviews it) · `ddd-clean-architecture` (§5 / §8 layer boundaries).
+`tech-docs-writer` (doc を書く) · `api-design-review` (doc を review する) · `ddd-clean-architecture` (§5 / §8 の layer 境界)。

@@ -7,7 +7,7 @@ description: /loop で回す「自分が author の open PR を見届ける」dr
 
 # pr-follow-loop
 
-PR 見届けの driver（dev-loop / review-loop の兄弟）。**loop の lifecycle は user の /loop 操作が管理し、本 skill は 1 tick の内部を定義する。** 1 tick = 1 poll + 1 PR を最大 1 歩。
+PR 見届けの driver（dev-loop / review-loop の兄弟）。1 tick = 1 poll + 1 PR を最大 1 歩。**時刻取得・通知 3 区分・wakeup 基準値・3 連続 breaker・tick 報告の共通規定は `~/.claude/skills/dev-loop/references/loop-driver-common.md` が SoT** — 本文で再掲しない。
 
 三兄弟の棲み分け:
 - **dev-loop** = 自分が PR を「作る」（work-intake → dev-cycle → draft PR）
@@ -24,7 +24,6 @@ PR 見届けの driver（dev-loop / review-loop の兄弟）。**loop の lifecy
 
 ### Step 1: precondition check
 
-- `date '+%Y-%m-%d %H:%M %Z'` で現地時刻を取得（tick report 用、時刻は推測しない）
 - git repo 内 / `gh auth status` が通ること
 
 ### Step 2: poll（機械的）
@@ -67,14 +66,9 @@ poll で拾った PR から 1 件選び（oldest created 優先）、現在の�
 
 ### Step 4: self-pacing（`ScheduleWakeup`）
 
-| 直前の結果 | 次 wakeup | 理由 |
-|---|---|---|
-| 1 歩進んだ（triage 提示 / 掃除完了） | 60-120s | drain — 次の PR / 次段階を即消化 |
-| approve 待ちに移行 | 1200-1800s | Monitor が主 signal、これは fallback heartbeat |
-| 該当なし（0 件 or 全 skip） | 1200-1800s | idle（20-30 分） |
-| error | 900s | retry 間隔 |
-
-- **連続エラー breaker**: tick が **3 連続**で error したら wakeup を停止（`ScheduleWakeup` stop）、「loop 停止（3 連続 error）」を通知して終了。成功でリセット
+- 基準値は loop-driver-common（1 歩進んだ → drain / 該当なし → idle / error → 900s）
+- 固有: approve 待ちに移行 → 1200-1800s（Monitor が主 signal、wakeup は fallback heartbeat）
+- breaker の対象 = tick の error。リセットは成功
 
 ### Step 5: tick report（強制出力）
 
@@ -93,7 +87,6 @@ poll で拾った PR から 1 件選び（oldest created 優先）、現在の�
 1. **approve / request-changes / merge は人間のみ** — loop は GitHub の review state を操作しない
 2. **bot 指摘は triage の提示まで** — 修正適用・decline 返信は user 承認後に対話で実施。loop が独断で fix / decline しない
 3. **掃除は clean 確認必須** — dirty worktree は掃除せず escalation。掃除対象は自 worktree + merge 済 local branch のみ（remote / 他 worktree は不変）。deny された掃除 command は迂回せず人間に提示する
-4. **通知は receipts の実在確認後** — triage 通知・掃除後の消滅・Monitor 起動を機械確認してから報告
-5. **設定を hardcode しない** — bot 名 / 必須 reviewer / repo は reference memory から取得
-6. **tick report を省略しない** — 全項目を毎 tick 出力
-7. **安全装置を緩めない** — hooks / permission deny / least privilege は loop でも一切緩めない
+4. **設定を hardcode しない** — bot 名 / 必須 reviewer / repo は reference memory から取得
+5. **安全装置を緩めない** — hooks / permission deny / least privilege は loop でも一切緩めない
+6. **共通規定（receipts 検証 / breaker / tick 報告 / 停止権限）は loop-driver-common に従う**

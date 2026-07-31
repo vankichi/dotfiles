@@ -54,6 +54,7 @@ frontmatter の `target` で振り分ける:
 
 ### Step 5: 改善実装
 
+- **作業は worktree で行う** (`git worktree add -b <branch> <path> <base>`)。main checkout の branch を切り替えない — 稼働 harness (`~/.claude/*` → main checkout working tree の symlink) が別 session で使用中のため、checkout 切替は稼働中の全 session の挙動を変える。merge 後は main checkout で `git pull` して master に追従する
 - ja SoT (`claude/ja/...`) を編集 → en mirror (`claude/...`) は opus subagent へ翻訳委譲する (docs = opus 規約)。mirror を持たないファイル (`rules/` / `CLAUDE.md`) は単一編集
 - proposal が undecided / user 判断を要する (複数案併記・status 体系への介入・外部 account・権限拡大 等) → 実装せず `status: deferred` (reason 付き) で「要判断一覧」へ
 

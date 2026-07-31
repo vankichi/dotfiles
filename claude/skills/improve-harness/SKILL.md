@@ -56,6 +56,7 @@ Sort by the `target` in the frontmatter:
 
 ### Step 5: Implement the improvement
 
+- **Do the work in a worktree** (`git worktree add -b <branch> <path> <base>`). Don't switch the main checkout's branch — the live harness (`~/.claude/*` → symlinks into the main checkout's working tree) is in use by other sessions, so a checkout switch changes the behavior of every running session. After the merge, run `git pull` in the main checkout to catch up with master
 - Edit the ja SoT (`claude/ja/...`) → delegate the en mirror (`claude/...`) translation to an opus subagent (docs = opus convention). Files with no mirror (`rules/` / `CLAUDE.md`) are edited in a single place
 - If the proposal is undecided / requires user judgment (multiple options listed / intervention in the status scheme / external accounts / privilege escalation, etc.) → do not implement; set `status: deferred` (with reason) and add it to the "decisions-needed list"
 

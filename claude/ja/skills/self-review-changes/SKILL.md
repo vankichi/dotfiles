@@ -29,20 +29,9 @@ self-review の最大バイアスは「自分の intent が見えて actual gap 
 
 ## Phase 2: 観点の実行 (default-on + 機械的 skip 判定)
 
-観点は全て default-on。**skip して良いのは下表の機械的条件を満たす時だけ**で、skip には理由を付ける:
+観点は全て default-on。**skip して良いのは機械的条件を満たす時だけ**で、skip には理由を付ける。**skip 条件の SoT は各 reference 先頭行の `skip 可:`** — 本ファイルに再掲しない (二重管理の乖離防止)。
 
-| 観点 (references/) | skip 可の条件 (機械判定) |
-|---|---|
-| correctness.md | code diff が 0 (docs / config のみの変更) |
-| filetype-checks.md | なし (常時実施) |
-| conventions.md | なし (常時実施) |
-| spec-alignment.md | 対応する spec / work item が存在しない |
-| test-adversarial.md | test ファイルの diff が 0 |
-| performance.md | code diff が 0 |
-| observability.md | 新規 code path なし (docs / config / test のみ) |
-| ops-docs-hazard.md | 運用手順 docs の diff が 0 (`docs/runbook/**` の変更が無く、docs 追加行に shell command の code fence が無い) |
-| dependency.md | 依存ファイル (go.mod / go.sum / lock / import 行) の diff が 0 |
-| code-quality.md | code diff が 0 |
+観点一覧 (references/、1 観点 1 file): correctness / filetype-checks / conventions / spec-alignment / test-adversarial / performance / observability / ops-docs-hazard / dependency / code-quality
 
 - 実施する観点の references を Read し、checklist を diff に適用する
 - **loop-mode**: 本 skill は直接起動されず、`review-orchestrator` agent が本 SKILL.md と references/ を Read して観点 review を主管する。規模 gate が fan-out なら `review-lens` へ観点 reference path + diff 範囲 + spec を渡し並列・**同期**起動、inline なら reviewer 自身が観点 references を逐次適用する (gate の SoT は review-orchestrator 手順 3-4)。対話時は inline で順に実施

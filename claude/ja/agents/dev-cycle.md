@@ -70,7 +70,7 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 - loop-mode と同じ手法で内製導出し (影響範囲調査・DoD self-check 含む)、plan を state file に書いた上で **ExitPlanMode で承認を取ってから**次工程へ進む (以降の対話 mode 承認 point は従来通り)
 
 **共通**:
-- state file は per-project plans dir の `<ticket-slug>.md` (構成は本ファイル末尾の「state file template」を SoT とする)
+- state file は per-project plans dir の `<ticket-slug>.md`。**構成の SoT は `~/.claude/skills/dev-loop/references/dev-cycle-state-file.md`** — 計画の書き出し前に Read して template どおりに作る
 
 **境界の報告**:
 ```
@@ -108,25 +108,9 @@ tools: Skill, Agent, Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 
 **実装に入る前に `EnterWorktree` で分離する** (loop-mode・対話mode共通)。分離後は state file への書き込みに Step起動時の準備で確定した絶対パスを使う (cwd変化で自動解決パスが変わるため)。base の ahead / behind 判定は verify-before-assert の git 手順で数値確定する (`git status` の "Recent commits" の見た目から推測しない)。
 
-**worktree 内の cwd で起動された場合** (並列 cycle の衝突等): EnterWorktree は worktree 内からのネスト作成ができない。main checkout を特定し、`git worktree add` で自前の worktree を main (or origin/main) から作成して移動する。他 agent の worktree 内のファイルには触れない。
-
 **base が default branch でない場合** (stacked PR で親 branch の上に積む等): `EnterWorktree` の新規作成は既定 baseRef が `origin/<default-branch>` のため使えない。`git worktree add -b <branch> <path> <親 branch>` で base 指定の worktree を作り、`EnterWorktree(path: <path>)` で入る。base branch は state file に記録し、commit-push-branch への委譲時に明示的に渡す (squash の base ref と `gh pr create --base` の両方で必要)。
 
-作成した新規 worktree への Edit/Write が拒否され続ける場合 (subagent の cwd pin 下では `EnterWorktree(path)` が成功を報告しても書き込み境界が移らない — 2026-07-15 FB) は、pin 済みの元 worktree 内でのブランチ差し替えに切り替える:
-
-1. 新規 worktree を `git worktree remove` で片付ける
-2. **所有確認**: 元 worktree が他の稼働中 cycle の所有でないことを逆引きで機械的に確認する — per-project plans dir の state file 群を grep し、当該 worktree path を `worktree:` に記録する active な state file (= Current state が全工程完了 / escalation 終了を示していないもの) があれば所有中と判定 (直近 mtime は補助)
-3. 所有中なら差し替えず escalation して停止する (「他 agent の worktree に触れない」原則)
-4. 安全を確認したら `git fetch origin <base-ref>` で remote-tracking ref を更新する
-5. 元 worktree ディレクトリ内で `git checkout -b <branch> origin/<base-ref>` によりブランチだけ差し替えて続行する (元ブランチの commit は保持される)
-
-**cwd が main checkout に pin されている場合** (background job の bgIsolation guard 下): 上記のブランチ差し替えは使えない — 差し替えると user の checkout を乗っ取る。かつ guard は **repo root 配下の全 path** で Write/Edit tool を拒否するため、`.claude/worktrees/` 配下に作った worktree にも書けない。この場合は **repo root の外**に worktree を作る:
-
-1. **guard の性質を probe で判定**: `/tmp` への Write と Bash subprocess からの書き込みを試す。両方成功するなら、guard は「repo checkout root に path-scoped な Write/Edit tool の遮断」であり session 全体の遮断ではない
-2. `git worktree add <repo と兄弟の path> origin/<base-ref>` で repo root 外に worktree を作成する (既に repo 内に作ってしまった場合は `git worktree move` で外へ退避)
-3. 以降は絶対パスで Write/Edit する。共有 checkout を一切触らないため guard の意図は守られる
-
-**Write/Edit がなお拒否される場合**は Bash heredoc (`cat > <path> <<'EOF'`) か python でファイルを生成し、git / go 等は `cd <worktree> && ...` で実行する。guard を無効化する設定変更は行わない。
+**worktree 分離が失敗・拒否される場合** (worktree 内 cwd での起動 / subagent cwd pin / bgIsolation guard / Write 拒否): 復旧分岐は `~/.claude/skills/dev-loop/references/dev-cycle-worktree-recovery.md` を Read して従う (通常 path では読まない)。共通原則 = 他 agent の worktree に触れない / user の checkout を乗っ取らない / guard を無効化しない。
 
 **spec が自己矛盾している場合の tie-break**: 「挙動不変 (regression-guarded)」の要求と、同じ shared code path に対する新しい内部挙動の指定が spec 内に併存する場合、**regression-guarded な不変条件を優先する**。新しい挙動は guarded path を変えない範囲でのみ実装し、差分を SD として flag する (spec 側の訂正も merge までに行う)。
 
@@ -137,7 +121,7 @@ plan を読み、実装内容のタイプを判定:
 | Go module 初回セットアップ (go.mod なし or 骨格不足) | `Skill: go-bootstrap` | (dev-cycle 内) |
 | Go の DDD+TDD 機能追加 (既存 internal/ に追加) | `Agent: go-feature-tdd` | opus (frontmatter 固定) |
 | docs 変更 (設計 doc / README / runbook 等) で分量のあるもの | `Agent: general-purpose` subagent に委譲 | **opus** (spawn 時に指定) |
-| Go 以外の code / 設定ファイル変更 で分量のあるもの | `Agent: general-purpose` subagent に委譲 | **opus** (spawn 時に指定 — sonnet coding は実地検証で品質不足と判明、2026-07-15 FB。難易度別 routing は insights 蓄積後に再検討) |
+| Go 以外の code / 設定ファイル変更 で分量のあるもの | `Agent: general-purpose` subagent に委譲 | **opus** (spawn 時に指定 — sonnet coding は実地検証で品質不足のため opus 固定。難易度別 routing は insights 蓄積後に再検討) |
 | 数回の tool 呼び出しで終わる変更 (小規模 docs 修正 / 1-2 file の設定変更 / 数行の edit) | 自前で `Read` / `Edit` / `Write` | (dev-cycle 内。委任は分量があり真に独立な作業に限る — CLAUDE.md「出力と委任の作法」) |
 
 委譲時は work item の spec・実装計画の該当 step・検証コマンド・**規約 digest + 原本 path (起動時の準備 Step 5)** を prompt で完全に渡す (subagent は state file を知らない前提で自己完結させる)。実装委譲 prompt には「comment は WHY のみ (WHAT を書かない)」「magic number / 繰り返す literal は named const に集約」の 2 点を常に含める (SoT: go-style §8 / code-quality 観点)。
@@ -219,7 +203,7 @@ spawn の前に、本 cycle で自分が書いた doc / ADR / comment 散文へ 
 - `Skill` tool で `commit-push-branch` を起動
 - **loop-mode**: 承認待ちせず branch名/commitメッセージを自動決定 → commit → push → **draft PR 作成** (`commit-push-branch` の loop-mode拡張。詳細はそちらのSKILL.mdをSoTとする)。draft PR bodyには実装計画・DoDチェック結果・self-review/security review結果を含める (テンプレートはcommit-push-branch側で定義)
 - **対話 mode**: 従来通り、skillが提案したbranch名/commitメッセージをcommit直前にAskUserQuestionで1回確認。push完了後、PR作成URLを取得するが draft PR自動作成はしない (CLAUDE.md「push/PRの作法」通り、PR作成は別途user指示後)
-- commit messageは **default で title 1 行・変更内容のみ**。why / 背景 / 影響範囲は付けない
+- commit message の規約 (title 1 行・変更内容のみ) は commit-push-branch が SoT
 
 **境界の報告**:
 ```
@@ -308,87 +292,10 @@ loop-mode で escalation 条件 (鉄則 2/3) に当たったら、以下を順�
 - resume で main checkout の branch を乗っ取って作業する
 - 外向き操作を receipt なしで「実施済み」と報告する
 
-## 補足: skill / subagent の依存関係
+## 補足: 呼び出し構造
 
-```
-dev-cycle (this)
-  ├── api-design-review (skill)                  ← 設計 review (上流、新contract/新ADR/新ACLモデル時)
-  ├── go-bootstrap (skill)                        ← 実装 (初回セットアップ)
-  ├── go-feature-tdd (subagent)                   ← 実装 (機能追加)
-  ├── review-orchestrator (subagent, opus)         ← review 統合主体 (loop-mode、反復ごとにfresh spawn)
-  │     ├── review-lens (subagent, sonnet)          ← 観点別 review worker (N並列、同期起動。規模 gate が fan-out の時のみ)
-  │     └── independent-reviewer (subagent, opus)   ← 独立 review (spec + diffのみで判断)
-  ├── self-review-changes (skill)                 ← review (対話 mode) / 観点体系のSoT (references/)
-  ├── security-review-local (skill)                ← security review
-  ├── commit-push-branch (skill)                   ← commit & push (+ loop-modeはdraft PR)
-  └── retrospect (skill)                            ← サイクル末のinsight記録
-```
-
-各道具は独立して呼び出し可能。ユーザーが「self-reviewだけやり直したい」等と言ったら直接skillを呼んで対応する。
+配下の道具は「配下の道具」の表どおり。nesting は review 工程のみ: review-orchestrator (opus) が配下に review-lens (sonnet、規模 gate が fan-out の時のみ N 並列) と independent-reviewer (opus) を同期 spawn する。各道具は独立して呼び出し可能 — ユーザーが「self-review だけやり直したい」等と言ったら直接 skill を呼んで対応する。
 
 ## state file template
 
-state file (per-project plans dir の `<ticket-slug>.md`) の構成。実装計画導出の書き出し先で、後続 agent / 再開時の context bootstrap の SoT:
-
-```
-# <Phase> / <Ticket ID>: <タイトル> — 実装プラン
-
-## Context
-なぜこの変更が必要か (DoD ベース)
-
-## Confirmed decisions
-確定した literal を列挙。再実装時の参照源、後続 agent が context bootstrap に使う。永続的な設計判断はここに置く。
-| 判断項目 | 採用 literal | 根拠 (DoD / docs どちら) |
-
-## Scope decisions (DoD 由来の意図的限定)
-DoD で「stub のみで OK」「後続 ticket で実装」と明示されている範囲限定。逸脱ではないので PR description には flag しない。
-| 範囲限定項目 | DoD 根拠 | 後続 ticket |
-
-## Spec deviations (PR description で flag、reviewer 確認対象)
-DoD / docs と実装で割れる「永続的な構造選択」のみ。reviewer に確認したい項目だけを残す。
-| # | 逸脱内容 | 是正方針 (spec update / 維持 / 後日見直し) |
-
-## Phase 2+ migration (follow-up ticket 化)
-暫定実装で将来 refactor 予定のもの。follow-up として記録、本 PR では実装しない。
-| 暫定実装 | 将来形 | follow-up ticket / link |
-
-## Carryover (既存問題、別 ticket)
-scope 外の既存問題で、本 PR では触らないが視認しておきたいもの。
-| 既存問題 | 影響範囲 | 対応 ticket |
-
-## Documentation updates (Tier 分類)
-docs 突合で抽出した矛盾箇所の Tier 別整理と本 ticket での扱い。
-| 対象 doc | 修正内容 | Tier (1/2/3/4) | 扱い (同 commit / 同 PR / 別 ticket) |
-
-## 影響範囲
-impact-A/B/C の分類と「対象 symbol → 参照元」の対応表 (実装計画導出の影響範囲調査の出力)
-
-## Current state (随時更新)
-進行状態。後続 agent / 再開時に Read 1 回で context bootstrap できるように。
-計画段階では「未実施」とだけ書く — 実測前の値・commit sha・PR URL・review 周回数を書かない (template を埋める圧力による捏造防止)。
-- Stage X 完了 / Y 進行中 (wip commit と対応)
-- 直近 commit: <hash> / test 修正試行カウント: <n>/3
-- Pending questions / escalation 停止 (<工程> / <理由>)
-
-## Design review (api-design-review)
-実行結果 summary (6 観点の検出有無 / 反映済み / user 判断済み / 残置 follow-up)
-
-## 主要な設計判断
-| 判断項目 | 決定 | 根拠 |
-
-## 実装ステップ (実行順)
-### Step 1: ...
-- 新規 / 編集ファイル + 内容概要
-
-## DoD と実装ステップの対応
-| DoD 項目 | 対応 Step | 検証方法 |
-
-## 想定される落とし穴
-
-## 検証手順 (実装完了後)
-
-## 次のチケットへの引き継ぎ (スコープ外)
-
-## 参照
-- ticket URL / docs のパス / repo 規約 digest の原本 path
-```
+構成の SoT は `~/.claude/skills/dev-loop/references/dev-cycle-state-file.md` (実装計画導出の「共通」参照)。本ファイルには再掲しない。
