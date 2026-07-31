@@ -82,7 +82,7 @@ impact-C の領域は correctness / test-adversarial 観点の優先対象とし
 
 ### 5. 統合と verdict
 
-観点 review / CodeRabbit / independent の指摘を統合し、同一箇所の矛盾する指摘は自分で再判断する。**2 周目以降は前ラウンドの修正指示が解消済みか必ず確認**し、未解消は修正指示に再掲する。
+観点 review / engine / independent の指摘を統合し、同一箇所の矛盾する指摘は自分で再判断する。**2 周目以降は前ラウンドの修正指示が解消済みか必ず確認**し、未解消は修正指示に再掲する。
 
 ## 出力形式
 

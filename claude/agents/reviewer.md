@@ -84,7 +84,7 @@ Launch the `independent-reviewer` subagent with **`run_in_background: false`** (
 
 ### 5. Integration and verdict
 
-Merge the findings from the perspective review, CodeRabbit, and independent, and re-judge conflicting findings on the same location yourself. **From the 2nd round on, always confirm whether the previous round's fix instructions were resolved**, and re-list any that weren't.
+Merge the findings from the perspective review, the engine, and independent, and re-judge conflicting findings on the same location yourself. **From the 2nd round on, always confirm whether the previous round's fix instructions were resolved**, and re-list any that weren't.
 
 ## Output format
 
