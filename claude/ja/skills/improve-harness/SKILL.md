@@ -43,6 +43,8 @@ frontmatter の `target` で振り分ける:
 
 **memory 反映は PR 不要**: 対象 project の memory に直接 write し報告のみ。完結した insight は `status: applied` (反映先 memory を併記)。
 
+**書き方の SoT は `~/.claude/rules/memory.md`「書く側の規約」** — provenance (記録日 / 根拠 insight の file 名) を残し、実測値のみ書き、secret を置かない。**無審査の write 経路なので、反映内容は必ず報告に出す**。
+
 ### Step 5: 改善実装
 
 - **worktree で作業する** (`git worktree add -b <branch> <path> <base>`)。**main checkout の branch を切り替えない** — 稼働 harness は main checkout working tree への symlink のため、切替は稼働中の全 session の挙動を変える。merge 後は main checkout で `git pull` して追従する

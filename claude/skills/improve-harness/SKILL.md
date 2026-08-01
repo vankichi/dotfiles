@@ -45,6 +45,8 @@ Group related insights into one improvement unit (cluster). Decide the destinati
 
 **Memory application needs no PR**: write directly to the target project's memory and just report it. Insights completed this way get `status: applied` (noting the memory it went to).
 
+**`~/.claude/rules/memory.md` ("Rules for the writing side") is the SoT for how to write** — leave provenance (the record date, the filename of the insight it came from), write only measured values, and never place secrets there. **This is an unreviewed write path, so what was applied must always appear in the report.**
+
 ### Step 5: Implement the improvement
 
 - **Work in a worktree** (`git worktree add -b <branch> <path> <base>`). **Never switch the main checkout's branch** — the live harness is a symlink into the main checkout's working tree, so switching changes the behavior of every running session. After merge, `git pull` in the main checkout to catch up
