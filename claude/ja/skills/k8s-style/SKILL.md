@@ -1,6 +1,7 @@
 ---
 name: k8s-style
-description: K8s manifest / workload 設計 / RBAC / SecurityContext / NetworkPolicy / probe / resource / Kustomize / image 運用の reference skill。「K8s 的にどう」「manifest 規約」「RBAC 最小権限」「probe どう書く」等の問いで参照する。手順 skill ではない。
+description: K8s manifest / workload 設計 / RBAC / SecurityContext / NetworkPolicy / probe / resource / Kustomize / image 運用の house 規約。手順 skill ではない reference。
+when_to_use: 「K8s 的にどう」「manifest 規約」「RBAC 最小権限」「probe どう書く」等の問いが来た時。manifest の作成 / review / refactor 候補出しの判断基準が要る時。`code-refactor-advisor` / `security-review-local` からの参照。
 ---
 
 # k8s-style

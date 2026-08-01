@@ -1,6 +1,7 @@
 ---
 name: ddd-clean-architecture
-description: DDD + Clean Architecture (Go では Hexagonal / Ports-Adapters とほぼ同義) の reference skill。layer 境界 / 依存方向 / Port-Adapter / ACL / Aggregate / Repository / DTO 変換 / cross-cutting を扱う。「層曖昧」「責務違反」「port の切り方」「layered と同じ?」等の問いや設計 review 時に参照する。手順 skill ではない。
+description: DDD + Clean Architecture (Go では Hexagonal / Ports-Adapters とほぼ同義) の house 規約。layer 境界 / 依存方向 / Port-Adapter / ACL / Aggregate / Repository / DTO 変換 / cross-cutting を扱う。手順 skill ではない reference。
+when_to_use: 「層が曖昧」「責務違反では」「port の切り方」「layered と同じ?」等の問いが来た時。設計 review / 層境界の判断 / refactor 候補出しの基準が要る時。`code-refactor-advisor` / `go-feature-tdd` からの参照。
 ---
 
 # ddd-clean-architecture

@@ -1,6 +1,7 @@
 ---
 name: go-style
-description: Go の慣用句・命名・error handling・context・logging・concurrency・lint / format の reference skill。「Go お作法的にどう」「命名規約」「error wrap」等の問いや code review 時に参照する。手順 skill ではない。
+description: Go の慣用句・命名・error handling・context・logging・concurrency・lint / format の house 規約。手順 skill ではない reference。
+when_to_use: 「Go お作法的にどう」「命名規約」「error wrap どうする」等の問いが来た時。Go コードの review / refactor 候補出しで判断基準が要る時。`code-refactor-advisor` / `go-feature-tdd` からの参照。
 ---
 
 # go-style

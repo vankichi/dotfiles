@@ -1,6 +1,7 @@
 ---
 name: k8s-style
-description: Reference skill for K8s manifests / workload design / RBAC / SecurityContext / NetworkPolicy / probes / resources / Kustomize / image operations. Consult it for questions like 「K8s 的にどう」「manifest 規約」「RBAC 最小権限」「probe どう書く」. Not a procedural skill.
+description: The house conventions for K8s manifests / workload design / RBAC / SecurityContext / NetworkPolicy / probes / resources / Kustomize / image operations. A reference, not a procedural skill.
+when_to_use: When a question like 「K8s 的にどう」「manifest 規約」「RBAC 最小権限」「probe どう書く」 comes up. When authoring or reviewing manifests, or generating refactor candidates. Referenced from `code-refactor-advisor` / `security-review-local`.
 ---
 
 > **Source of truth:** `claude/ja/skills/k8s-style/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.

@@ -1,6 +1,7 @@
 ---
 name: go-test
-description: Go の test design / test code 慣用句の reference skill。命名 / table-driven / t.Parallel / race detector / fake・mock / boundary value / coverage 解釈を扱う。「test 名どうする」「table-driven にする」「coverage 何 % まで」等の問いで参照する。手順 skill ではない。
+description: Go の test に関する house 規約。命名 / table-driven / t.Parallel / race detector / fake・mock / boundary value / coverage 解釈を扱う。手順 skill ではない reference。
+when_to_use: 「test 名どうする」「table-driven にする」「coverage 何 % まで」等の問いが来た時。test code の review / 追加 test の設計時。`code-refactor-advisor` / `go-feature-tdd` からの参照。
 ---
 
 # go-test

@@ -1,6 +1,7 @@
 ---
 name: ddd-clean-architecture
-description: Reference skill for DDD + Clean Architecture (in Go, effectively synonymous with Hexagonal / Ports-and-Adapters). Covers layer boundaries / dependency direction / Port-Adapter / ACL / Aggregate / Repository / DTO conversion / cross-cutting concerns. Consult it for questions like 「層曖昧」「責務違反」「port の切り方」「is this the same as layered?」or during design review. Not a procedural skill.
+description: The house conventions for DDD + Clean Architecture (in Go, effectively synonymous with Hexagonal / Ports-and-Adapters). Covers layer boundaries / dependency direction / Port-Adapter / ACL / Aggregate / Repository / DTO conversion / cross-cutting concerns. A reference, not a procedural skill.
+when_to_use: When a question like 「層が曖昧」「責務違反では」「port の切り方」「is this the same as layered?」 comes up. During design review, when judging layer boundaries, or when generating refactor candidates. Referenced from `code-refactor-advisor` / `go-feature-tdd`.
 ---
 
 > **Source of truth:** `claude/ja/skills/ddd-clean-architecture/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.

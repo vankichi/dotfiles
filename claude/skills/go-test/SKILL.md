@@ -1,6 +1,7 @@
 ---
 name: go-test
-description: Reference skill for Go test design and test-code idioms. Covers naming, table-driven tests, t.Parallel, the race detector, fakes/mocks, boundary values, and how to interpret coverage. Consulted for questions like 「test 名どうする」「table-driven にする」「coverage 何 % まで」. Not a procedural skill.
+description: The house conventions for Go tests. Covers naming, table-driven tests, t.Parallel, the race detector, fakes/mocks, boundary values, and how to interpret coverage. A reference, not a procedural skill.
+when_to_use: When a question like 「test 名どうする」「table-driven にする」「coverage 何 % まで」 comes up. When reviewing test code or designing additional tests. Referenced from `code-refactor-advisor` / `go-feature-tdd`.
 ---
 
 > **Source of truth:** `claude/ja/skills/go-test/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.

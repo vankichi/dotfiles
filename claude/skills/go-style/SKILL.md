@@ -1,6 +1,7 @@
 ---
 name: go-style
-description: Reference skill for Go idioms, naming, error handling, context, logging, concurrency, and lint/format conventions. Consulted for questions like 「Go お作法的にどう」「命名規約」「error wrap」 or during code review. Not a procedural skill.
+description: The house conventions for Go idioms, naming, error handling, context, logging, concurrency, and lint/format. A reference, not a procedural skill.
+when_to_use: When a question like 「Go お作法的にどう」「命名規約」「error wrap どうする」 comes up. When reviewing Go code or generating refactor candidates and you need the criteria. Referenced from `code-refactor-advisor` / `go-feature-tdd`.
 ---
 
 > **Source of truth:** `claude/ja/skills/go-style/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
