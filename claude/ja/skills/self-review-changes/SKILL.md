@@ -31,11 +31,14 @@ description: 「self review して」「review して」「修正箇所ないか
 
 ### correctness — skip: code diff 0
 
-- **入力検証** — public API (`WithXxx` / `NewXxx` / handler 引数) で 0 / 負値 / nil / empty / traversal を check。validation は constructor 末尾に配置
-- **edge case** — wire form の parameters 付き (MIME は `mime.ParseMediaType`) / `strings.TrimSpace` 後の empty / batch 全要素 fail / empty 出力
-- **ctx** — `ctx.Deadline` 尊重 / 不要な goroutine spawn 回避 / `ctx.Err()` を都度 check / **最深部まで伝播** (pre-processing loop も含む)
-- **error 契約** — sentinel の意味契約 (transient vs permanent) / 4xx は retry しない / boundary error の port-level wrap
-- **slice OOB** — `slice[len-N:]` の直前に `len >= N` guard
+汎用の欠陥検出は engine 側。**ここで見るのは house 固有の罠のみ**。
+
+- **validation の配置** — constructor の末尾に置く
+- **wire form の parameters** — MIME は `mime.ParseMediaType` で解く (自前分割は parameters 付きで壊れる)
+- **ctx の伝播** — 最深部まで通す。**pre-processing loop も対象** (最も見落としやすい)
+- **error 契約** — 4xx は retry しない / boundary error は port-level で wrap する
+
+engine が無い場合のみ、入力検証 (0 / 負値 / nil / empty / traversal) / edge case (`TrimSpace` 後の empty / batch 全要素 fail) / slice OOB guard まで自分で見る。
 
 ### filetype-checks — skip: なし
 
@@ -72,18 +75,16 @@ description: 「self review して」「review して」「修正箇所ないか
 
 ### test-adversarial — skip: test ファイルの diff 0
 
-- 各 assertion に「**実装の挙動を逆にしても pass する mutation はあるか?**」と問う
-- input に repeated content / 同一値 / nil / empty が含まれる場合は特に注意。`strings.Contains` / `len(got) > 0` / `errors.Is(...)` が trivially 通る経路を探す
-- 例: 同一 sentence を 80 回 repeat した input で carry-over を `strings.Contains` 検証 → carry-over が壊れても true。distinct marker + `HasPrefix` で boundary を検証する形が正解
+- 各 assertion に「**実装の挙動を逆にしても pass する mutation はあるか?**」と問う (engine は trivial assertion を拾うが、この問い方はしない)
+- input に repeated content / 同一値 / nil / empty が含まれる場合は特に危険
+- 例: 同一 sentence を 80 回 repeat した input で carry-over を `strings.Contains` 検証 → carry-over が壊れても true。**distinct marker + `HasPrefix` で boundary を検証する形が正解**
 
 ### performance — skip: code diff 0
 
-静的に疑い箇所を flag する範囲 (profile は取らない。基準の詳細は `~/.claude/rules/performance.md`)。
+判定基準の SoT は `~/.claude/rules/performance.md`、汎用の検出は engine 側。**ここで見るのは diff 固有の観点だけ**。
 
-- **計算量** — 追加 loop の nest が O(n²) 以上でないか / 既存 O(n) 経路の劣化
-- **I/O** — loop 内の逐次 I/O (N+1 query / 1 件ずつの API call) の batch 化・事前 fetch
-- **hot path allocation** — loop 内の slice/map 生成・string 連結・`fmt.Sprintf` / `strings.Builder` や事前 capacity の検討
-- **同期** — 粗すぎる lock 範囲 / 並列化できる独立処理の直列実行
+- **既存の計算量を劣化させていないか** — O(n) だった経路を O(n²) にしていないか
+- **spec の性能制約に触れていないか** — 量・頻度の前提を変える変更なら spec の制約 section と突合する
 
 ### observability — skip: 新規 code path 無し (docs / config / test のみ)
 
@@ -111,15 +112,10 @@ description: 「self review して」「review して」「修正箇所ないか
 
 ### code-quality — skip: code diff 0
 
-bug 検出ではなく「より良い書き方」の観点。
+規約の SoT は `go-style` / `go-test` / `ddd-clean-architecture`、簡素化は `/simplify` と engine。**ここで見るのは diff 全体を横断する一貫性だけ**。
 
-- **重複 / reuse** — 同等の helper / util が repo 内に既存でないか grep。同型処理を 2 箇所以上に書いていないか
-- **簡素化** — 不要な中間変数 / 深い nest (early return で平坦化) / 過剰な抽象化 (1 実装しかない interface)
-- **命名 / altitude** — 挙動と名前の一致、repo 既存語彙との一貫性。関数内の抽象度が揃っているか
-- **コメント** — 「何をするか」の自明コメント・PR 向け説明コメントは削除対象。書くべきは「code に書けない制約」のみ
-- **定数** — 式中の magic number / 2 回以上出現する同一 literal が named const か。関連定数が const block にまとまっているか
-- **同一 PR 内の一貫性** — 導入した命名 / const / helper を diff で再 grep し「片方だけ named const」型の取りこぼしを検出
-- 規約の詳細は `go-style` / `go-test` / `ddd-clean-architecture` が SoT
+- **同一 PR 内の適用一貫性** — 本 PR で導入した命名 / const / helper を diff で**再 grep** し、「片方だけ named const」型の取りこぼしを検出する
+- **既存 helper の見落とし** — 追加した logic と同等のものが repo 内に既存でないか grep する (engine は repo 全体を見ないので残す)
 
 ## 機械 check (correctness の補強。grep で実行)
 

@@ -33,11 +33,14 @@ A file edit happened in the immediately preceding turn (before commit or right a
 
 ### correctness — skip: code diff 0
 
-- **Input validation** — check 0 / negative / nil / empty / traversal at public APIs (`WithXxx` / `NewXxx` / handler arguments). Validation goes at the end of the constructor
-- **Edge cases** — wire form with parameters (use `mime.ParseMediaType` for MIME) / empty after `strings.TrimSpace` / all batch elements failing / empty output
-- **ctx** — respect `ctx.Deadline` / avoid unnecessary goroutine spawns / check `ctx.Err()` each time / **propagate to the deepest level** (including pre-processing loops)
-- **Error contract** — the semantic contract of sentinels (transient vs permanent) / no retry on 4xx / port-level wrapping of boundary errors
-- **Slice OOB** — a `len >= N` guard immediately before `slice[len-N:]`
+Generic defect detection belongs to the engine. **Only the house-specific traps live here.**
+
+- **Where validation goes** — at the end of the constructor
+- **Wire form parameters** — parse MIME with `mime.ParseMediaType` (hand-rolled splitting breaks once parameters are present)
+- **ctx propagation** — carry it to the deepest level. **Pre-processing loops count** (the easiest place to miss)
+- **Error contract** — no retry on 4xx / wrap boundary errors at port level
+
+Only when no engine is available, also cover input validation (0 / negative / nil / empty / traversal), edge cases (empty after `TrimSpace` / all batch elements failing), and slice OOB guards yourself.
 
 ### filetype-checks — skip: none
 
@@ -74,18 +77,16 @@ A file edit happened in the immediately preceding turn (before commit or right a
 
 ### test-adversarial — skip: test file diff 0
 
-- Ask of each assertion: "**is there a mutation that inverts the implementation's behavior and still passes?**"
-- Be especially careful when input contains repeated content / identical values / nil / empty. Look for paths where `strings.Contains` / `len(got) > 0` / `errors.Is(...)` pass trivially
-- Example: verifying carry-over with `strings.Contains` on the same sentence repeated 80 times → true even when carry-over is broken. The correct form verifies the boundary with a distinct marker + `HasPrefix`
+- Ask of each assertion: "**is there a mutation that inverts the implementation's behavior and still passes?**" (engines catch trivial assertions, but don't pose the question this way)
+- Input containing repeated content / identical values / nil / empty is especially dangerous
+- Example: verifying carry-over with `strings.Contains` on the same sentence repeated 80 times → true even when carry-over is broken. **The correct form verifies the boundary with a distinct marker + `HasPrefix`**
 
 ### performance — skip: code diff 0
 
-Statically flag suspicious spots only (no profiling; see `~/.claude/rules/performance.md` for detail).
+`~/.claude/rules/performance.md` is the SoT for the criteria, and generic detection belongs to the engine. **Only diff-specific concerns live here.**
 
-- **Complexity** — an added loop nest at O(n²) or worse / degradation of an existing O(n) path
-- **I/O** — batching or pre-fetching sequential I/O inside a loop (N+1 queries / one-at-a-time API calls)
-- **Hot path allocation** — slice/map creation, string concatenation, `fmt.Sprintf` inside loops / consider `strings.Builder` or pre-sized capacity
-- **Synchronization** — too coarse a lock scope / serial execution of independent work
+- **Does the change degrade existing complexity** — has an O(n) path become O(n²)
+- **Does it touch the spec's performance constraints** — if it changes assumptions about volume or frequency, cross-check the spec's constraints section
 
 ### observability — skip: no new code path (docs / config / test only)
 
@@ -113,15 +114,10 @@ Statically flag suspicious spots only (no profiling; see `~/.claude/rules/perfor
 
 ### code-quality — skip: code diff 0
 
-Not bug detection but the "better way to write it" perspective.
+`go-style` / `go-test` / `ddd-clean-architecture` are the SoT for the conventions; simplification belongs to `/simplify` and the engine. **Only consistency across the whole diff lives here.**
 
-- **Duplication / reuse** — grep for an equivalent helper / util already in the repo. Is the same shape of processing written in 2+ places
-- **Simplification** — unnecessary intermediate variables / deep nesting (flatten with early returns) / over-abstraction (an interface with a single implementation)
-- **Naming / altitude** — does the name match the behavior, consistent with the repo's vocabulary. Is the abstraction level uniform within a function
-- **Comments** — self-evident "what it does" comments and PR-facing explanations are removal targets. Write only "constraints that can't be expressed in code"
-- **Constants** — are magic numbers / literals appearing 2+ times extracted into named consts. Are related constants grouped in a const block
-- **Consistency within the PR** — re-grep the diff for the naming / consts / helpers you introduced to catch "only one side got a named const"
-- `go-style` / `go-test` / `ddd-clean-architecture` are the SoT for convention detail
+- **Consistency of application within the PR** — **re-grep** the diff for the naming / consts / helpers this PR introduced, to catch "only one side got a named const"
+- **Overlooked existing helpers** — grep whether an equivalent to the logic you added already exists in the repo (kept here because the engine doesn't look at the whole repo)
 
 ## Mechanical checks (reinforcing correctness — run with grep)
 
