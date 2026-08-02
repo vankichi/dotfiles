@@ -157,6 +157,70 @@ Note the last row — when a trademark leads an unexported identifier, lowercase
 - Mixing pointer and value receivers on one type (if there is a mutating method, all methods take a pointer receiver)
 - Map assignment missing a nil check
 
+## How to detect
+
+**Don'ts are detected through three distinct channels. Don't conflate them.**
+
+### A. The linter catches it (don't grep for it here)
+
+What `.golangci.yaml` (`standard` + `revive` / `gocritic` / `misspell` / `gofmt` / `goimports`) already catches:
+
+| Don't | linter |
+|---|---|
+| Exported symbols without godoc | `revive` (exported) |
+| Mixed import order | `goimports` (auto-fixed) |
+| Error returns discarded into `_` | `errcheck` |
+| `this` / `self` receivers, inconsistent receiver names on one type | `revive` (receiver-naming) |
+| `errors.New(fmt.Sprintf(...))` | `gocritic` |
+
+**If `make lint` is green, treat these as already checked.** Don't re-run them in review.
+
+### B. Catch it with grep (house-specific — the linter won't)
+
+```bash
+# Mixed-case 2-letter acronyms (revive's initialism list has no AI/IO/OS/DB)
+grep -rnE '\b[A-Za-z]*(Ai|Io|Os|Db)([A-Z]|\b)' --include='*.go' .
+
+# Case mix in trademark acronyms (openAIKey → openaiKey is correct)
+grep -rnE '\b[a-z]+(AI|API|OpenAI)[A-Z]' --include='*.go' .
+
+# context.Background() inside a library (excluding cmd/ and _test.go)
+grep -rn 'context.Background()' --include='*.go' internal/ pkg/ 2>/dev/null | grep -v '_test.go'
+
+# Collision-prone string keys
+grep -rn 'ctx.Value("' --include='*.go' .
+
+# ctx as a struct field (also matches the one-line struct form, right after `{`)
+grep -rnE '(^|\{)\s*ctx\s+context\.Context' --include='*.go' .
+
+# Operational logs via fmt / the standard log
+grep -rnE '(fmt\.Print|log\.Print|log\.Fatal)' --include='*.go' internal/ pkg/ 2>/dev/null
+
+# Interpolated log messages
+grep -rnE 'slog\.[A-Z][a-z]+\(fmt\.Sprintf' --include='*.go' .
+
+# nolint without a reason comment
+grep -rn 'nolint:' --include='*.go' . | grep -v '//.*nolint:.*//'
+
+# Timeline / ticket-scope references
+grep -rnE '(Phase [0-9]|TODO\(.*-[0-9]+\)|ticket)' --include='*.go' .
+
+# Bidirectional channels in signatures
+grep -rnE 'func .*\bchan [A-Za-z]' --include='*.go' .
+```
+
+**A grep surfaces candidates; it does not decide.** Always confirm a hit against the actual code (drop generated code / idioms via "Identifying false positives").
+
+### C. Requires judgment (not greppable)
+
+Not catchable by grep — **the reviewer reads and decides**. Look at these knowing they cannot be detected mechanically:
+
+- Symbols exported only "in case we publish it later"
+- Comments that only restate WHAT / mechanical WHAT doc blocks on unexported methods (grep can surface 4+ line candidates)
+- A `mu sync.Mutex` with no clear protection target (grep can surface the declarations)
+- Whether a goroutine has a guaranteed exit path
+- Business logic inside `cmd/` / over-abstraction / uneven altitude
+
 ## Identifying false positives
 
 Even when a Don't matches, the following are not violations.

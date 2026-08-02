@@ -155,6 +155,70 @@ Go の house 規約集。各 section は **Do (house の選択)** と **Don't (�
 - 1 型での pointer receiver と value receiver の混在 (mutating method があるなら全 method pointer receiver)
 - nil check 漏れの map 代入
 
+## 検出方法
+
+**Don't の検出手段は 3 系統ある。混同しない。**
+
+### A. lint が落とす (skill 側で grep しない)
+
+`.golangci.yaml` (`standard` + `revive` / `gocritic` / `misspell` / `gofmt` / `goimports`) が拾うもの:
+
+| Don't | linter |
+|---|---|
+| godoc の無い exported symbol | `revive` (exported) |
+| import 順序の混在 | `goimports` (自動修正) |
+| 戻り値 error の `_` 破棄 | `errcheck` |
+| `this` / `self` receiver、1 型での receiver 名の揺れ | `revive` (receiver-naming) |
+| `errors.New(fmt.Sprintf(...))` | `gocritic` |
+
+**`make lint` が green ならこれらは検出済み**として扱う。review で再走しない。
+
+### B. grep で拾う (house 固有 — lint では落ちない)
+
+```bash
+# 2 文字 acronym の mixed case (revive の initialism リストに AI/IO/OS/DB は無い)
+grep -rnE '\b[A-Za-z]*(Ai|Io|Os|Db)([A-Z]|\b)' --include='*.go' .
+
+# 商標 acronym の case mix (openAIKey → openaiKey が正)
+grep -rnE '\b[a-z]+(AI|API|OpenAI)[A-Z]' --include='*.go' .
+
+# library 内の context.Background() (cmd/ と _test.go は除外)
+grep -rn 'context.Background()' --include='*.go' internal/ pkg/ 2>/dev/null | grep -v '_test.go'
+
+# 衝突 risk のある string key
+grep -rn 'ctx.Value("' --include='*.go' .
+
+# struct field の ctx (1 行 struct 記法にも当たるよう `{` 直後も見る)
+grep -rnE '(^|\{)\s*ctx\s+context\.Context' --include='*.go' .
+
+# 運用 log を fmt / 標準 log で出している
+grep -rnE '(fmt\.Print|log\.Print|log\.Fatal)' --include='*.go' internal/ pkg/ 2>/dev/null
+
+# interpolated な log message
+grep -rnE 'slog\.[A-Z][a-z]+\(fmt\.Sprintf' --include='*.go' .
+
+# 理由コメントの無い nolint
+grep -rn 'nolint:' --include='*.go' . | grep -v '//.*nolint:.*//'
+
+# 時系列 / ticket scope の言及
+grep -rnE '(Phase [0-9]|TODO\(.*-[0-9]+\)|ticket)' --include='*.go' .
+
+# signature の両方向 channel
+grep -rnE 'func .*\bchan [A-Za-z]' --include='*.go' .
+```
+
+**grep は候補抽出であり判定ではない**。hit を必ず実物で確認する (生成コード / 慣用 pattern は「false positive 判定基準」で落とす)。
+
+### C. 判断が要る (grep 不可)
+
+grep では拾えず、**reviewer が読んで判断する**もの。検出できないことを自覚した上で見る:
+
+- 「将来公開するかも」だけの exported symbol
+- WHAT しか書いていないコメント / unexported method の機械的 WHAT doc block (4 行以上を grep で候補出しはできる)
+- `mu sync.Mutex` の保護対象が不明 (宣言の grep で候補は出せる)
+- goroutine の終了経路の有無
+- `cmd/` 内の business logic / 過剰な抽象化 / altitude の不揃い
+
 ## False positive 判定基準
 
 Don't にヒットしても、以下は違反扱いしない。
