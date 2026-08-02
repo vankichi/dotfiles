@@ -118,19 +118,71 @@ parser := adapters.NewPDFParser(vlm, adapters.WithDPI(cfg.Parser.DPI)) // value 
 
 **Detect**: no `defaultXxx` const, with numeric literals scattered through the code / `WithXxx(...)` not exported, so cmd can't override / public adapter struct fields (direct assignment by callers breaks immutability) / adapter-internal values exposed as proto fields
 
-## 11. Detection signals (grep)
+## 11. How to detect
 
-| Violation | grep |
-|---|---|
-| Domain → outward import | `grep -r 'import.*adapters\|import.*interfaces' internal/domain/` |
-| Application → concrete adapter import | `grep -r 'import.*adapters/[a-z]\+/' internal/application/ \| grep -v 'application/ports'` |
-| Adapter → interfaces import | `grep -r 'import.*interfaces' internal/adapters/` |
-| SDK-specific types in a port shape | `grep -rn 'pineconego\.\|openaigo\.\|aws\.' internal/application/ports/` |
-| Direct logger calls in an Application Service | `grep -rn 'slog\.Info\|slog\.Error' internal/application/ \| grep -v 'logger\.'` |
-| SDK types imported into a handler / service | `grep -rn 'pineconego\|openaigo' internal/interfaces/ internal/application/` |
-| SQL strings in a repository | `grep -rn 'SELECT\|INSERT\|UPDATE\|DELETE' internal/application/ports/` |
+**Three distinct channels. Don't conflate them.**
 
-Other signals: an adapter that implements no Port (its role is unclear and it gets imported ad hoc) / application code receiving an adapter as a concrete type (no fake can be injected in tests) / vendor-specific errors leaking into the application layer without a sentinel wrap.
+### A. The linter catches it
+
+**Layer boundary violations can be enforced with `depguard` (golangci-lint)** — more reliable than grepping for them every time. Declare the dependency direction in `.golangci.yaml`:
+
+```yaml
+linters-settings:
+  depguard:
+    rules:
+      domain:
+        files: ["**/internal/domain/**"]
+        deny:
+          - pkg: "**/internal/adapters/**"
+            desc: domain must not depend on outer layers
+          - pkg: "**/internal/interfaces/**"
+            desc: domain must not depend on outer layers
+      application:
+        files: ["**/internal/application/**"]
+        deny:
+          - pkg: "**/internal/adapters/**"
+            desc: go through a Port (direct concrete adapter imports are forbidden)
+```
+
+**Once adopted, the linter catches the first three greps below**, dropping them out of review. In repos that haven't adopted it, catch them via B.
+
+### B. Catch it with grep
+
+```bash
+# Domain → outward import
+grep -rn 'import.*adapters\|import.*interfaces' internal/domain/
+
+# Application → concrete adapter import (not through ports)
+grep -rn 'import.*adapters/[a-z]\+/' internal/application/ | grep -v 'application/ports'
+
+# Adapter → interfaces import (sideways dependency)
+grep -rn 'import.*interfaces' internal/adapters/
+
+# SDK-specific types in a port shape (adjust vendor names to the target repo)
+grep -rnE '(pineconego|openaigo|aws)\.' internal/application/ports/
+
+# Direct logger calls inside an Application Service (cross-cutting leaking in)
+grep -rnE 'slog\.(Info|Error|Warn|Debug)' internal/application/ | grep -v 'logger\.'
+
+# SDK types imported into a handler / service
+grep -rnE '(pineconego|openaigo)' internal/interfaces/ internal/application/
+
+# SQL strings in a repository signature
+grep -rnE '(SELECT|INSERT|UPDATE|DELETE)' internal/application/ports/
+
+# Domain entities carrying wire tags (layers mixed)
+grep -rnE '`(json|protobuf|yaml):' internal/domain/
+```
+
+**Replace the vendor names (`pineconego` etc.) with the target repo's actual dependencies** — don't hardcode them in the skill (take them from `MEMORY.md` / `go.mod`).
+
+### C. Requires judgment (not greppable)
+
+- **Whether an adapter implements a Port** — without one its role is unclear and it gets imported ad hoc. Interface satisfaction requires following the types
+- **Whether application code receives an adapter as a concrete type** — judge by whether a fake can be injected in tests
+- **Whether vendor-specific errors leak without a sentinel wrap** — requires following the error flow
+- **Where the YAGNI line sits** — is something that could be a plain struct being made an Aggregate / does the Aggregate Root actually protect the invariant
+- **Ubiquitous Language drift** — comparing vocabulary between docs and code cannot be mechanized
 
 ## Identifying false positives
 

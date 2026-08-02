@@ -116,19 +116,71 @@ parser := adapters.NewPDFParser(vlm, adapters.WithDPI(cfg.Parser.DPI)) // Config
 
 **検出**: `defaultXxx` const が無く数値リテラルが散在 / `WithXxx(...)` が export されておらず cmd 側で override 不可 / adapter struct field が public (caller 直接代入で immutable 性が破綻) / proto field に adapter internal 値が露出
 
-## 11. 検出シグナル総括 (grep)
+## 11. 検出方法
 
-| 違反 | grep |
-|---|---|
-| Domain → 外側 import | `grep -r 'import.*adapters\|import.*interfaces' internal/domain/` |
-| Application → concrete adapter import | `grep -r 'import.*adapters/[a-z]\+/' internal/application/ \| grep -v 'application/ports'` |
-| Adapter → interfaces import | `grep -r 'import.*interfaces' internal/adapters/` |
-| Port shape に SDK 固有型 | `grep -rn 'pineconego\.\|openaigo\.\|aws\.' internal/application/ports/` |
-| Application Service 内の logger 直接呼び | `grep -rn 'slog\.Info\|slog\.Error' internal/application/ \| grep -v 'logger\.'` |
-| handler / service 内の SDK 型直 import | `grep -rn 'pineconego\|openaigo' internal/interfaces/ internal/application/` |
-| Repository に SQL string | `grep -rn 'SELECT\|INSERT\|UPDATE\|DELETE' internal/application/ports/` |
+**3 系統に分かれる。混同しない。**
 
-その他の検出: adapter が Port を実装していない (位置付けが不明で ad-hoc に直接 import される) / Application code が adapter を concrete type で受け取っている (test で fake を注入できない) / vendor 固有 error が application 層に sentinel wrap なしで漏れている。
+### A. lint が落とす
+
+**層境界の違反は `depguard` (golangci-lint) で強制できる** — grep で毎回探すより確実。`.golangci.yaml` に依存方向を宣言する:
+
+```yaml
+linters-settings:
+  depguard:
+    rules:
+      domain:
+        files: ["**/internal/domain/**"]
+        deny:
+          - pkg: "**/internal/adapters/**"
+            desc: domain は外側に依存しない
+          - pkg: "**/internal/interfaces/**"
+            desc: domain は外側に依存しない
+      application:
+        files: ["**/internal/application/**"]
+        deny:
+          - pkg: "**/internal/adapters/**"
+            desc: Port 経由で使う (concrete adapter の直 import は禁止)
+```
+
+**導入すれば下記 B の上 3 行は lint が落とす**ので review から外れる。未導入の repo では B で拾う。
+
+### B. grep で拾う
+
+```bash
+# Domain → 外側 import
+grep -rn 'import.*adapters\|import.*interfaces' internal/domain/
+
+# Application → concrete adapter import (ports 経由でない)
+grep -rn 'import.*adapters/[a-z]\+/' internal/application/ | grep -v 'application/ports'
+
+# Adapter → interfaces import (横方向依存)
+grep -rn 'import.*interfaces' internal/adapters/
+
+# Port shape に SDK 固有型 (vendor 名は対象 repo に合わせる)
+grep -rnE '(pineconego|openaigo|aws)\.' internal/application/ports/
+
+# Application Service 内の logger 直接呼び (cross-cutting の混入)
+grep -rnE 'slog\.(Info|Error|Warn|Debug)' internal/application/ | grep -v 'logger\.'
+
+# handler / service 内の SDK 型直 import
+grep -rnE '(pineconego|openaigo)' internal/interfaces/ internal/application/
+
+# Repository の signature に SQL string
+grep -rnE '(SELECT|INSERT|UPDATE|DELETE)' internal/application/ports/
+
+# Domain entity が wire tag を持つ (層の混在)
+grep -rnE '`(json|protobuf|yaml):' internal/domain/
+```
+
+**vendor 名 (`pineconego` 等) は対象 repo の実際の依存に置き換える** — skill 側に hardcode しない (`MEMORY.md` / `go.mod` から取る)。
+
+### C. 判断が要る (grep 不可)
+
+- **adapter が Port を実装しているか** — 実装していないと位置付けが不明で ad-hoc に直接 import される。interface の充足は型を追わないと分からない
+- **Application code が adapter を concrete type で受け取っていないか** — test で fake を注入できるかで判定する
+- **vendor 固有 error が sentinel wrap なしで漏れていないか** — error の流れを追う必要がある
+- **YAGNI の線引き** — plain struct で足りるものを Aggregate 化していないか / Aggregate Root が invariant を守っているか
+- **Ubiquitous Language の drift** — docs と code の語彙比較は機械化できない
 
 ## False positive 判定基準
 
