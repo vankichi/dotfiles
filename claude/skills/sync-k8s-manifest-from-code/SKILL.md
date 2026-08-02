@@ -1,6 +1,6 @@
 ---
 name: sync-k8s-manifest-from-code
-description: Propagates interface changes (config / env / port / probe / resources) in a code repo (Go application) to the K8s Kustomize manifest repo (through detection + edits across 3 environments + `git add`; does not commit or push). Triggered by 「manifest 同期」「config / env 変えたから manifest 直して」 etc. Target repo information is fetched from the reference memory in MEMORY.md.
+description: Propagates interface changes (config / env / port / probe / resources) in a code repo (Go application) to the K8s Kustomize manifest repo (through detection + edits across 3 environments + `git add`; does not commit or push). Target repo information is fetched from the reference memory in MEMORY.md.
 when_to_use: When propagating interface changes on the code side (config / env / port / probe / resource) into k8s manifests.
 allowed-tools: Read, Edit, Grep, Glob, Bash(git status:*, git diff:*, git add:*, ls:*, find:*, cat:*)
 ---

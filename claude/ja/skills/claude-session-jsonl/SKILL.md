@@ -1,6 +1,6 @@
 ---
 name: claude-session-jsonl
-description: Claude Code のセッションログ (~/.claude/projects/**/*.jsonl) のスキーマ参照と、token / cost / tool 集計 tool を作るレシピ。「Claude の使用状況を観測したい」「セッションログから集計」「ccusage 相当を作る」「JSONL の中身教えて」等で使う。言語別サンプル parser は references/ にある。
+description: Claude Code のセッションログ (~/.claude/projects/**/*.jsonl) のスキーマ参照と、token / cost / tool 集計 tool を作るレシピ。言語別サンプル parser は references/ にある。
 when_to_use: session log (~/.claude/projects/**/*.jsonl) を解析したい時。token 消費 / cost の集計、parser の実装。
 ---
 

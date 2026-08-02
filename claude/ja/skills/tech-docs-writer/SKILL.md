@@ -1,6 +1,6 @@
 ---
 name: tech-docs-writer
-description: 社内向け技術ドキュメント (ADR / Design Doc / API 仕様 / README / Runbook / システム設計書) を日本語 Markdown で作成し docs/{adr,api,readme,runbook,design}/ に保存する。「設計ドキュメント書いて」「ADR 起こして」「API 仕様書」「Runbook 作成」「アーキテクチャ設計」等で必ず使う。
+description: 社内向け技術ドキュメント (ADR / Design Doc / API 仕様 / README / Runbook / システム設計書) を日本語 Markdown で作成し docs/{adr,api,readme,runbook,design}/ に保存する。
 when_to_use: ADR / Design Doc / API spec / README / Runbook を書く時。「ドキュメント書いて」「ADR 起票して」「runbook 作って」。
 ---
 

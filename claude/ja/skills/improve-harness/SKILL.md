@@ -1,6 +1,6 @@
 ---
 name: improve-harness
-description: 全 project の未処理 insights を集約し、現状照合 → 反映先判定 (memory → rules → skill → agent) → 改善実装 → dotfiles への改善 draft PR まで行う knowledge loop の反映側 skill。「improve-harness して」「harness 改善して」「insights 集約して」等で使う。設計判断はしない (undecided は要判断一覧で人間へ)。収集側は retrospect (対の skill)。
+description: 全 project の未処理 insights を集約し、現状照合 → 反映先判定 (memory → rules → skill → agent) → 改善実装 → dotfiles への改善 draft PR まで行う knowledge loop の反映側 skill。設計判断はしない (undecided は要判断一覧で人間へ)。収集側は retrospect (対の skill)。
 when_to_use: 「improve-harness して」「harness 改善して」「insights 集約して」。手動起動のみ (定期実行は未導入)。
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: grill-me
-description: plan / 設計について shared understanding に到達するまで user を徹底的に interview し、decision tree の各分岐を解消する skill。plan を stress-test したい場面、設計を厳しく問い詰めてほしい場面、「grill me」と言われた場面で使う。
+description: plan / 設計について shared understanding に到達するまで user を徹底的に interview し、decision tree の各分岐を解消する skill。
 when_to_use: 計画や設計を詰めたい時。「詰めて」「穴を探して」「grill me」。
 ---
 

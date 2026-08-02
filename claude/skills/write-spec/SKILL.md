@@ -1,6 +1,6 @@
 ---
 name: write-spec
-description: Assistant skill that polishes a human's design draft into a spec that satisfies the spec contract (rules/spec-contract.md). Makes no design decisions itself — only interrogates gaps, formats, and validates against the contract. Use for "spec にして" ("turn this into a spec"), "spec 書くの手伝って" ("help me write a spec"), "設計を spec 化" ("formalize this design into a spec"), etc. Only a human may set the ready flag.
+description: Assistant skill that polishes a human's design draft into a spec that satisfies the spec contract (rules/spec-contract.md). Makes no design decisions itself — only interrogates gaps, formats, and validates against the contract. Only a human may set the ready flag.
 when_to_use: When polishing a human's design draft into something that satisfies the spec contract. 「spec に起こして」「仕様書いて」.
 ---
 

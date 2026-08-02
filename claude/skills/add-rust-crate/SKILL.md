@@ -1,6 +1,6 @@
 ---
 name: add-rust-crate
-description: Adds a new crate to an existing Rust workspace (workspace inheritance in Cargo.toml / CLI, TUI, and lib skeletons / README table update / adding to workspace.dependencies if needed). Used for things like 「workspace に新 crate 追加」「<name> という tool を生やして」「新しい binary crate 切って」.
+description: Adds a new crate to an existing Rust workspace (workspace inheritance in Cargo.toml / CLI, TUI, and lib skeletons / README table update / adding to workspace.dependencies if needed).
 when_to_use: When adding a single new crate to an existing Rust workspace. Triggers like 「crate 追加して」「workspace に <name> を足して」.
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: arc42-c4
-description: Reference for architecture design docs combining arc42 (§1-12) with the C4 model (L1-L4) — which diagram goes in which section, top-level vs subsystem split. Use for "which section gets what", "§5 vs §6 vs §7", "ADR inside or separate". Reference skill, not a procedure.
+description: Reference for architecture design docs combining arc42 (§1-12) with the C4 model (L1-L4) — which diagram goes in which section, top-level vs subsystem split. Reference skill, not a procedure.
 when_to_use: When writing or reviewing architecture docs in arc42 / C4. When unsure where the boundary sits against ADR / runbook / README.
 ---
 

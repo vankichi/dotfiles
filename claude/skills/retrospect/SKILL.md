@@ -1,6 +1,6 @@
 ---
 name: retrospect
-description: Lightweight skill for recording one insight at the end of a dev cycle / work session — a sticking point, a redo, or a newly discovered convention or environment quirk. Use for "retrospect して" ("do a retrospective"), "振り返り記録して" ("record a retrospective"), etc. Does not analyze, aggregate, or turn findings into improvement PRs (that's improve-harness's responsibility).
+description: Lightweight skill for recording one insight at the end of a dev cycle / work session — a sticking point, a redo, or a newly discovered convention or environment quirk. Does not analyze, aggregate, or turn findings into improvement PRs (that's improve-harness's responsibility).
 when_to_use: At the end of a cycle or work session, when there were sticking points, redos, or newly discovered conventions. 「retrospect して」「振り返り記録して」. Write nothing when there is nothing to record.
 ---
 

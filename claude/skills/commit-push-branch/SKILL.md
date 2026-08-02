@@ -1,6 +1,6 @@
 ---
 name: commit-push-branch
-description: Cuts a new branch and commits & pushes the working-tree changes with a message that follows past commit style (type prefix / ticket ID / Co-Authored-By). Used for 「branch 切って commit & push して」「PR 用に push」 etc.
+description: Cuts a new branch and commits & pushes the working-tree changes with a message that follows past commit style (type prefix / ticket ID / Co-Authored-By).
 when_to_use: 「branch 切って commit & push して」「PR 用に push」. Also launched from dev-cycle's commit & push stage.
 ---
 
