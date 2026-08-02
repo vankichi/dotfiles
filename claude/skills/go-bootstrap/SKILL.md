@@ -1,6 +1,7 @@
 ---
 name: go-bootstrap
 description: Sets up a working skeleton for a new or existing Go project in one shot (module initialization / directory skeleton / .golangci.yaml / Makefile / .gitignore / golangci-lint installation). Used for requests like 「Go プロジェクトのセットアップ」「Go module を切って」「lint と Makefile 用意して」.
+when_to_use: When scaffolding a new or existing Go project (go.mod / cmd / internal / .golangci.yaml / Makefile). 「Go project 立ち上げて」.
 ---
 
 > **Source of truth:** `claude/ja/skills/go-bootstrap/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.

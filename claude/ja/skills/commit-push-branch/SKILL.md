@@ -1,6 +1,7 @@
 ---
 name: commit-push-branch
 description: 作業ツリーの変更を過去の commit スタイル (type prefix / ticket ID / Co-Authored-By) に倣ったメッセージで、新 branch を切って commit & push する。「branch 切って commit & push して」「PR 用に push」等で使う。
+when_to_use: 「branch 切って commit & push して」「PR 用に push」。dev-cycle の commit & push 工程からも起動される。
 ---
 
 # commit-push-branch

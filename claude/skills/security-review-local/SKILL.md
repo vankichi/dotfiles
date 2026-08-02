@@ -1,6 +1,7 @@
 ---
 name: security-review-local
 description: Security audit of the local repository and Claude Code configuration. Cross-checks for secret leaks, real values leaking into `.env` files, over-granted permissions, suspicious commands, and supply-chain risk. Used for 「security review して」「secret 漏れてない?」 etc.
+when_to_use: Before a commit or push, or after a configuration change. 「security review して」「secret 漏れてない?」. Also launched from dev-cycle's security review stage.
 ---
 
 > **Source of truth:** `claude/ja/skills/security-review-local/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.

@@ -1,6 +1,7 @@
 ---
 name: improve-harness
 description: The apply side of the knowledge loop — aggregates unprocessed insights across all projects, then reconciles against current state → decides where to apply (memory → rules → skill → agent) → implements the improvement → all the way to a draft improvement PR against dotfiles. Use for "improve-harness して" ("run improve-harness"), "harness 改善して" ("improve the harness"), "insights 集約して" ("aggregate the insights"), etc. Makes no design decisions (undecided items go back to a human as a decisions-needed list). The collection side is retrospect (its paired skill).
+when_to_use: 「improve-harness して」「harness 改善して」「insights 集約して」. Manual invocation only (no scheduled run).
 ---
 
 > **Source of truth:** `claude/ja/skills/improve-harness/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.

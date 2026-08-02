@@ -1,6 +1,7 @@
 ---
 name: work-intake
 description: Entry-point skill for the dev loop that picks up a ready ticket from Notion, validates it against the spec contract (rules/spec-contract.md), and returns a normalized work item. Use for "次の work 拾って" ("grab the next work item"), "ready ticket ある?" ("any ready tickets?"), "work-intake", etc. Tickets that fail the contract are skipped with a reason comment. The watched DB is resolved from a memory reference.
+when_to_use: As the dev loop's entry point, picking up a ready ticket and turning it into a work item. Normally launched from dev-loop's poll stage.
 ---
 
 > **Source of truth:** `claude/ja/skills/work-intake/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.

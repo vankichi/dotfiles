@@ -1,6 +1,7 @@
 ---
 name: security-review-local
 description: ローカルリポジトリと Claude Code 設定のセキュリティ監査。secret leak / .env 実値混入 / permission 過剰許可 / suspicious 命令 / supply chain リスクを横断チェックする。「security review して」「secret 漏れてない?」等で使う。
+when_to_use: commit 前 / push 前 / 設定変更後。「security review して」「secret 漏れてない?」。dev-cycle の security review 工程からも起動される。
 ---
 
 # security-review-local

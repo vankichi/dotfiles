@@ -1,6 +1,7 @@
 ---
 name: dev-loop
 description: /loop で回す dev loop の driver skill。1 tick = work-intake poll → (work item があれば) dev-cycle を直列実行 → receipts 検証済みの完了 / escalation 通知 → ScheduleWakeup で次 tick の self-pacing。「dev-loop の tick を実行して」「dev loop 回して」等で使う (通常は /loop 経由)。cycle の中身は dev-cycle が SoT — 本 skill は駆動のみ。
+when_to_use: /loop 経由で dev loop を駆動する時。「dev-loop の tick を実行して」「dev loop 回して」。単発 tick の手動実行も可。
 disallowed-tools: AskUserQuestion
 ---
 

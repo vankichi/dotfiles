@@ -1,6 +1,7 @@
 ---
 name: work-intake
 description: Notion の ready ticket を拾い、spec contract (rules/spec-contract.md) を検証して正規化 work item を返す Dev loop の入口 skill。「次の work 拾って」「ready ticket ある?」「work-intake」等で使う。contract を満たさない ticket は skip + 理由コメント。watch 対象 DB は memory reference から取得。
+when_to_use: dev loop の入口として ready な ticket を拾い work item にする時。通常は dev-loop の poll 工程から起動される。
 ---
 
 # work-intake

@@ -1,6 +1,7 @@
 ---
 name: rust-bootstrap
 description: 新規 / 既存ディレクトリに Rust workspace の動く骨格を一括セットアップする (crates/* レイアウト、lints 集中管理、Makefile、deny.toml、CI、rustup 導入まで。task runner は make のみ)。「Rust の workspace 切って」「Rust プロジェクトのセットアップ」「複数 tool 入れる Rust リポジトリにして」等で使う。
+when_to_use: 新規 or 既存 repo に Rust workspace の骨組みを作る時。「Rust project 立ち上げて」。
 ---
 
 # rust-bootstrap

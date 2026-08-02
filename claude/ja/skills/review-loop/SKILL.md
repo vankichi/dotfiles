@@ -1,6 +1,7 @@
 ---
 name: review-loop
 description: /loop で回す PR review の driver skill。1 tick = reviewer assign された open PR を poll → 未 review の head sha を 1 件選択 → reviewer の統合 review → findings を中立 comment として投稿 (approve / merge はしない) → 通知 → ScheduleWakeup で self-pacing。「review-loop の tick を実行して」「review loop 回して」等で使う (通常は /loop 経由)。review の中身は reviewer が SoT — 本 skill は駆動のみ。
+when_to_use: /loop 経由で reviewer assign された PR を回す時。「review-loop の tick を実行して」「review loop 回して」。
 disallowed-tools: AskUserQuestion
 ---
 

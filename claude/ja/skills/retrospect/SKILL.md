@@ -1,6 +1,7 @@
 ---
 name: retrospect
 description: dev cycle / 作業 session の最後に、詰まった点・やり直し・新規判明した規約や環境の癖を insights として 1 件記録する軽量 skill。「retrospect して」「振り返り記録して」等で使う。分析・集約・改善 PR 化はしない (improve-harness の責務)。
+when_to_use: cycle / 作業 session の終わりに、詰まった点・やり直し・新規判明した規約があった時。「retrospect して」「振り返り記録して」。該当なしなら書かない。
 ---
 
 # retrospect

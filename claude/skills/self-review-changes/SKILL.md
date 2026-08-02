@@ -1,6 +1,7 @@
 ---
 name: self-review-changes
 description: Use when you want the most recent edit diff inspected — 「self review して」「review して」「修正箇所ないか確認して」. Holds a 10-perspective checklist (correctness / spec alignment / tests / dependencies / ops docs, etc.) in this single file, firing mechanically on diff content (default-on + reasoned skip). In interactive mode it presents a fix plan and Edits only after user approval. In loop-mode the `reviewer` agent preloads and applies it.
+when_to_use: 「self review して」「review して」「修正箇所ないか確認して」. When an edit happened in the preceding turn, before a commit or right after the most recent one. Not launched directly in loop-mode — `reviewer` preloads it.
 ---
 
 > **Source of truth:** `claude/ja/skills/self-review-changes/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.

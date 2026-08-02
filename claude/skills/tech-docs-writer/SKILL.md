@@ -1,6 +1,7 @@
 ---
 name: tech-docs-writer
 description: Creates internal technical documentation (ADR / Design Doc / API spec / README / Runbook / system design document) as Japanese Markdown and saves it under docs/{adr,api,readme,runbook,design}/. Always use for 「設計ドキュメント書いて」「ADR 起こして」「API 仕様書」「Runbook 作成」「アーキテクチャ設計」 and similar requests.
+when_to_use: When writing an ADR / Design Doc / API spec / README / Runbook. 「ドキュメント書いて」「ADR 起票して」「runbook 作って」.
 ---
 
 > **Source of truth:** `claude/ja/skills/tech-docs-writer/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.

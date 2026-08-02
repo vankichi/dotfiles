@@ -1,6 +1,7 @@
 ---
 name: rust-bootstrap
 description: Sets up a working skeleton for a Rust workspace in a new or existing directory in one shot (crates/* layout, centralized lints, Makefile, deny.toml, CI, all the way through installing rustup. The only task runner is make). Used for things like 「Rust の workspace 切って」「Rust プロジェクトのセットアップ」「複数 tool 入れる Rust リポジトリにして」.
+when_to_use: When scaffolding a Rust workspace in a new or existing repo. 「Rust project 立ち上げて」.
 ---
 
 > **Source of truth:** `claude/ja/skills/rust-bootstrap/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.

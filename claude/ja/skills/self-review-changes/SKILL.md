@@ -1,6 +1,7 @@
 ---
 name: self-review-changes
 description: 「self review して」「review して」「修正箇所ないか確認して」等、直前の編集差分を点検したい時に使う。10 観点の checklist (correctness / spec 整合 / test / 依存 / 運用 docs 等) を本ファイル 1 枚に持ち、diff 内容で機械的に発火する (default-on + 理由付き skip)。対話時は修正方針を提示し user 承認後に Edit。loop-mode では `reviewer` agent が preload して適用する。
+when_to_use: 「self review して」「review して」「修正箇所ないか確認して」。直前ターンで編集があり commit 前 / 直近 commit 後の時。loop-mode では reviewer が preload するため直接起動しない。
 ---
 
 # self-review-changes

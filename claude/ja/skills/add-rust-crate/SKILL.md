@@ -1,6 +1,7 @@
 ---
 name: add-rust-crate
 description: 既存 Rust workspace に新 crate を追加する (Cargo.toml の workspace 継承 / CLI・TUI・lib 雛形 / README 表更新 / 必要なら workspace.dependencies 追加)。「workspace に新 crate 追加」「<name> という tool を生やして」「新しい binary crate 切って」等で使う。
+when_to_use: 既存の Rust workspace に新しい crate を 1 つ足す時。「crate 追加して」「workspace に <name> を足して」。
 ---
 
 # add-rust-crate
