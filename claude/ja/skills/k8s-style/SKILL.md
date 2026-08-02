@@ -179,6 +179,67 @@ spec:
 
 log は **stdout / stderr に構造化 JSON で出す** (file に書かない — ephemeral container は消える)。metrics endpoint を全 workload に生やし、ServiceMonitor か `prometheus.io/scrape` annotation で配線する。**高 cardinality な label を metrics に入れない** (時系列 DB を破壊する)。重要 SLI は Recording Rule で事前計算する。
 
+## 検出方法
+
+**3 系統に分かれる。混同しない。**
+
+### A. tool が落とす (skill 側で grep しない)
+
+| Don't | tool |
+|---|---|
+| 廃止 API の使用 | `pluto` |
+| probe 無し / resources 無し / `privileged` / root 実行 / `capabilities.drop` 未指定 | `kube-linter` |
+| `:latest` tag | `kube-linter` |
+| securityContext の misconfig / `hostPath` / `hostNetwork` | `trivy config` + `kube-linter` |
+| RBAC の wildcard | `kube-linter` |
+| schema 不整合 (apiVersion と kind の組み合わせ) | `kubeconform` |
+
+**CI で `kustomize build` の出力をこの 3 つに流していれば検出済み**として扱う。review で再走しない。
+
+### B. grep で拾う (house 固有 — tool が見ない)
+
+```bash
+# 環境名を resource name に埋めている (namespace で分離するのが house 規約)
+grep -rnE '^\s*name:.*-(dev|stg|staging|prod|production)\b' --include='*.yaml' .
+
+# recommended labels の欠落
+for f in $(grep -rl 'kind: \(Deployment\|StatefulSet\|Service\)' --include='*.yaml' .); do
+  grep -q 'app.kubernetes.io/name' "$f" || echo "labels 欠落: $f"
+done
+
+# NetworkPolicy はあるが DNS egress allow が無い (全 pod が死ぬ最頻の罠)
+for f in $(grep -rl 'kind: NetworkPolicy' --include='*.yaml' .); do
+  grep -q 'port: 53' "$f" || echo "DNS allow 欠落: $f"
+done
+
+# 3 probe が同じ endpoint を向いている
+grep -rn -A4 'livenessProbe:|readinessProbe:|startupProbe:' -E --include='*.yaml' . | grep 'path:' | sort | uniq -c | sort -rn
+
+# selector に rolling deploy で変わる値
+grep -rn -A5 'matchLabels:' --include='*.yaml' . | grep -iE 'sha|commit|build|revision'
+
+# envFrom の一括注入 (必要な key だけ valueFrom にする)
+grep -rn 'envFrom:' --include='*.yaml' .
+
+# Secret を平の YAML で commit
+grep -rln 'kind: Secret' --include='*.yaml' .
+
+# Kustomize の base が環境値で汚れている
+grep -rnE '(dev|stg|prod)[-.]' --include='*.yaml' base/ 2>/dev/null
+
+# 自社アプリ用に新規 Helm chart を切っている (Kustomize で済まないか先に検討)
+find . -name Chart.yaml -not -path '*/charts/*'
+```
+
+**grep は候補抽出であり判定ではない**。hit は必ず実物で確認する。
+
+### C. 判断が要る (grep 不可)
+
+- **liveness が依存先を見ているか** — probe の path は grep できるが、その endpoint が DB を叩くかは**アプリ実装を読まないと分からない**
+- resource sizing が計測ベースか推測か
+- sidecar / init container の役割が明確か
+- `terminationGracePeriodSeconds` がアプリの cleanup 時間に合っているか
+
 ## チェックリスト (manifest review 時)
 
 - [ ] `apiVersion` が stable / 非推奨でない

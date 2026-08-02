@@ -163,6 +163,65 @@ Main causes and remedies: **time-based** (`time.Sleep` waits / implicit `time.No
 
 **Detect**: `time.Sleep` inside a test / order-sensitive comparison of map iteration results / goroutines surviving after the test ends
 
+## How to detect
+
+**Three distinct channels. Don't conflate them.**
+
+### A. The linter catches it
+
+The current `.golangci.yaml` (`standard` + `revive` / `gocritic` / `misspell`) has **no test-specific linters**. The following can be enforced by lint, removing the need to check them in review:
+
+| Don't | Linter to add |
+|---|---|
+| Missing `t.Helper()` | `thelper` |
+| Missing `t.Parallel()` / closure capture | `paralleltest` + `tparallel` |
+| Misuse of an assertion library | `testifylint` (only if testify is in use) |
+
+**Adding `thelper` / `paralleltest` / `tparallel` to `.golangci.yaml` is recommended.** Once added, these three drop out of channels B and C.
+
+### B. Catch it with grep (house-specific — the linter won't)
+
+```bash
+# Explanatory inline comments inside tests (intent belongs in the test / variable names)
+grep -rnE '^\s+//' --include='*_test.go' . | grep -vE '// *(nolint|go:build|Code generated)'
+
+# Index-based case names
+grep -rnE 'name:\s*"(case|test|tc)[0-9]' --include='*_test.go' .
+
+# Spaces in sub-test names (they become hard to grep)
+grep -rnE 't\.Run\("[^"]* ' --include='*_test.go' .
+
+# setup / teardown naming (the house uses beforeFunc / afterFunc)
+grep -rnE '\b(setup|teardown)\s+func' --include='*_test.go' .
+
+# A mock framework introduced (the house hand-writes fakes)
+grep -nE '(testify|gomock|mockery|golang/mock)' go.mod
+
+# wantErr compared as a string (sentinel + errors.Is is correct)
+grep -rnE 'wantErr\s+string' --include='*_test.go' .
+
+# time.Sleep inside a test (the main cause of flakiness)
+grep -rn 'time.Sleep' --include='*_test.go' .
+
+# Cleanup via defer (use t.Cleanup)
+grep -rnE 'defer .*(cleanup|Cleanup|Close)\(' --include='*_test.go' .
+
+# go test in the Makefile without -race
+grep -n 'go test' Makefile | grep -v -- '-race'
+
+# Huge expected values inlined (move them to testdata)
+awk 'length($0)>200 && /"/ {print FILENAME":"NR}' $(find . -name '*_test.go')
+```
+
+**A grep surfaces candidates; it does not decide.** Always confirm a hit against the actual code.
+
+### C. Requires judgment (not greppable)
+
+- **Whether an assertion passes trivially** — "is there a mutation that inverts the implementation's behavior and still passes" **can only be answered by reading both the implementation and the test**. It's this skill's most valuable perspective and it cannot be mechanized
+- Coverage of boundary values (0 / the limit / limit+1 / multi-byte) — detecting what's missing requires knowing the spec's constraints
+- Whether the fake reproduces the real behavior
+- Whether the coverage number is backed by meaningful tests
+
 ## Identifying false positives
 
 The following are **not violations** even when a detection signal fires:

@@ -161,6 +161,65 @@ line coverage は guide rail であって**信仰しない**。branch / boundary
 
 **検出**: test 内の `time.Sleep` / map iteration 結果の順序付き比較 / test 終了後に残る goroutine
 
+## 検出方法
+
+**3 系統に分かれる。混同しない。**
+
+### A. lint が落とす
+
+現行の `.golangci.yaml` (`standard` + `revive` / `gocritic` / `misspell`) には **test 固有の linter が入っていない**。以下は lint で強制でき、review で見る必要がなくなる:
+
+| Don't | 追加すべき linter |
+|---|---|
+| `t.Helper()` の欠落 | `thelper` |
+| `t.Parallel()` の欠落 / closure capture | `paralleltest` + `tparallel` |
+| assertion ライブラリの誤用 | `testifylint` (testify を使う場合のみ) |
+
+**`thelper` / `paralleltest` / `tparallel` を `.golangci.yaml` に足すことを推奨**する。足せばこの 3 項目は B / C 系統から外れる。
+
+### B. grep で拾う (house 固有 — lint が拾わない)
+
+```bash
+# test 内の説明 inline コメント (意図は test 名 / 変数名で表現する)
+grep -rnE '^\s+//' --include='*_test.go' . | grep -vE '// *(nolint|go:build|Code generated)'
+
+# index ベースの case 名
+grep -rnE 'name:\s*"(case|test|tc)[0-9]' --include='*_test.go' .
+
+# sub-test 名のスペース (grep しにくくなる)
+grep -rnE 't\.Run\("[^"]* ' --include='*_test.go' .
+
+# setup / teardown 命名 (house は beforeFunc / afterFunc)
+grep -rnE '\b(setup|teardown)\s+func' --include='*_test.go' .
+
+# mock framework の導入 (house は手書き fake)
+grep -nE '(testify|gomock|mockery|golang/mock)' go.mod
+
+# wantErr の文字列比較 (sentinel + errors.Is が正)
+grep -rnE 'wantErr\s+string' --include='*_test.go' .
+
+# test 内の time.Sleep (flaky の主因)
+grep -rn 'time.Sleep' --include='*_test.go' .
+
+# defer での cleanup (t.Cleanup を使う)
+grep -rnE 'defer .*(cleanup|Cleanup|Close)\(' --include='*_test.go' .
+
+# Makefile の go test に -race が無い
+grep -n 'go test' Makefile | grep -v -- '-race'
+
+# 巨大な期待値が inline (testdata に切り出す)
+awk 'length($0)>200 && /"/ {print FILENAME":"NR}' $(find . -name '*_test.go')
+```
+
+**grep は候補抽出であり判定ではない**。hit は必ず実物で確認する。
+
+### C. 判断が要る (grep 不可)
+
+- **assertion が trivially pass しないか** — 「実装の挙動を逆にしても pass する mutation はあるか」は**実装と test の両方を読まないと判定できない**。本 skill で最も価値がある観点だが、機械化できない
+- boundary value の網羅性 (0 / 上限 / 上限+1 / マルチバイト) — 欠落の検出には spec 側の制約を知る必要がある
+- fake の作りが実挙動を再現できているか
+- coverage の数値が意味のある test に裏付けられているか
+
 ## False positive 判定基準
 
 以下は検出シグナルがヒットしても**違反扱いしない**:

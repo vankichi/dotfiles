@@ -181,6 +181,67 @@ spec:
 
 Emit logs **to stdout / stderr as structured JSON** (never to files — ephemeral containers vanish). Give every workload a metrics endpoint, wired via a ServiceMonitor or a `prometheus.io/scrape` annotation. **Don't put high-cardinality labels in metrics** (it destroys the time-series DB). Precompute important SLIs with Recording Rules.
 
+## How to detect
+
+**Three distinct channels. Don't conflate them.**
+
+### A. A tool catches it (don't grep for it here)
+
+| Don't | tool |
+|---|---|
+| Use of removed APIs | `pluto` |
+| No probes / no resources / `privileged` / running as root / `capabilities.drop` unspecified | `kube-linter` |
+| `:latest` tag | `kube-linter` |
+| securityContext misconfiguration / `hostPath` / `hostNetwork` | `trivy config` + `kube-linter` |
+| Wildcards in RBAC | `kube-linter` |
+| Schema mismatch (apiVersion / kind combination) | `kubeconform` |
+
+**If CI pipes `kustomize build` output through those three, treat these as already checked.** Don't re-run them in review.
+
+### B. Catch it with grep (house-specific — the tools don't look)
+
+```bash
+# Environment baked into a resource name (house convention separates by namespace)
+grep -rnE '^\s*name:.*-(dev|stg|staging|prod|production)\b' --include='*.yaml' .
+
+# Missing recommended labels
+for f in $(grep -rl 'kind: \(Deployment\|StatefulSet\|Service\)' --include='*.yaml' .); do
+  grep -q 'app.kubernetes.io/name' "$f" || echo "labels missing: $f"
+done
+
+# A NetworkPolicy exists but has no DNS egress allow (the most common way to kill every pod)
+for f in $(grep -rl 'kind: NetworkPolicy' --include='*.yaml' .); do
+  grep -q 'port: 53' "$f" || echo "DNS allow missing: $f"
+done
+
+# All three probes pointing at the same endpoint
+grep -rn -A4 'livenessProbe:|readinessProbe:|startupProbe:' -E --include='*.yaml' . | grep 'path:' | sort | uniq -c | sort -rn
+
+# Values in a selector that change on rolling deploy
+grep -rn -A5 'matchLabels:' --include='*.yaml' . | grep -iE 'sha|commit|build|revision'
+
+# Bulk injection via envFrom (inject only the keys you need with valueFrom)
+grep -rn 'envFrom:' --include='*.yaml' .
+
+# Secrets committed as plain YAML
+grep -rln 'kind: Secret' --include='*.yaml' .
+
+# A Kustomize base polluted with environment values
+grep -rnE '(dev|stg|prod)[-.]' --include='*.yaml' base/ 2>/dev/null
+
+# A new Helm chart cut for an in-house app (check whether Kustomize suffices first)
+find . -name Chart.yaml -not -path '*/charts/*'
+```
+
+**A grep surfaces candidates; it does not decide.** Always confirm a hit against the actual manifest.
+
+### C. Requires judgment (not greppable)
+
+- **Whether liveness touches a dependency** — the probe path is greppable, but **whether that endpoint hits the DB requires reading the application**
+- Whether resource sizing is measured or guessed
+- Whether the sidecar / init container has a clear role
+- Whether `terminationGracePeriodSeconds` matches the app's cleanup time
+
 ## Checklist (for manifest review)
 
 - [ ] `apiVersion` is stable / not deprecated
