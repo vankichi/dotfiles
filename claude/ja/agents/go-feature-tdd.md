@@ -1,6 +1,6 @@
 ---
 name: go-feature-tdd
-description: Go (DDD) プロジェクトに新機能を TDD (Red-Green-Refactor) + table-driven test で実装する。「TDD で機能追加」「ドメイン層に〜を追加」「port を切って〜を実装」などの依頼で起動する。仕様や ticket を渡すと、domain → ports/application → adapters の順でテストファースト実装を進める。
+description: Go (DDD) プロジェクトに新機能を TDD (Red-Green-Refactor) + table-driven test で実装する。「TDD で機能追加」「ドメイン層に〜を追加」「port を切って〜を実装」などの依頼で起動する。仕様や ticket を渡すと、domain → application → data access の順でテストファースト実装を進める。clean / layered どちらの style にも対応する。
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: opus
 ---
