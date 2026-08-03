@@ -1,6 +1,8 @@
 ---
 name: pr-follow-loop
-description: Driver skill run via /loop that shepherds the open PRs I authored. 1 tick = poll my open PRs → advance one PR by one step (triage-and-present bot review findings / watch for human approval / auto-clean up after merge) → notify → ScheduleWakeup to self-pace. Use for 「pr-follow-loop の tick を実行して」("run the pr-follow-loop tick"), 「PR 見届け loop 回して」("run the PR follow loop"), etc. (normally via /loop). Sibling of dev-loop (produces PRs) and review-loop (reviews others' PRs); this skill follows the PRs I produced through the rest of their life.
+description: Driver skill run via /loop that shepherds the open PRs I authored. 1 tick = poll my open PRs → advance one PR by one step (triage-and-present bot review findings / watch for human approval / auto-clean up after merge) → notify → ScheduleWakeup to self-pace. Sibling of dev-loop (produces PRs) and review-loop (reviews others' PRs); this skill follows the PRs I produced through the rest of their life.
+when_to_use: When shepherding my own open PRs via /loop. 「pr-follow-loop の tick を実行して」「PR 見届け loop 回して」.
+disallowed-tools: AskUserQuestion
 ---
 
 > **Source of truth:** `claude/ja/skills/pr-follow-loop/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
@@ -46,7 +48,7 @@ Select one PR from the poll (oldest created first) and, based on its current sta
 - Fetch the bot reviewer's reviews / inline comments and **assess each finding against the repo conventions (`.claude/rules/`)**: valid (recommend fix) / false-positive / convention-conflict or YAGNI (recommend decline), each with a severity and a one-line reason
 - **Present the triage summary (each finding → verdict + reason + recommended action) and notify the user.** Record the marker to treat this head sha as triaged
 - **The loop stops here**: applying fixes (commit+push) / posting decline replies happen **after the user approves, in dialogue** (the loop never fixes / declines on its own). Design judgments / convention conflicts are always surfaced as escalation
-- If the assessment needs fresh context at scale, a review-lens-equivalent may be spawned as a subagent (but this skill's role ends at presenting the triage — it does not apply anything)
+- If the assessment needs fresh context at scale, `reviewer` may be spawned as a subagent (but this skill's role ends at presenting the triage — it does not apply anything)
 
 #### b. Awaiting approval (no un-triaged findings; required reviewer has not approved)
 

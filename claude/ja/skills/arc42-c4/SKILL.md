@@ -1,6 +1,7 @@
 ---
 name: arc42-c4
-description: arc42 (§1-12) と C4 model (L1-L4) を組み合わせた architecture 設計ドキュメントの reference。どの diagram をどの section に置くか、top-level と subsystem の分割を扱う。「どの section に何を書くか」「§5 vs §6 vs §7」「ADR は本文内か別出しか」等の問いで使う。手順 skill ではない。
+description: arc42 (§1-12) と C4 model (L1-L4) を組み合わせた architecture 設計ドキュメントの reference。どの diagram をどの section に置くか、top-level と subsystem の分割を扱う。手順 skill ではない。
+when_to_use: arc42 / C4 で設計ドキュメントを書く / review する時。ADR / runbook / README との境界に迷った時。
 ---
 
 # arc42-c4
@@ -51,4 +52,4 @@ ADR を切る基準は、覆すのに costly な決定・意見が割れた決�
 
 ## 関連 skill
 
-`tech-docs-writer` (doc を書く) · `api-design-review` (doc を review する) · `ddd-clean-architecture` (§5 / §8 の layer 境界)。
+`tech-docs-writer` (doc を書く) · `api-design-review` (doc を review する) · `ddd-architecture` (§5 / §8 の layer 境界)。

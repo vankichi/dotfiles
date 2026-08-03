@@ -1,6 +1,7 @@
 ---
 name: go-bootstrap
-description: Sets up a working skeleton for a new or existing Go project in one shot (module initialization / directory skeleton / .golangci.yaml / Makefile / .gitignore / golangci-lint installation). Used for requests like 「Go プロジェクトのセットアップ」「Go module を切って」「lint と Makefile 用意して」.
+description: Sets up a working skeleton for a new or existing Go project in one shot (module initialization / directory skeleton / .golangci.yaml / Makefile / .gitignore / golangci-lint installation).
+when_to_use: When scaffolding a new or existing Go project (go.mod / cmd / internal / .golangci.yaml / Makefile). 「Go project 立ち上げて」.
 ---
 
 > **Source of truth:** `claude/ja/skills/go-bootstrap/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
@@ -13,7 +14,7 @@ A skill that sets up a new Go project from scratch to the point where "`make bui
 
 - Go (assuming 1.22+, using the Toolchain Directive) is installed locally
 - The repository root doesn't yet have a `go.mod` (or it's fine to re-set-up)
-- Adopting DDD + Clean Architecture (`internal/{domain,application,adapters}/`). Confirm with the user if a different layout is wanted.
+- Adopting a DDD layout (`internal/{domain,application,adapters}/`). **Confirm the architecture style (clean / layered) with the user, and don't create `application/ports/` under layered** (`ddd-architecture` §0 is the SoT for the definitions). Also confirm if a different layout is wanted.
 
 ## Procedure
 

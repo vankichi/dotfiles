@@ -1,6 +1,7 @@
 ---
 name: grill-me
-description: Interview the user relentlessly about a plan or design until reaching shared understanding, resolving each branch of the decision tree. Use when user wants to stress-test a plan, get grilled on their design, or mentions "grill me".
+description: Interview the user relentlessly about a plan or design until reaching shared understanding, resolving each branch of the decision tree.
+when_to_use: When a plan or design needs hardening. 「詰めて」「穴を探して」「grill me」.
 ---
 
 > **Source of truth:** `claude/ja/skills/grill-me/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.

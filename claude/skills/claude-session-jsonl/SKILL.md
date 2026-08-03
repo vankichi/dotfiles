@@ -1,6 +1,7 @@
 ---
 name: claude-session-jsonl
-description: Schema reference for Claude Code session logs (~/.claude/projects/**/*.jsonl), plus a recipe for building token / cost / tool aggregation tools. Use for 「Claude の使用状況を観測したい」「セッションログから集計」「ccusage 相当を作る」「JSONL の中身教えて」, etc. Language-specific sample parsers live in references/.
+description: Schema reference for Claude Code session logs (~/.claude/projects/**/*.jsonl), plus a recipe for building token / cost / tool aggregation tools. Language-specific sample parsers live in references/.
+when_to_use: When analyzing session logs (~/.claude/projects/**/*.jsonl) — aggregating token consumption / cost, or implementing a parser.
 ---
 
 > **Source of truth:** `claude/ja/skills/claude-session-jsonl/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.

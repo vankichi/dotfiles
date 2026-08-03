@@ -1,6 +1,8 @@
 ---
 name: dev-loop
-description: Driver skill for the dev loop run via /loop. 1 tick = work-intake poll → (if there is a work item) run dev-cycle serially → completion with verified receipts / escalation notification → ScheduleWakeup to self-pace the next tick. Use for 「dev-loop の tick を実行して」("run the dev-loop tick"), 「dev loop 回して」("run the dev loop"), etc. (normally via /loop). The cycle's internals are the dev-cycle SoT — this skill only drives.
+description: Driver skill for the dev loop run via /loop. 1 tick = work-intake poll → (if there is a work item) run dev-cycle serially → completion with verified receipts / escalation notification → ScheduleWakeup to self-pace the next tick. The cycle's internals are the dev-cycle SoT — this skill only drives.
+when_to_use: When driving the dev loop via /loop. 「dev-loop の tick を実行して」「dev loop 回して」. A single manual tick is also fine.
+disallowed-tools: AskUserQuestion
 ---
 
 > **Source of truth:** `claude/ja/skills/dev-loop/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
@@ -30,7 +32,7 @@ The dev loop's driver. 1 tick = 1 poll + at most 1 cycle. **`references/loop-dri
 
 ### Step 3: cycle (run `dev-cycle` serially)
 
-- **Spawn `dev-cycle` with the normal Agent tool — do not use teams** (under a flat roster, nested spawn is not possible and the review fan-out degrades to inline. Nested fan-out via normal spawn is proven)
+- **Spawn `dev-cycle` with the normal Agent tool — do not use teams** (under a flat roster, nested spawn is not possible, so the two-level nesting `dev-cycle` → `reviewer` → `independent-reviewer` cannot form)
 - **Synchronous startup (`run_in_background: false`)** — wait until completion. At most 1 cycle per tick; do not start in parallel
 - Pass the full work item text in the prompt (dev-cycle judges it as loop-mode)
 - **Check your own cwd after the cycle completes**: when the dev-cycle subagent calls `EnterWorktree`, the caller's (this skill's) shell cwd is also moved under the worktree and pinned there (`cd`-ing back gets reverted with `Shell cwd was reset to ...`). If cwd is under the worktree, return via `ExitWorktree(action: keep)` — **the worktree stays, so this is a cwd return, not cleanup**. This keeps subsequent polls / notifications from resolving paths (the per-project plans dir, etc.) on the worktree side

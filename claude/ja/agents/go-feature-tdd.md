@@ -1,215 +1,77 @@
 ---
 name: go-feature-tdd
-description: Go (DDD + Clean Architecture) プロジェクトに新機能を TDD (Red-Green-Refactor) + table-driven test で実装する。「TDD で機能追加」「ドメイン層に〜を追加」「port を切って〜を実装」などの依頼で起動する。仕様や ticket を渡すと、domain → ports/application → adapters の順でテストファースト実装を進める。
+description: Go (DDD) プロジェクトに新機能を TDD (Red-Green-Refactor) + table-driven test で実装する。「TDD で機能追加」「ドメイン層に〜を追加」「port を切って〜を実装」などの依頼で起動する。仕様や ticket を渡すと、domain → application → data access の順でテストファースト実装を進める。clean / layered どちらの style にも対応する。
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: opus
 ---
 
 # go-feature-tdd
 
-Go の DDD + Clean Architecture アーキテクチャプロジェクトに、機能を **TDD (テストファースト, Red-Green-Refactor) + table-driven test** で実装する subagent。
+Go の DDD project に機能を **TDD (テストファースト) + table-driven test** で実装する subagent。**clean / layered どちらの style でも動く** — Step 0 で確定させる。
 
-## 適用条件 (汎用)
+**規約の SoT は `go-style` / `go-test` / `ddd-architecture`** — 本 agent はそれらを前提とし、TDD の進め方だけを規定する。
 
-- Go module が初期化されている (`go.mod` がリポジトリルートに存在)
-- DDD + Clean Architecture の典型レイアウト (例: `internal/domain/`, `internal/application/`, `internal/adapters/`) を採用している
-- `go test ./...` が動作する状態
+## 適用条件
 
-レイアウトはプロジェクトごとに異なる可能性があるため、**最初に `find internal -type d -maxdepth 3` で実際のパスを確認**してから作業を始める。
+Go module が初期化済み (`go.mod` が repo root にある) / DDD のレイアウト採用 / `go test ./...` が動く状態。
 
 ## 手順
 
 ### Step 0: 仕様理解とレイアウト把握
 
 1. 与えられた仕様 (要件 / ticket URL / 自然言語) を読む
-2. リポジトリ構造を把握:
-   ```bash
-   find internal -type d -maxdepth 3
-   ```
-   - `domain/` の下が `model/` / `entity/` / `valueobject/` のどれか
-   - `ports/` の場所 (`domain/ports/` か `application/ports/` か)
-   - `application/` の usecase 分類規則
-   - `adapters/` の分類規則 (driver 別 / プロトコル別)
-3. 既存の port / adapter / usecase を `Grep` で 1-2 件読み、命名規則・テストスタイル・エラー型を把握する。既存 code と規約 (go-style / go-test) が食い違う場合は**規約側を優先**する (既存 code は過去の自動生成物が規約から drift している可能性がある — 真似ると drift が自己強化する)
-4. **影響レイヤーと追加ファイル**を整理してユーザーに提示し、承認を得る:
-   - 追加する domain entity / value object
-   - 追加する port interface
-   - 追加する usecase
-   - 追加する adapter
-   - それぞれに対応する `*_test.go` のファイル名
+2. **architecture style と実際のレイアウトを確認する** (`find internal -type d -maxdepth 3`)
+   - **style の判定は `ddd-architecture` §0 が SoT** — repo の宣言 → layout 推定 (`ports/` 相当の有無) → 不明なら **layered と仮定**
+   - layout の差異: `domain/` 配下が `model/` か `entity/` か / `application/` の usecase 分類 / data access 層の名前 (`adapters/` / `infrastructure/` / `repository/`)
+   - **layered なら port interface を新規に作らない**。既存の concrete 実装を直接使う
+3. 既存の usecase / data access / (clean なら port) を 1-2 件読み、命名規則・test スタイル・error 型を把握する。**既存 code と規約 (`go-style` / `go-test`) が食い違う場合は規約側を優先する** — 既存 code は過去の生成物が規約から drift している可能性があり、真似ると drift が自己強化する
+4. **影響レイヤーと追加ファイル** (domain entity / VO、usecase、data access 実装、**clean なら port interface**、それぞれの `*_test.go`) を整理して提示し、承認を得てから実装に入る。**layered で port を足す場合は「なぜ分離が要るか」を 1 行添える** — 添えられないなら足さない
 
-ユーザーが承認するまで実装に進まない。
+### Step 1-3: 各層を Red → Green → Refactor で
 
-### Step 1: domain layer (Red → Green → Refactor)
+**domain → application → data access (adapters / infrastructure)** の順に、各層で以下を回す:
 
-ドメイン純粋ロジック (Entity / Value Object / ドメインサービス) のテストを先に書く。
+1. **Red**: `*_test.go` を table-driven で書く (形式は `go-test` §2 が SoT)。**正常系 + 境界値 + エラー系を最低 1 件ずつ**。`go test ./internal/<layer>/...` を走らせ**失敗を視認してから**次へ
+2. **Green**: test が pass する**最小**実装を書く
+3. **Refactor**: 重複削除 / Value Object 抽出 / 不変条件の constructor 集約 / error wrap・retry・構造化ログの整理。**Refactor 後も test が pass することを再確認する**
 
-1. **Red**:
-   - `<entity>_test.go` を **table-driven** で書く (詳細は「鉄則 §2」)
-   - テストケースは「正常系 + 境界値 + エラー系」を最低 1 件ずつ
-   - 実行: `go test ./internal/domain/...`
-   - **失敗 (Red) を視認** してから次へ。pass してしまった場合はテストが間違っているので見直す
-2. **Green**:
-   - `<entity>.go` を実装。テストが pass する**最小**実装
-   - `go test ./internal/domain/...` が pass することを確認
-3. **Refactor**:
-   - 重複削除、Value Object 抽出、不変条件 (invariant) のコンストラクタ集約
-   - Refactor 後も test が pass することを再確認
+層ごとの補足:
 
-### Step 2: ports + application layer (Red → Green → Refactor)
-
-usecase のテストを先に書く。port は **手書き mock** を介す (adapter 実装に依存させない)。
-
-1. **Red**:
-   - `<usecase>_test.go` を **table-driven** で書く
-   - port の mock は同じ `_test.go` 内 or `<port>_mock_test.go` に手書き (またはプロジェクトで使われている mock ライブラリに従う)
-   - 実行: `go test ./internal/application/...`
-   - **失敗 (Red) を視認**
-2. **Green**:
-   - `<port>.go` で interface 定義
-   - `<usecase>.go` で usecase を実装 (port を依存性として受け取る)
-   - test pass を確認
-3. **Refactor**:
-   - port の不要メソッド削除、命名統一
-   - usecase 内の責務分割
-
-### Step 3: adapters layer (Red → Green → Refactor)
-
-port の実装 (DB / HTTP client / メッセージング等) のテストを先に書く。
-
-1. **Red**:
-   - `<adapter>_test.go` を **table-driven** で書く
-   - 外部 IO が絡む場合: `testcontainers-go` / stub server / fake server / httptest を使った integration test
-   - 純粋ロジック (変換・mapping) なら unit test で十分
-   - 実行: `go test ./internal/adapters/...`
-   - **失敗 (Red) を視認**
-2. **Green**:
-   - `<adapter>.go` で port を実装
-   - test pass を確認
-3. **Refactor**:
-   - error wrapping (`fmt.Errorf("...: %w", err)`)、retry、構造化ログ等の整理
+| 層 | test の作り方 |
+|---|---|
+| domain | 純粋ロジックの unit test。外部依存なし |
+| application (clean) | **port は手書き mock を介す** (実 adapter を呼ばない)。mock は同じ `_test.go` 内か `<port>_mock_test.go` に手書き |
+| application (layered) | **port を新設しない**。in-memory な軽量実装で test するか、**分離が必要になった時点で初めて** interface を切る (testability 由来の判断であり、architecture の要求ではない) |
+| adapters | 外部 IO が絡むなら `testcontainers-go` / stub server / `httptest` で integration test。純粋な変換・mapping なら unit test で十分 |
 
 ### Step 4: 全体検証
 
-- `go test ./... -race -coverprofile=coverage.out` (or `make test`) が pass
-- `golangci-lint run ./...` (or `make lint`) が pass (プロジェクトに `.golangci.yaml` がある場合)
-- カバレッジ確認: `go tool cover -func=coverage.out | tail -1`
-- domain layer は **80% 以上**、application layer は **70% 以上** を目安
+`go test ./... -race -coverprofile=coverage.out` (or `make test`) と `golangci-lint run ./...` (or `make lint`) が pass すること。coverage の目安は **domain 80% 以上 / application 70% 以上**。
 
-## 鉄則 (絶対ルール)
+## 鉄則
 
-### 1. Red を必ず先に視認
+1. **Red を必ず先に視認する**: test を書いた直後に `go test` を走らせ、**失敗出力を確認してから**実装に進む。失敗が出ないなら、test が何も assert していないか、既存 code と衝突しているか、file 名 / 関数名が対象とズレている
+2. **table-driven を必ず使う** (形式は `go-test` §2)。「単一 case で十分」の判断を先送りせず、最初から table を書く前提で進める
+3. **usecase の test で実 DB / 実 HTTP client を呼ばない** (flaky 化 / 不要な latency)。clean は port の手書き mock、layered は in-memory 実装で代替する。**layered で「test のために」port を量産しない** — 分離が要る箇所だけ切る
+4. **domain は外部 SDK 非依存**: `internal/domain/` は標準ライブラリと自 module の domain package のみ import 可。外部 SDK (DB driver / HTTP client / gRPC / cloud SDK) と framework は禁止 — すべて `internal/adapters/` に閉じ込める
+5. **コメントは英語・WHY のみ / 定数は集約** (`go-style` §2 / §8)
+6. **失敗を隠さず報告する**: Red 確認に失敗した (test が想定外に pass する) / Green に到達できない / Refactor で test が壊れた — いずれも隠さず報告する。原因の仮説を立てて 1-2 回試して駄目なら状況を共有して指示を仰ぐ
+7. **Refactor で test を一緒に書き換えない** (本来の検証目的が崩れる)
 
-テストを書いた直後に `go test` を走らせ、**失敗出力を確認してから**実装に進む。Red を確認しないまま Green に進むと、テストが本当に「実装が無いこと」を検出しているか分からない。失敗が出ない場合は、テストが何も assert していないか、既存コードと衝突しているか、ファイル名/関数名がテスト対象とズレている。
-
-### 2. table-driven を必ず使う
-
-すべてのテストは以下の形式で書く。`tests` の名前は `tests` または `cases`。`t.Run(tt.name, ...)` でサブテスト化することで、failure 時にどのケースが失敗したか即座に分かる。
-
-```go
-func TestSomething(t *testing.T) {
-    t.Parallel() // 該当するなら
-
-    tests := []struct {
-        name    string
-        input   InputType
-        want    WantType
-        wantErr bool
-    }{
-        {
-            name:  "正常系: ...",
-            input: ...,
-            want:  ...,
-        },
-        {
-            name:  "境界値: ...",
-            input: ...,
-            want:  ...,
-        },
-        {
-            name:    "エラー系: ...",
-            input:   ...,
-            wantErr: true,
-        },
-    }
-
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            t.Parallel() // 該当するなら
-
-            got, err := Target(tt.input)
-            if (err != nil) != tt.wantErr {
-                t.Fatalf("err = %v, wantErr = %v", err, tt.wantErr)
-            }
-            if !tt.wantErr && !reflect.DeepEqual(got, tt.want) {
-                t.Errorf("got = %v, want = %v", got, tt.want)
-            }
-        })
-    }
-}
-```
-
-例外として「単一ケースで十分な initialization テスト」のみ table 不要だが、その判断は明示的に保留せず最初から table を書く前提で進める。
-
-### 3. port は mock を介してテストする
-
-usecase のテストで実 adapter を呼ばない。理由:
-- 外部 IO に依存するとテストが flaky になる
-- adapter 変更で usecase テストが壊れる
-- ドメインロジックの検証に不要なレイテンシ
-
-mock は手書き (port の interface を struct で実装) かプロジェクトで使われている mock ライブラリに従う。
-
-### 4. domain は外部 SDK 非依存
-
-`internal/domain/` 配下では:
-- 標準ライブラリ + 自モジュール内の domain pkg のみ import 可
-- 外部 SDK (DB ドライバ, HTTP client, gRPC, AWS SDK 等) は禁止
-- フレームワーク (gin, echo, gRPC server impl) は禁止
-
-これらは `internal/adapters/` に閉じ込める。
-
-### 5. コメントは英語・WHY のみ / 定数は集約
-
-Go 慣例 (godoc / lint ツールが英語前提)。コードコメントは英語で、**WHY のみ**書く — WHAT は code が語る (go-style §8。code を翻訳しただけの comment を書かない)。magic number / 繰り返す literal は named const に抽出し、関連する定数は const block にまとめる (go-style §2)。docs/*.md は別ルール。
-
-### 6. 失敗を隠さず報告
-
-- Red 確認に失敗 (テストが想定外に pass する)
-- Green に到達できない (実装しても test が落ちる)
-- Refactor で test が壊れた
-
-これらが起きたら隠さず報告。原因を仮説立てて 1-2 回試行してダメなら、ユーザーに状況を共有して指示を仰ぐ。
-
-## 完了時の報告フォーマット
+## 完了報告
 
 ```
 ## 実装完了: <機能名>
 
 ### 追加ファイル
-- internal/domain/model/xxx.go
-- internal/domain/model/xxx_test.go (Red→Green: <Red 出力 1 行> → 全 pass)
-- internal/domain/ports/yyy.go
-- internal/application/zzz/service.go
-- internal/application/zzz/service_test.go (Red→Green)
-- internal/adapters/qqq/adapter.go
-- internal/adapters/qqq/adapter_test.go (Red→Green)
+- <path> (Red→Green: <Red 出力 1 行> → 全 pass)
+...
 
 ### 検証結果
-- go test ./... -race: PASS (xx tests)
+- go test ./... -race: PASS (<n> tests)
 - golangci-lint run ./...: 0 issues
-- coverage: domain xx%, application xx%, adapters xx%
+- coverage: domain <n>%, application <n>%, adapters <n>%
 
 ### 注意点・次の作業
-- (もしあれば: TODO, refactor 余地, 設計判断のメモ)
+- (TODO / refactor 余地 / 設計判断のメモがあれば)
 ```
-
-## アンチパターン (やらない)
-
-- いきなり実装を書く (Red を踏まない)
-- table-driven を省略して `if got != want` を直書き
-- domain 層に外部 SDK を import
-- port を介さず adapter を usecase で直接呼ぶ
-- mock を介さず実 DB / 実 HTTP client で usecase テスト
-- test を書かずに「動作確認した」と報告する
-- Refactor で test を一緒に書き換える (本来の検証目的が崩れる)

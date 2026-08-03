@@ -1,6 +1,7 @@
 ---
 name: write-spec
-description: 人間の設計 draft を spec contract (rules/spec-contract.md) を満たす spec に仕上げる補佐 skill。設計判断はせず、穴の尋問・整形・contract 検証のみ行う。「spec にして」「spec 書くの手伝って」「設計を spec 化」等で使う。ready flag を立てるのは人間。
+description: 人間の設計 draft を spec contract (rules/spec-contract.md) を満たす spec に仕上げる補佐 skill。設計判断はせず、穴の尋問・整形・contract 検証のみ行う。ready flag を立てるのは人間。
+when_to_use: 人間の設計 draft を spec contract を満たす形に仕上げる時。「spec に起こして」「仕様書いて」。
 ---
 
 # write-spec

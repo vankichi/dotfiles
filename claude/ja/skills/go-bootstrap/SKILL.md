@@ -1,6 +1,7 @@
 ---
 name: go-bootstrap
-description: 新規 / 既存 Go プロジェクトに動く骨格を一括セットアップする (module 初期化 / ディレクトリ骨格 / .golangci.yaml / Makefile / .gitignore / golangci-lint 導入)。「Go プロジェクトのセットアップ」「Go module を切って」「lint と Makefile 用意して」等の依頼で使う。
+description: 新規 / 既存 Go プロジェクトに動く骨格を一括セットアップする (module 初期化 / ディレクトリ骨格 / .golangci.yaml / Makefile / .gitignore / golangci-lint 導入)。
+when_to_use: 新規 or 既存 Go project に骨組み (go.mod / cmd / internal / .golangci.yaml / Makefile) を作る時。「Go project 立ち上げて」。
 ---
 
 # go-bootstrap
@@ -11,7 +12,7 @@ description: 新規 / 既存 Go プロジェクトに動く骨格を一括セッ
 
 - Go (1.22+ 想定、Toolchain Directive 利用) がローカルに導入されている
 - リポジトリ ルートに `go.mod` がまだ無い (or 再セットアップで OK)
-- DDD + Clean Architecture を採用する (`internal/{domain,application,adapters}/`)。違うレイアウトのときはユーザーに確認
+- DDD レイアウトを採用する (`internal/{domain,application,adapters}/`)。**architecture style (clean / layered) を user に確認し、layered なら `application/ports/` を作らない** (判定・定義は `ddd-architecture` §0 が SoT)。違うレイアウトのときもユーザーに確認
 
 ## 手順
 

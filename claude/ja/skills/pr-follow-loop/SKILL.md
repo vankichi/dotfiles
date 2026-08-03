@@ -1,6 +1,8 @@
 ---
 name: pr-follow-loop
-description: /loop で回す「自分が author の open PR を見届ける」driver skill。1 tick = 自分の open PR を poll → 各 PR の段階を 1 歩進める（bot review 指摘の triage 提示 / human approve の watch / merge 後の自動掃除）→ 通知 → ScheduleWakeup で self-pace。「pr-follow-loop の tick を実行して」「PR 見届け loop 回して」等で使う（通常は /loop 経由）。dev-loop（PR を作る）/ review-loop（他人の PR をレビューする）の兄弟で、本 skill は自分が作った PR のその後を追う。
+description: /loop で回す「自分が author の open PR を見届ける」driver skill。1 tick = 自分の open PR を poll → 各 PR の段階を 1 歩進める（bot review 指摘の triage 提示 / human approve の watch / merge 後の自動掃除）→ 通知 → ScheduleWakeup で self-pace。dev-loop（PR を作る）/ review-loop（他人の PR をレビューする）の兄弟で、本 skill は自分が作った PR のその後を追う。
+when_to_use: /loop 経由で自 author の open PR を見届ける時。「pr-follow-loop の tick を実行して」「PR 見届け loop 回して」。
+disallowed-tools: AskUserQuestion
 ---
 
 > **Source of truth:** 本ファイル（日本語）。更新時は本ファイルを先に直し、英訳（`claude/skills/pr-follow-loop/SKILL.md`）に反映する。
@@ -46,7 +48,7 @@ poll で拾った PR から 1 件選び（oldest created 優先）、現在の�
 - bot reviewer の review / inline comment を取得し、**各指摘を repo 規約（`.claude/rules/`）に照らして assess**: 妥当（fix 推奨）/ 誤検知（false-positive）/ 規約衝突・YAGNI（decline 推奨）を、severity と 1 行理由付きで判定
 - **triage サマリ（各指摘 → verdict + 理由 + 推奨アクション）を提示し user に通知**。marker を記録して当該 head sha を triaged 扱いに
 - **loop はここまで**: 修正の適用（commit+push）・decline 返信は **user 承認後に対話で実施**（loop が独断で fix / decline しない）。設計判断・規約衝突は必ず escalation として明示
-- 判定に fresh context が要る規模なら review-lens 相当を subagent で spawn 可（ただし本 skill の役割は triage の提示までで、適用はしない）
+- 判定に fresh context が要る規模なら `reviewer` を subagent で spawn 可（ただし本 skill の役割は triage の提示までで、適用はしない）
 
 #### b. approve 待ち（未 triage 指摘なし・必須 reviewer 未 approve）
 

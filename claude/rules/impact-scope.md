@@ -1,6 +1,6 @@
 # 影響範囲分類 (impact-A/B/C)
 
-変更のデグレ risk を 3 段階で表す共通語彙。分類する側 (`dev-cycle` の影響範囲調査 / `review-orchestrator` の規模 gate と重点指定 / `review-loop` の簡易判定) は本ファイルを SoT とし、**各所で定義を再掲しない**。分類結果は state file の「影響範囲」section と PR body の「Impact scope」欄へ転記される (転記側は判定しない)。
+変更のデグレ risk を 3 段階で表す共通語彙。分類する側 (`dev-cycle` の影響範囲調査 / `reviewer` の重点指定 / `review-loop` の簡易判定) は本ファイルを SoT とし、**各所で定義を再掲しない**。分類結果は state file の「影響範囲」section と PR body の「Impact scope」欄へ転記される (転記側は判定しない)。
 
 ## 分類
 
@@ -21,7 +21,7 @@
 2. 各 symbol の参照元を grep する
 3. 「対象 symbol → 参照元」の対応表とともに 3 分類する
 
-### 簡易判定 (diff だけがある場合 — review-orchestrator の standalone 起動 / review-loop)
+### 簡易判定 (diff だけがある場合 — reviewer の standalone 起動 / review-loop)
 
 `--stat` と diff 本体から機械的に落とす:
 
@@ -31,4 +31,4 @@
 | 既存 file への追加のみ (削除行が 0 かつ既存 symbol の本体に変更なし) | impact-B |
 | 既存 file の既存行に変更・削除がある | impact-C |
 
-簡易判定は**安全側に倒す** — 判別がつかない変更は impact-C として扱う (規模 gate の fan-out 側・review 観点の重点指定側に倒れる)。
+簡易判定は**安全側に倒す** — 判別がつかない変更は impact-C として扱う (review 観点の重点指定側に倒れる)。
