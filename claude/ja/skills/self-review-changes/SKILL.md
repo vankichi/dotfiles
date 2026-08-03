@@ -66,6 +66,7 @@ engine が無い場合のみ、入力検証 (0 / 負値 / nil / empty / traversa
 - **一時情報の混入** — `ticket`, `in a later`, `future ticket`, `see (commit|PR) #`, ticket ID 形式。検査 pattern の literal は project の `MEMORY.md` から取得 (skill 側への hardcode は禁止)
 - **cross-reference の実在確認** — コメント内の section 参照の引用語彙が原文と一致するか
 - **推測 mapping** — 原文に書かれていない対応関係をコメントで補完していないか
+- **doc 内の自己矛盾 (claim-vs-claim)** — diff の追加行が主張する事実を、**同一 doc の他 section / 同一 PR の他 file** に対して grep 照合する。code と一致していても他 section と矛盾すれば誤り。特に diff が既存 section の事実を**再掲**している箇所は、再掲をやめて pointer にする方向で指摘する (再掲がある限り編集ごとに矛盾が再生産される)。検証手順の SoT は `~/.claude/rules/verify-before-assert.md`
 
 ### spec-alignment — skip: 対応する spec / work item が無い
 

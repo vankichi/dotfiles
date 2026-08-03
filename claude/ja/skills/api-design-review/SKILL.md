@@ -65,6 +65,14 @@ git grep -nE "<old-name-pattern>"
 
 root の instruction file 群 (`CLAUDE.md` / `.github/copilot-instructions.md` / `.claude/rules/`) は agent が毎回 load するため、stale な契約が後続実装へ伝播する経路 — 必ず含める。逆に改訂履歴 / changelog 行は immutable なので hit しても触らない。
 
+**ADR を起こす前に、その ADR が要るかを grep で確定させる。** repo の「変更は新 ADR で」型の規約は *既存 ADR の決定内容を変える場合* の規定であり、決定が存在しない領域には発動しない。順序:
+
+1. 撤回 / 変更しようとしている決定が既存 ADR に **literal として存在するか** grep する (例: `terminal` の語が対象 ADR に 0 hits なら、その ADR は terminal 意味論を決めていない)
+2. 存在しなければ supersede は発生しない → その領域の SoT (design doc 等) を更新する側に寄せる
+3. **draft に「既存 ADR を Superseded にしない」と書きたくなった時点が、規約の発動条件を満たしていないサイン** — 中断して 1 に戻る
+
+実測事例: この確認を飛ばして ADR を起票し review を 6 周回した後、ADR-0011 に `terminal` が 0 hits で supersede が発生しないと判明して撤回。ADR 番号 1 つと review 予算を消費した。
+
 **名前 grep は必要だが不十分**。設計対象が producer / worker 等の process flow を記述する場合、関連する Accepted ADR / design doc の **flow / lifecycle 記述** (どの行を誰がいつ作るか / dedup 方式 / 失敗時の観測境界) まで読み合わせ、設計案と矛盾しないか確認する。
 
 **新設する状態が既存 runbook の前提遷移を壊さないか**も同時に見る: 新規に書く状態を列挙 → 各状態からの出口が state machine にあるか → 出口の無い terminal 状態を前提にした運用手順 (「redrive で再処理」型) が docs に無いか grep する。terminal 状態の書き手を新設した瞬間に既存手順と矛盾する構造は、実装前のこの段階でしか安く検出できない。
