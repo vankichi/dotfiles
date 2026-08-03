@@ -1,6 +1,6 @@
 ---
 name: ddd-clean-architecture
-description: DDD + Clean Architecture (Go では Hexagonal / Ports-Adapters とほぼ同義) の house 規約。layer 境界 / 依存方向 / Port-Adapter / ACL / Aggregate / Repository / DTO 変換 / cross-cutting を扱う。手順 skill ではない reference。
+description: DDD の house 規約。**clean (Hexagonal) と layered (classic N-tier) の両 style を扱い、style により適用範囲が変わる**。layer 境界 / 依存方向 / Port-Adapter / ACL / Aggregate / Repository / DTO 変換 / cross-cutting を扱う。手順 skill ではない reference。
 when_to_use: 「層が曖昧」「責務違反では」「port の切り方」「layered と同じ?」等の問いが来た時。設計 review / 層境界の判断 / refactor 候補出しの基準が要る時。`code-refactor-advisor` / `go-feature-tdd` からの参照。
 ---
 
@@ -10,9 +10,24 @@ DDD + Clean Architecture の house 規約と検出シグナル集。設計判断
 
 **一般論 (Entity と Value Object の定義 / Repository pattern とは何か 等) は再掲しない** — 本 skill が持つのは house のレイアウトと選択、YAGNI の線引き、grep で違反を拾うための signal。
 
-> **Clean Architecture と Hexagonal はほぼ同義** (Dependency Rule = 内向き依存 + Port は内側が定義し外側が実装、という同じ機構)。4 リングは下表の Domain / Application / Interfaces+Adapters / cmd に対応する。
->
-> **classic Layered (N-tier) とは別物**: Layered は Business 層が Data Access の concrete 型を直接 import することを許容し DIP を要求しない。本 skill が禁じる「Application → concrete adapter 直 import」は Layered では違反にならない。**依存方向の逆転の有無こそが本質的な違い**で、物理配置が層状に見えることではない。
+## 0. まず architecture style を確定する
+
+**DDD には DIP を要求する形 (Clean / Hexagonal) と要求しない形 (Layered) がある。** DDD の戦術パターン (Entity / VO / Aggregate / Repository / UL / ACL) はどちらでも成立し、**Layered は劣化 Clean ではなく正当な変種** (Evans 原典は Layered)。style を確定せずに review すると、Layered で正しく書かれた code に「依存方向違反」「Port 抽象化欠如」を出してしまう。
+
+| style | 依存の向き | Port (interface の所有者) | 本 skill の適用 |
+|---|---|---|---|
+| **clean** (= Hexagonal) | 常に内向き。外側との通信は Port 経由 | 内側 (Application) が定義し外側 (Adapter) が実装 | 全 section |
+| **layered** (= classic N-tier / Evans 原典) | 上位層が下位層の concrete 型を直接参照してよい | **不要**。Repository は concrete 実装で足りる | **§2 と §11 の DIP 系を除外** |
+
+**判定順**:
+
+1. 対象 repo の `CLAUDE.md` / `.claude/rules/` に style の宣言があればそれに従う
+2. 無ければ layout から推定 — `application/ports/` 相当があれば clean、無ければ layered
+3. 判別できなければ **layered と仮定して進み、verdict に仮定を明記する** (安全側 = 過剰な指摘を出さない側)
+
+**本質的な違いは依存方向の逆転の有無**であり、物理配置が層状に見えることではない。
+
+**Clean Architecture と Hexagonal はほぼ同義** (Dependency Rule = 内向き依存 + Port は内側が定義し外側が実装、という同じ機構)。4 リングは下表の Domain / Application / Interfaces+Adapters / cmd に対応する。
 
 ## 1. Layer 定義
 
@@ -23,9 +38,13 @@ DDD + Clean Architecture の house 規約と検出シグナル集。設計判断
 | **Interfaces** | `internal/interfaces/` | Inbound adapter (gRPC / HTTP handler / CLI / interceptor / wire shape ⇄ DTO 変換) | Application + Domain |
 | **Adapters** | `internal/adapters/` | Outbound adapter (DB / vendor SDK / external API。Port を実装) | Application (Port 実装) + Domain (型参照) |
 
-依存は常に内向き。外側との通信は **Port 経由** (Application が定義し Adapter が実装)。内側 → 外側が必要なら Domain Event を発行し外側で subscribe して反転させる。
+**clean**: 依存は常に内向き。外側との通信は **Port 経由** (Application が定義し Adapter が実装)。内側 → 外側が必要なら Domain Event を発行し外側で subscribe して反転させる。
 
-## 2. Port-Adapter
+**layered**: 上位層が下位層の concrete 型を直接参照してよい。**Domain が外部 SDK / framework に依存しないことだけは両 style 共通で守る** (Evans の Domain 隔離。DIP とは別の要請)。
+
+## 2. Port-Adapter — **clean のみ**
+
+> **layered では本 section 全体が適用外**。Application が Repository の concrete 実装を直接使ってよく、interface の抽出は「差し替える予定がある」「test で fake を差す必要がある」時の任意の選択にすぎない。Port が無いことを違反として報告しない。
 
 - **Port は vendor-neutral**。SDK 固有型を漏らさない (`[]float32` を渡し、`openai.EmbeddingResponse` を port shape に登場させない)
 - Port の signature は**必要最小限の method** に絞る (1 method port も可)
@@ -122,19 +141,22 @@ parser := adapters.NewPDFParser(vlm, adapters.WithDPI(cfg.Parser.DPI)) // Config
 
 ### A. lint が落とす
 
-**層境界の違反は `depguard` (golangci-lint) で強制できる** — grep で毎回探すより確実。`.golangci.yaml` に依存方向を宣言する:
+**層境界の違反は `depguard` (golangci-lint) で強制できる** — grep で毎回探すより確実。**style によって宣言する規則が変わる**:
 
 ```yaml
 linters-settings:
   depguard:
     rules:
+      # 両 style 共通: Domain の隔離
       domain:
         files: ["**/internal/domain/**"]
         deny:
           - pkg: "**/internal/adapters/**"
-            desc: domain は外側に依存しない
+            desc: domain は infrastructure に依存しない
           - pkg: "**/internal/interfaces/**"
-            desc: domain は外側に依存しない
+            desc: domain は presentation に依存しない
+
+      # clean のみ: DIP の強制。layered ではこの rule を入れない
       application:
         files: ["**/internal/application/**"]
         deny:
@@ -142,18 +164,21 @@ linters-settings:
             desc: Port 経由で使う (concrete adapter の直 import は禁止)
 ```
 
-**導入すれば下記 B の上 3 行は lint が落とす**ので review から外れる。未導入の repo では B で拾う。
+**`application` rule は clean 専用**。layered の repo に入れると正常な依存を落とすので入れない。
+
+導入すれば対応する grep は lint が落とすため review から外れる。未導入の repo では B で拾う。
 
 ### B. grep で拾う
 
 ```bash
-# Domain → 外側 import
+# [両 style] Domain → 外側 import (Domain の隔離)
 grep -rn 'import.*adapters\|import.*interfaces' internal/domain/
 
-# Application → concrete adapter import (ports 経由でない)
+# [clean のみ] Application → concrete adapter import (ports 経由でない)
+#   layered では正常な依存。実行しない
 grep -rn 'import.*adapters/[a-z]\+/' internal/application/ | grep -v 'application/ports'
 
-# Adapter → interfaces import (横方向依存)
+# [両 style] Adapter → interfaces import (横方向依存)
 grep -rn 'import.*interfaces' internal/adapters/
 
 # Port shape に SDK 固有型 (vendor 名は対象 repo に合わせる)
@@ -176,8 +201,8 @@ grep -rnE '`(json|protobuf|yaml):' internal/domain/
 
 ### C. 判断が要る (grep 不可)
 
-- **adapter が Port を実装しているか** — 実装していないと位置付けが不明で ad-hoc に直接 import される。interface の充足は型を追わないと分からない
-- **Application code が adapter を concrete type で受け取っていないか** — test で fake を注入できるかで判定する
+- **[clean のみ] adapter が Port を実装しているか** — 実装していないと位置付けが不明で ad-hoc に直接 import される。interface の充足は型を追わないと分からない
+- **[clean のみ] Application code が adapter を concrete type で受け取っていないか** — test で fake を注入できるかで判定する。**layered では concrete 受け取りが正常**なので指摘しない
 - **vendor 固有 error が sentinel wrap なしで漏れていないか** — error の流れを追う必要がある
 - **YAGNI の線引き** — plain struct で足りるものを Aggregate 化していないか / Aggregate Root が invariant を守っているか
 - **Ubiquitous Language の drift** — docs と code の語彙比較は機械化できない

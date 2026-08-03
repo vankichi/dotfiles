@@ -1,6 +1,6 @@
 ---
 name: ddd-clean-architecture
-description: The house conventions for DDD + Clean Architecture (in Go, effectively synonymous with Hexagonal / Ports-and-Adapters). Covers layer boundaries / dependency direction / Port-Adapter / ACL / Aggregate / Repository / DTO conversion / cross-cutting concerns. A reference, not a procedural skill.
+description: The house conventions for DDD. **Covers both the clean (Hexagonal) and layered (classic N-tier) styles; the applicable scope changes with the style.** Covers layer boundaries / dependency direction / Port-Adapter / ACL / Aggregate / Repository / DTO conversion / cross-cutting concerns. A reference, not a procedural skill.
 when_to_use: When a question like 「層が曖昧」「責務違反では」「port の切り方」「is this the same as layered?」 comes up. During design review, when judging layer boundaries, or when generating refactor candidates. Referenced from `code-refactor-advisor` / `go-feature-tdd`.
 ---
 
@@ -12,9 +12,24 @@ The house conventions for DDD + Clean Architecture, plus detection signals. Cons
 
 **General knowledge is not restated here** (the definitions of Entity and Value Object, what the Repository pattern is, etc.) — this skill carries the house layout and choices, where the YAGNI line sits, and the signals for catching violations via grep.
 
-> **Clean Architecture and Hexagonal are effectively synonymous** (the same mechanism: the Dependency Rule = inward dependency, with Ports defined on the inside and implemented on the outside). The four rings map onto Domain / Application / Interfaces+Adapters / cmd in the table below.
->
-> **classic Layered (N-tier) is a different thing**: Layered permits the Business layer to import concrete Data Access types directly and does not require DIP. The "Application → concrete adapter direct import" this skill forbids is not a violation under Layered. **The essential difference is whether the dependency direction is inverted**, not that the physical arrangement looks like stacked layers.
+## 0. First, establish the architecture style
+
+**DDD comes in a form that requires DIP (Clean / Hexagonal) and one that does not (Layered).** The tactical patterns (Entity / VO / Aggregate / Repository / UL / ACL) hold under both, and **Layered is not a degraded Clean but a legitimate variant** (Evans' original is Layered). Reviewing without establishing the style produces "dependency direction violation" and "missing Port abstraction" findings against code that is correct under Layered.
+
+| style | Dependency direction | Port (who owns the interface) | Scope of this skill |
+|---|---|---|---|
+| **clean** (= Hexagonal) | Always inward; outward communication goes through a Port | The inside (Application) defines it, the outside (Adapter) implements it | All sections |
+| **layered** (= classic N-tier / Evans' original) | An upper layer may reference a lower layer's concrete types directly | **Not needed.** A concrete Repository implementation suffices | **§2 and the DIP items in §11 are excluded** |
+
+**How to determine it**:
+
+1. If the target repo's `CLAUDE.md` / `.claude/rules/` declares a style, follow that
+2. Otherwise infer from the layout — the equivalent of `application/ports/` present → clean; absent → layered
+3. If still undecidable, **assume layered and state the assumption in the verdict** (the safe side = the side that doesn't over-report)
+
+**The essential difference is whether the dependency direction is inverted**, not that the physical arrangement looks like stacked layers.
+
+**Clean Architecture and Hexagonal are effectively synonymous** (the same mechanism: the Dependency Rule = inward dependency, with Ports defined on the inside and implemented on the outside). The four rings map onto Domain / Application / Interfaces+Adapters / cmd in the table below.
 
 ## 1. Layer definitions
 
@@ -25,9 +40,13 @@ The house conventions for DDD + Clean Architecture, plus detection signals. Cons
 | **Interfaces** | `internal/interfaces/` | Inbound adapters (gRPC / HTTP handlers / CLI / interceptors / wire shape ⇄ DTO conversion) | Application + Domain |
 | **Adapters** | `internal/adapters/` | Outbound adapters (DB / vendor SDKs / external APIs; implement Ports) | Application (to implement Ports) + Domain (to reference types) |
 
-Dependencies always point inward. Communication with the outside goes **through Ports** (defined by Application, implemented by Adapters). When inner → outer communication is needed, invert it by having the domain publish a Domain Event that the outside subscribes to.
+**clean**: dependencies always point inward. Communication with the outside goes **through Ports** (defined by Application, implemented by Adapters). When inner → outer communication is needed, invert it by having the domain publish a Domain Event that the outside subscribes to.
 
-## 2. Port-Adapter
+**layered**: an upper layer may reference a lower layer's concrete types directly. **Keeping Domain free of external SDKs and frameworks holds under both styles** (Evans' domain isolation — a separate requirement from DIP).
+
+## 2. Port-Adapter — **clean only**
+
+> **Under layered this entire section does not apply.** Application may use a concrete Repository implementation directly, and extracting an interface is an optional choice for when you intend to swap it or need a fake in tests. Never report the absence of a Port as a violation.
 
 - **Ports are vendor-neutral.** Don't leak SDK-specific types (pass `[]float32`; never let `openai.EmbeddingResponse` appear in a port shape)
 - Keep port signatures to the **minimum necessary methods** (a single-method port is fine)
@@ -124,19 +143,22 @@ parser := adapters.NewPDFParser(vlm, adapters.WithDPI(cfg.Parser.DPI)) // value 
 
 ### A. The linter catches it
 
-**Layer boundary violations can be enforced with `depguard` (golangci-lint)** — more reliable than grepping for them every time. Declare the dependency direction in `.golangci.yaml`:
+**Layer boundary violations can be enforced with `depguard` (golangci-lint)** — more reliable than grepping for them every time. **The rules you declare differ by style**:
 
 ```yaml
 linters-settings:
   depguard:
     rules:
+      # Both styles: domain isolation
       domain:
         files: ["**/internal/domain/**"]
         deny:
           - pkg: "**/internal/adapters/**"
-            desc: domain must not depend on outer layers
+            desc: domain must not depend on infrastructure
           - pkg: "**/internal/interfaces/**"
-            desc: domain must not depend on outer layers
+            desc: domain must not depend on presentation
+
+      # clean only: enforcing DIP. Do not add this rule under layered
       application:
         files: ["**/internal/application/**"]
         deny:
@@ -144,18 +166,21 @@ linters-settings:
             desc: go through a Port (direct concrete adapter imports are forbidden)
 ```
 
-**Once adopted, the linter catches the first three greps below**, dropping them out of review. In repos that haven't adopted it, catch them via B.
+**The `application` rule is clean-only.** Adding it to a layered repo rejects legitimate dependencies, so leave it out.
+
+Once adopted, the linter catches the corresponding greps, dropping them out of review. In repos that haven't adopted it, catch them via B.
 
 ### B. Catch it with grep
 
 ```bash
-# Domain → outward import
+# [both styles] Domain → outward import (domain isolation)
 grep -rn 'import.*adapters\|import.*interfaces' internal/domain/
 
-# Application → concrete adapter import (not through ports)
+# [clean only] Application → concrete adapter import (not through ports)
+#   A legitimate dependency under layered. Don't run it there
 grep -rn 'import.*adapters/[a-z]\+/' internal/application/ | grep -v 'application/ports'
 
-# Adapter → interfaces import (sideways dependency)
+# [both styles] Adapter → interfaces import (sideways dependency)
 grep -rn 'import.*interfaces' internal/adapters/
 
 # SDK-specific types in a port shape (adjust vendor names to the target repo)
@@ -178,8 +203,8 @@ grep -rnE '`(json|protobuf|yaml):' internal/domain/
 
 ### C. Requires judgment (not greppable)
 
-- **Whether an adapter implements a Port** — without one its role is unclear and it gets imported ad hoc. Interface satisfaction requires following the types
-- **Whether application code receives an adapter as a concrete type** — judge by whether a fake can be injected in tests
+- **[clean only] Whether an adapter implements a Port** — without one its role is unclear and it gets imported ad hoc. Interface satisfaction requires following the types
+- **[clean only] Whether application code receives an adapter as a concrete type** — judge by whether a fake can be injected in tests. **Under layered, receiving a concrete type is normal** — don't report it
 - **Whether vendor-specific errors leak without a sentinel wrap** — requires following the error flow
 - **Where the YAGNI line sits** — is something that could be a plain struct being made an Aggregate / does the Aggregate Root actually protect the invariant
 - **Ubiquitous Language drift** — comparing vocabulary between docs and code cannot be mechanized
