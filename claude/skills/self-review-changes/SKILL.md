@@ -115,7 +115,7 @@ Only when no engine is available, also cover input validation (0 / negative / ni
 
 ### code-quality — skip: code diff 0
 
-`go-style` / `go-test` / `ddd-clean-architecture` are the SoT for the conventions; simplification belongs to `/simplify` and the engine. **Only consistency across the whole diff lives here.**
+`go-style` / `go-test` / `ddd-architecture` are the SoT for the conventions; simplification belongs to `/simplify` and the engine. **Only consistency across the whole diff lives here.**
 
 - **Consistency of application within the PR** — **re-grep** the diff for the naming / consts / helpers this PR introduced, to catch "only one side got a named const"
 - **Overlooked existing helpers** — grep whether an equivalent to the logic you added already exists in the repo (kept here because the engine doesn't look at the whole repo)

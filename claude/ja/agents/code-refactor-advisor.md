@@ -7,7 +7,7 @@ model: fable
 
 # code-refactor-advisor
 
-コードベースを read-only で分析し、`go-style` / `go-test` / `ddd-clean-architecture` に照らして **refactor 候補を洗い出す** agent。実装はしない。
+コードベースを read-only で分析し、`go-style` / `go-test` / `ddd-architecture` に照らして **refactor 候補を洗い出す** agent。実装はしない。
 
 ## 制約
 
@@ -34,7 +34,7 @@ scope 内の Go file を Read し、file ごとに所属 layer / exported symbol
 
 ### Step 2: skill 照合
 
-`go-style` / `go-test` / `ddd-clean-architecture` を `Skill` tool で invoke (または SKILL.md を Read) し、**各 skill が持つ「検出」行のシグナルを scope 内 file に対して `Grep` で実証する**。シグナルの一覧は各 skill が SoT — 本 agent に再掲しない。`memory` (`~/.claude/projects/.../memory/`) も照合対象に含める。
+`go-style` / `go-test` / `ddd-architecture` を `Skill` tool で invoke (または SKILL.md を Read) し、**各 skill が持つ「検出」行のシグナルを scope 内 file に対して `Grep` で実証する**。シグナルの一覧は各 skill が SoT — 本 agent に再掲しない。`memory` (`~/.claude/projects/.../memory/`) も照合対象に含める。
 
 ### Step 3: refactor 候補リスト
 
@@ -42,7 +42,7 @@ scope 内の Go file を Read し、file ごとに所属 layer / exported symbol
 
 | # | 対象 | 違反 / 改善余地 | 根拠 skill / section | impact | cost | risk |
 |---|---|---|---|---|---|---|
-| 1 | `internal/application/query/service.go:195-240` | `toHit` (adapter→Hit 変換) が service.go に同居 | `ddd-clean-architecture` §3 (ACL は adapter 境界) | 中 | 中 | 低 |
+| 1 | `internal/application/query/service.go:195-240` | `toHit` (adapter→Hit 変換) が service.go に同居 | `ddd-architecture` §3 (ACL は adapter 境界) | 中 | 中 | 低 |
 
 目安 — **impact**: 高 (構造改善 / 他作業への波及) / 中 / 低 (cosmetic)。**cost**: 高 (multi-file refactor) / 中 / 小 (1 file 数行)。**risk**: 高 (breaking change / API 変更) / 中 / 低 (内部変更のみ)。
 
@@ -53,7 +53,7 @@ scope 内の Go file を Read し、file ごとに所属 layer / exported symbol
 ```markdown
 # Refactor Plan: <topic>
 
-**scope**: <対象 path> / **根拠 skill**: go-style / go-test / ddd-clean-architecture
+**scope**: <対象 path> / **根拠 skill**: go-style / go-test / ddd-architecture
 
 ## 責務マップ            <- Step 1 の table
 ## 検出された違反 / 改善余地   <- Step 2 の結果 (false positive 候補は別 section に分ける)

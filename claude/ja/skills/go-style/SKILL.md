@@ -17,7 +17,7 @@ Go の house 規約集。各 section は **Do (house の選択)** と **Don't (�
 - 実装は原則 `internal/` に置く
 - `pkg/` は外部 import を意図する場合のみ
 - `apis/` で proto / OpenAPI / SDK の公開 surface を分離
-- DDD 採用時は `internal/{domain,application,interfaces,adapters}/` (層境界は `ddd-clean-architecture` が SoT)
+- DDD 採用時は `internal/{domain,application,interfaces,adapters}/` (層境界は `ddd-architecture` が SoT)
 
 **Don't**
 - `util` / `common` / `helper` の catch-all package (1 package = 1 責務)

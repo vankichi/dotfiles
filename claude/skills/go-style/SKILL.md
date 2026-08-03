@@ -19,7 +19,7 @@ The house Go conventions. Each section is two blocks: **Do (the house's choice)*
 - Implementation goes under `internal/` by default
 - `pkg/` is only for what is meant to be imported externally
 - `apis/` separates the proto / OpenAPI / SDK public surface
-- With DDD, use `internal/{domain,application,interfaces,adapters}/` (`ddd-clean-architecture` is the SoT for layer boundaries)
+- With DDD, use `internal/{domain,application,interfaces,adapters}/` (`ddd-architecture` is the SoT for layer boundaries)
 
 **Don't**
 - Catch-all packages named `util` / `common` / `helper` (one package = one responsibility)

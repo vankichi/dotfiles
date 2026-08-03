@@ -11,7 +11,7 @@ model: opus
 
 A subagent that implements features in a Go DDD + Clean Architecture project with **TDD (test-first) + table-driven tests**.
 
-**`go-style` / `go-test` / `ddd-clean-architecture` are the SoT for the conventions** — this agent assumes them and specifies only how TDD proceeds.
+**`go-style` / `go-test` / `ddd-architecture` are the SoT for the conventions** — this agent assumes them and specifies only how TDD proceeds.
 
 ## Applicability
 

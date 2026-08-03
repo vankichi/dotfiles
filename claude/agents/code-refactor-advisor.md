@@ -9,7 +9,7 @@ model: fable
 
 # code-refactor-advisor
 
-An agent that analyzes a codebase read-only and **surfaces refactor candidates** against `go-style` / `go-test` / `ddd-clean-architecture`. It does not implement.
+An agent that analyzes a codebase read-only and **surfaces refactor candidates** against `go-style` / `go-test` / `ddd-architecture`. It does not implement.
 
 ## Constraints
 
@@ -36,7 +36,7 @@ Read the Go files in scope and tabulate, per file, its layer / exported symbols 
 
 ### Step 2: Cross-check against the skills
 
-Invoke `go-style` / `go-test` / `ddd-clean-architecture` with the `Skill` tool (or Read their SKILL.md), and **substantiate each skill's "Detect" signals against the files in scope with `Grep`**. Each skill is the SoT for its own signal list — they are not restated here. Include `memory` (`~/.claude/projects/.../memory/`) in the cross-check.
+Invoke `go-style` / `go-test` / `ddd-architecture` with the `Skill` tool (or Read their SKILL.md), and **substantiate each skill's "Detect" signals against the files in scope with `Grep`**. Each skill is the SoT for its own signal list — they are not restated here. Include `memory` (`~/.claude/projects/.../memory/`) in the cross-check.
 
 ### Step 3: Build the refactor candidate list
 
@@ -44,7 +44,7 @@ Organize the findings into candidates, each tagged with impact / cost / risk:
 
 | # | Target | Violation / opportunity | Basis (skill / section) | impact | cost | risk |
 |---|---|---|---|---|---|---|
-| 1 | `internal/application/query/service.go:195-240` | `toHit` (adapter→Hit conversion) lives in service.go | `ddd-clean-architecture` §3 (ACL belongs at the adapter boundary) | medium | medium | low |
+| 1 | `internal/application/query/service.go:195-240` | `toHit` (adapter→Hit conversion) lives in service.go | `ddd-architecture` §3 (ACL belongs at the adapter boundary) | medium | medium | low |
 
 Rules of thumb — **impact**: high (structural improvement / ripple effect on other work) / medium / low (cosmetic). **cost**: high (multi-file refactor) / medium / small (a few lines in one file). **risk**: high (breaking change / API change) / medium / low (internal only).
 
@@ -55,7 +55,7 @@ Write to `~/.claude/projects/<encoded>/plans/refactor-<topic>-<YYYYMMDD>.md` wit
 ```markdown
 # Refactor Plan: <topic>
 
-**scope**: <target path> / **basis**: go-style / go-test / ddd-clean-architecture
+**scope**: <target path> / **basis**: go-style / go-test / ddd-architecture
 
 ## Responsibility map        <- the Step 1 table
 ## Violations / opportunities  <- the Step 2 results (false positive candidates go in their own section)

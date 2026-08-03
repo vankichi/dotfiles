@@ -1,14 +1,14 @@
 ---
-name: ddd-clean-architecture
+name: ddd-architecture
 description: The house conventions for DDD. **Covers both the clean (Hexagonal) and layered (classic N-tier) styles; the applicable scope changes with the style.** Covers layer boundaries / dependency direction / Port-Adapter / ACL / Aggregate / Repository / DTO conversion / cross-cutting concerns. A reference, not a procedural skill.
 when_to_use: When a question like 「層が曖昧」「責務違反では」「port の切り方」「is this the same as layered?」 comes up. During design review, when judging layer boundaries, or when generating refactor candidates. Referenced from `code-refactor-advisor` / `go-feature-tdd`.
 ---
 
-> **Source of truth:** `claude/ja/skills/ddd-clean-architecture/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
+> **Source of truth:** `claude/ja/skills/ddd-architecture/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
 
-# ddd-clean-architecture
+# ddd-architecture
 
-The house conventions for DDD + Clean Architecture, plus detection signals. Consulted as the basis for design judgment / review / refactor candidate generation.
+The house conventions for DDD, plus detection signals. **Covers both the clean (Hexagonal) and layered (classic N-tier) styles** — establish the style in §0 before reading on. The basis for design judgment / review / refactor candidate generation.
 
 **General knowledge is not restated here** (the definitions of Entity and Value Object, what the Repository pattern is, etc.) — this skill carries the house layout and choices, where the YAGNI line sits, and the signals for catching violations via grep.
 

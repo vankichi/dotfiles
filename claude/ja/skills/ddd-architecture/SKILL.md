@@ -1,12 +1,12 @@
 ---
-name: ddd-clean-architecture
+name: ddd-architecture
 description: DDD の house 規約。**clean (Hexagonal) と layered (classic N-tier) の両 style を扱い、style により適用範囲が変わる**。layer 境界 / 依存方向 / Port-Adapter / ACL / Aggregate / Repository / DTO 変換 / cross-cutting を扱う。手順 skill ではない reference。
 when_to_use: 「層が曖昧」「責務違反では」「port の切り方」「layered と同じ?」等の問いが来た時。設計 review / 層境界の判断 / refactor 候補出しの基準が要る時。`code-refactor-advisor` / `go-feature-tdd` からの参照。
 ---
 
-# ddd-clean-architecture
+# ddd-architecture
 
-DDD + Clean Architecture の house 規約と検出シグナル集。設計判断 / review / refactor 候補出しの判断基準として参照する。
+DDD の house 規約と検出シグナル集。**clean (Hexagonal) と layered (classic N-tier) の両 style を扱う** — §0 で style を確定してから読む。設計判断 / review / refactor 候補出しの判断基準。
 
 **一般論 (Entity と Value Object の定義 / Repository pattern とは何か 等) は再掲しない** — 本 skill が持つのは house のレイアウトと選択、YAGNI の線引き、grep で違反を拾うための signal。
 

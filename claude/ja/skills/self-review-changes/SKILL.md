@@ -113,7 +113,7 @@ engine が無い場合のみ、入力検証 (0 / 負値 / nil / empty / traversa
 
 ### code-quality — skip: code diff 0
 
-規約の SoT は `go-style` / `go-test` / `ddd-clean-architecture`、簡素化は `/simplify` と engine。**ここで見るのは diff 全体を横断する一貫性だけ**。
+規約の SoT は `go-style` / `go-test` / `ddd-architecture`、簡素化は `/simplify` と engine。**ここで見るのは diff 全体を横断する一貫性だけ**。
 
 - **同一 PR 内の適用一貫性** — 本 PR で導入した命名 / const / helper を diff で**再 grep** し、「片方だけ named const」型の取りこぼしを検出する
 - **既存 helper の見落とし** — 追加した logic と同等のものが repo 内に既存でないか grep する (engine は repo 全体を見ないので残す)

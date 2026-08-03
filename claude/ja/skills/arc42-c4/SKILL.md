@@ -52,4 +52,4 @@ ADR を切る基準は、覆すのに costly な決定・意見が割れた決�
 
 ## 関連 skill
 
-`tech-docs-writer` (doc を書く) · `api-design-review` (doc を review する) · `ddd-clean-architecture` (§5 / §8 の layer 境界)。
+`tech-docs-writer` (doc を書く) · `api-design-review` (doc を review する) · `ddd-architecture` (§5 / §8 の layer 境界)。

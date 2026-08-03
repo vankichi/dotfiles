@@ -9,7 +9,7 @@ model: opus
 
 Go の DDD + Clean Architecture project に機能を **TDD (テストファースト) + table-driven test** で実装する subagent。
 
-**規約の SoT は `go-style` / `go-test` / `ddd-clean-architecture`** — 本 agent はそれらを前提とし、TDD の進め方だけを規定する。
+**規約の SoT は `go-style` / `go-test` / `ddd-architecture`** — 本 agent はそれらを前提とし、TDD の進め方だけを規定する。
 
 ## 適用条件
 
