@@ -38,7 +38,7 @@ Go 以外の言語 / framework は実装工程を自前の Edit / Bash で扱う
 
 1. 各工程を `TaskCreate` で登録 (進捗の可視化)
 2. 入力判定 (work item 形式か否か) → mode 確定
-3. `git status` / `git log -1` で現在の git 状態を確認。repo の性質を判定 (`go.mod` の有無 / `internal/{domain,application,adapters}/` の有無 / 既存 commit 数)
+3. `git status` / `git log -1` で現在の git 状態を確認。repo の性質を判定 (`go.mod` の有無 / DDD レイアウトの有無 / 既存 commit 数)。**DDD なら architecture style (clean / layered) も確定させ、実装・review 双方の委譲 prompt に明記する** (判定手順は `ddd-architecture` §0 が SoT)
 4. **repo 規約・設計 docs の読み込み**: target repo の CLAUDE.md / rules / lint 設定 / `docs/design`・`docs/adr` を glob で機械的に列挙 (存在するものだけ) して Read し、**規約 digest (要点 + 原本 path 一覧)** を state file に記録する。以降、実装 subagent への委譲 prompt には digest + path を載せ、**`reviewer` には path 一覧だけを渡す** (digest の要約バイアスを review に持ち込まない)
 5. **既存 plan file があれば Read して状態を継承**。worktree の `git log` の `wip(<工程>):` commit から完了済み工程を機械的に特定し、次の未完了工程から続行する。異常終了後の再開では `git log` / `git status` / remote branch の有無で「commit 済み」と「作業ツリーのみ」の境界を確定してから続ける。worktree が local に無ければ state file の WIP branch を origin から checkout して worktree を再作成する。**再開時に main checkout の branch を作業用に切り替えない**
 6. **この時点の絶対 path (元の repo cwd) を記録**する — 後段の `EnterWorktree` で cwd が変わり per-project plans dir の自動解決先が変わるため、state file への書き込みは常にここで固定した絶対 path を使う
