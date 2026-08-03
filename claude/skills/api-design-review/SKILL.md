@@ -67,6 +67,14 @@ git grep -nE "<old-name-pattern>"
 
 Root instruction files (`CLAUDE.md` / `.github/copilot-instructions.md` / `.claude/rules/`) are loaded by the agent every time and are therefore a path by which a stale contract propagates into later implementation — always include them. Conversely, revision history / changelog lines are immutable; don't touch them even on a hit.
 
+**Before drafting an ADR, settle by grep whether that ADR is needed at all.** A repo rule of the "changes go through a new ADR" form governs *changing what an existing ADR decided*; it doesn't fire on an area where no decision exists. The order:
+
+1. Grep whether the decision you're about to retract / change **exists as a literal** in an existing ADR (e.g. if the word `terminal` has 0 hits in the ADR in question, that ADR doesn't decide terminal semantics)
+2. If it doesn't exist, no supersede arises → shift to updating that area's SoT (the design doc, etc.) instead
+3. **The moment you want to write "this does not mark the existing ADR Superseded" in the draft is the sign that the rule's firing condition isn't met** — stop and go back to 1
+
+Case: skipping this check, an ADR was filed and went through 6 review rounds before it turned out `terminal` had 0 hits in ADR-0011 and no supersede arose, so it was retracted. It burned one ADR number and the review budget.
+
 **Grepping names is necessary but not sufficient.** When the design target describes a process flow (producer / worker, etc.), also read the **flow / lifecycle description** of the related Accepted ADRs and design docs (which row is created by whom and when / the dedup method / the observation boundary on failure) and confirm the design doesn't contradict them.
 
 Also check **whether a newly introduced state breaks the transitions an existing runbook assumes**: enumerate the states you'll newly write → confirm each has an exit in the state machine → grep for operational procedures ("redrive to reprocess") that assume a terminal state with no exit. A structure that contradicts existing procedures the moment you add a writer of a terminal state can only be caught cheaply at this pre-implementation stage.
