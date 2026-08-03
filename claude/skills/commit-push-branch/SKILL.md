@@ -122,8 +122,8 @@ Once the parent is squash-merged, none of its commits match by patch-id, so `git
 
 1. Confirm `git diff <parent tip> origin/<default>` is **empty** (if not, this procedure doesn't apply)
 2. Create a recovery point with `git branch backup/<name> <child tip>`
-3. `NEW=$(git commit-tree <child tip>^{tree} -p origin/<default> -F <msg file>)`
+3. `NEW=$(git commit-tree -S <child tip>^{tree} -p origin/<default> -F <msg file>)` — **always pass `-S`**. `commit-tree` is plumbing, so it ignores `commit.gpgsign=true` and the signature is dropped by the collapse step alone (even when the original commits were made by porcelain `git commit` and were signed). In a signature-required repo (`required_signatures: enabled`) an unsigned commit ends up `mergeState=BLOCKED`
 4. `git checkout -B <branch> $NEW` (don't use `reset --hard`)
-5. Mechanically verify that `git diff <child tip> HEAD` is empty (the tree is byte-identical to the reviewed head) and that `git diff origin/<default> HEAD --stat` matches the PR's expected diff
+5. Mechanically verify that `git diff <child tip> HEAD` is empty (the tree is byte-identical to the reviewed head), that `git diff origin/<default> HEAD --stat` matches the PR's expected diff, and that **`git log --format='%G?' -1` returns `G` (signature verified)**. If `-S` was forgotten and the commit came out unsigned, re-sign with porcelain via `git commit --amend --no-edit` (the tree doesn't change)
 
 Pushing requires force, so **wait for the user's explicit instruction** (offer `--force-with-lease` + the backup ref).
