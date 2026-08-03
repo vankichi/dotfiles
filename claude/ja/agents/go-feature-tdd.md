@@ -24,8 +24,8 @@ Go module が初期化済み (`go.mod` が repo root にある) / DDD のレイ�
    - **style の判定は `ddd-architecture` §0 が SoT** — repo の宣言 → layout 推定 (`ports/` 相当の有無) → 不明なら **layered と仮定**
    - layout の差異: `domain/` 配下が `model/` か `entity/` か / `application/` の usecase 分類 / data access 層の名前 (`adapters/` / `infrastructure/` / `repository/`)
    - **layered なら port interface を新規に作らない**。既存の concrete 実装を直接使う
-3. 既存の port / adapter / usecase を 1-2 件読み、命名規則・test スタイル・error 型を把握する。**既存 code と規約 (`go-style` / `go-test`) が食い違う場合は規約側を優先する** — 既存 code は過去の生成物が規約から drift している可能性があり、真似ると drift が自己強化する
-4. **影響レイヤーと追加ファイル** (domain entity / VO、port interface、usecase、adapter、それぞれの `*_test.go`) を整理して提示し、承認を得てから実装に入る
+3. 既存の usecase / data access / (clean なら port) を 1-2 件読み、命名規則・test スタイル・error 型を把握する。**既存 code と規約 (`go-style` / `go-test`) が食い違う場合は規約側を優先する** — 既存 code は過去の生成物が規約から drift している可能性があり、真似ると drift が自己強化する
+4. **影響レイヤーと追加ファイル** (domain entity / VO、usecase、data access 実装、**clean なら port interface**、それぞれの `*_test.go`) を整理して提示し、承認を得てから実装に入る。**layered で port を足す場合は「なぜ分離が要るか」を 1 行添える** — 添えられないなら足さない
 
 ### Step 1-3: 各層を Red → Green → Refactor で
 

@@ -26,8 +26,8 @@ The Go module is initialized (`go.mod` at the repo root) / the project uses a DD
    - **`ddd-architecture` §0 is the SoT for determining the style** — the repo's declaration → inference from the layout (presence of a `ports/` equivalent) → **assume layered** if undecidable
    - Layout differences: whether `domain/` holds `model/` or `entity/` / how `application/` classifies use cases / what the data access layer is called (`adapters/` / `infrastructure/` / `repository/`)
    - **Under layered, don't create new port interfaces.** Use the concrete implementation directly
-3. Read 1-2 existing ports / adapters / use cases to absorb the naming conventions, test style, and error types. **When existing code conflicts with the conventions (`go-style` / `go-test`), the conventions win** — existing code may be earlier output that drifted from the conventions, and copying it makes the drift self-reinforcing
-4. Lay out the **affected layers and the files to add** (domain entities / VOs, port interfaces, use cases, adapters, and each `*_test.go`), present them, and get approval before implementing
+3. Read 1-2 existing use cases / data access implementations / (ports, under clean) to absorb the naming conventions, test style, and error types. **When existing code conflicts with the conventions (`go-style` / `go-test`), the conventions win** — existing code may be earlier output that drifted from the conventions, and copying it makes the drift self-reinforcing
+4. Lay out the **affected layers and the files to add** (domain entities / VOs, use cases, data access implementations, **port interfaces under clean**, and each `*_test.go`), present them, and get approval before implementing. **If you add a port under layered, attach a one-line reason why isolation is needed** — if you can't, don't add it
 
 ### Steps 1-3: Red → Green → Refactor per layer
 
