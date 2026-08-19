@@ -1,13 +1,10 @@
 ---
 name: grill-me
-description: Interview the user relentlessly about a plan or design until reaching shared understanding, resolving each branch of the decision tree.
-when_to_use: When a plan or design needs hardening. 「詰めて」「穴を探して」「grill me」.
+description: plan や設計を shared understanding に到達するまで徹底的に interview し、decision tree の各分岐と決定間の依存関係を 1 つずつ解消する。「詰めて」「穴を探して」「grill me」と言われた時、または実装前に設計の未決事項を潰したい時に使用する。
 ---
 
-> **Source of truth:** `claude/ja/skills/grill-me/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
+この plan のあらゆる側面について、shared understanding に到達するまで user を徹底的に interview する。design tree の各分岐を辿り、決定間の依存関係を 1 つずつ解消する。各質問には推奨回答を添える。
 
-Interview me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
+質問は 1 問ずつ出す。
 
-Ask the questions one at a time.
-
-If a question can be answered by exploring the codebase, explore the codebase instead.
+codebase を調べれば答えが出る質問は、質問せず codebase を調べる。

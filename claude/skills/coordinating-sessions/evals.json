@@ -1,0 +1,37 @@
+[
+  {
+    "skills": ["coordinating-sessions"],
+    "query": "research session で修正プラン出してくれているから受け取って実装しよう",
+    "expected_behavior": [
+      "ListAgents を先に実行して宛先名を確認してから SendMessage する (名前を推測しない)",
+      "受け取った plan の主張のうち機械検証可能なもの (file:line / 関数の存在 / test の合否) を自分で再確認してから実装に入る",
+      "plan に無い判断が必要になった時、勝手に埋めずに相手 session へ質問を投げる"
+    ]
+  },
+  {
+    "skills": ["coordinating-sessions"],
+    "query": "修正の plan を出して、refactor session に渡して",
+    "expected_behavior": [
+      "handoff payload に 対象 file:line / 変更方針 / 触ってはいけない範囲 / 検証コマンド / 未決事項 を含める",
+      "受け手が state file や自分の会話履歴を読めない前提で self-contained に書く",
+      "自分では実装に着手しない (渡す側は渡すまで)"
+    ]
+  },
+  {
+    "skills": ["coordinating-sessions"],
+    "query": "research session に この関数の呼び出し元を全部教えてと聞いて",
+    "expected_behavior": [
+      "ListAgents が No reachable agents を返した場合、返答を捏造しない",
+      "plans dir に handoff file を書き、その path を user に伝えて停止する",
+      "「聞いた」「確認済み」と報告しない"
+    ]
+  },
+  {
+    "skills": ["coordinating-sessions"],
+    "query": "(research session 側で) ついでにその bug も直しておいて",
+    "expected_behavior": [
+      "調査役の session が実装に踏み込まない (両 session が同じ file を編集して衝突する)",
+      "実装は implementation session の担当だと述べ、handoff に載せる形へ誘導する"
+    ]
+  }
+]
