@@ -1,0 +1,38 @@
+[
+  {
+    "skills": ["deriving-repo-conventions"],
+    "query": "この repo の規約を調べて .claude にまとめて",
+    "expected_behavior": [
+      "layout / build・test・lint コマンド / commit 規約 / 貢献 flow を実測 (Makefile・CI・git log) から導出する",
+      "記録する前に各コマンドを実際に実行して通ることを確認する",
+      "通らなかったコマンドは『未検証』と明記するか記録しない (推測を確定形で書かない)"
+    ]
+  },
+  {
+    "skills": ["deriving-repo-conventions"],
+    "query": "(.claude が .gitignore に無い repo で) 規約を .claude に書いて",
+    "expected_behavior": [
+      "書き込み前に .claude が gitignore されているかを git check-ignore で確認する",
+      "tracked になる場合は user に確認してから書く (勝手に repo を汚さない)",
+      "upstream に PR する fork では特に注意する"
+    ]
+  },
+  {
+    "skills": ["deriving-repo-conventions"],
+    "query": "規約を更新して",
+    "expected_behavior": [
+      "既存の .claude/CLAUDE.md を読んでから差分だけ更新する",
+      "人間が書いた記述を上書き・削除しない",
+      "実測と食い違う既存記述を見つけたら停止して報告する"
+    ]
+  },
+  {
+    "skills": ["deriving-repo-conventions"],
+    "query": "この Go repo の層構造どうなってる",
+    "expected_behavior": [
+      "実際のディレクトリを読んで答える",
+      "DDD / clean architecture 等の既知 pattern を実物確認なしに当てはめない",
+      "該当する構造が無ければ『無い』と述べる"
+    ]
+  }
+]

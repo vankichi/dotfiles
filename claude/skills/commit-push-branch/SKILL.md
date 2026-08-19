@@ -1,129 +1,81 @@
 ---
 name: commit-push-branch
-description: Cuts a new branch and commits & pushes the working-tree changes with a message that follows past commit style (type prefix / ticket ID / Co-Authored-By).
-when_to_use: 「branch 切って commit & push して」「PR 用に push」. Also launched from dev-cycle's commit & push stage.
+description: 新しい branch を切り、過去の commit スタイルに倣ったメッセージで working tree の変更を commit して push する手順。「branch 切って commit & push して」「PR 用に push」の時に使用する。secret 混入を防ぐ明示 add、同一 file 内の対象外変更の分離、GPG hang の回避を含む。PR 作成は含まない (別途 user 指示)。
 ---
 
-> **Source of truth:** `claude/ja/skills/commit-push-branch/SKILL.md` (Japanese). To update, edit the Japanese source first, then re-translate this file into English.
+# branch を切って commit & push
 
-# commit-push-branch
+## 適用条件
 
-A skill that cuts a new branch, creates a commit following past style, and pushes it. PR creation is separate (`gh pr create`).
+git repo 内 / working tree に commit すべき変更がある / remote `origin` あり。
 
-## Applicability
+## 1. 過去スタイルを抽出する
 
-Inside a git repo / the working tree has changes worth committing / the `origin` remote is configured.
+```bash
+git status && git diff --stat
+git log -3 --format='%H%n%B%n---'
+```
 
-## Procedure
+過去 commit から **type prefix の慣用 / タイトルの言語 / ticket ID の置き方 / body の有無 / `Co-Authored-By` の慣例** を読み取る。**以降の判断はこの抽出結果が優先する** (下の表は抽出できなかった時の既定値)。
 
-### Steps 1-2: Check status and extract past style
-
-Run `git status` / `git diff --stat` / `git diff --cached` and `git log -3 --format='%H%n%B%n---'`, and read from past commits the **conventional type prefix / the title's language / how ticket IDs are placed / whether bodies are used / the Co-Authored-By convention**. This extraction takes precedence in all later judgments.
-
-### Step 3: Type and branch name
-
-| Content | type / branch prefix |
+| 変更内容 | type |
 |---|---|
-| New feature | `feat` |
-| Bug fix | `fix` |
-| Infra / config / build / tooling | `chore` |
-| Docs only | `docs` |
-| Refactor (no behavior change) | `refactor` |
-| Test additions | `test` |
+| 新機能 | `feat` |
+| バグ修正 | `fix` |
+| インフラ / 設定 / build | `chore` |
+| ドキュメントのみ | `docs` |
+| リファクタ (機能変化なし) | `refactor` |
+| テスト追加 | `test` |
 
-The branch name is `<prefix>/<ticket-id>-<slug>` when there is a ticket, `<prefix>/<slug>` otherwise. The slug is kebab-case, 3-5 words. **Never identify a branch by ticket ID alone — always include a content slug.** Whether to include the ticket ID follows the Step 2 extraction (this table is a pattern example and does not override Step 2).
+branch 名は `<type>/<slug>` (ticket があれば `<type>/<ticket-id>-<slug>`)。slug は kebab-case 3-5 語。**ticket ID だけで識別せず必ず内容 slug を付ける**。`git checkout -b <name>`、衝突したら `-2` 等。
 
-Create with `git checkout -b <name>`. On a collision, add a `-2` style suffix.
+## 2. 明示的に add する
 
-### Step 4: Explicit add
+**`-A` / `-a` を使わない**。対象を列挙して `git add` し、`git status` で `.env` / `*.pem` / `credentials*` が混ざっていないことを確認する。
 
-**Don't use** `-A` / `-a`. Enumerate the targets explicitly in `git add`, then confirm via `git status` that nothing like `.env` / `*.pem` / `credentials*` slipped in.
-
-**When out-of-scope pre-existing changes live in the same file**: file-granular add can't separate them, and `git add -p` is interactive and unusable. **Without touching the working tree** (checkout / stash forbidden), put only your changes into the index:
+**同一 file 内に対象外の既存変更が同居する場合** — file 単位では分離できず `git add -p` は interactive で使えない。**working tree を触らず** (checkout / stash 禁止) index だけに自分の変更を載せる:
 
 ```bash
 tmp=$(mktemp)
-git show HEAD:<path> > "$tmp"        # start from the HEAD version
-# apply only your own changes to "$tmp" (Edit / sed / patch)
+git show HEAD:<path> > "$tmp"        # HEAD 版を起点に
+# "$tmp" へ自分の変更だけを適用 (Edit / sed / patch)
 git update-index --cacheinfo 100644,$(git hash-object -w "$tmp"),<path>
 ```
 
-After staging, print **both** `git diff --cached -- <path>` (only your changes go into the commit) and `git diff -- <path>` (the pre-existing changes remain in the working tree) to confirm the separation.
+stage 後に `git diff --cached -- <path>` (commit に載るのは自分の変更のみ) と `git diff -- <path>` (working tree に既存変更が残存) の**双方**を出して分離を確認する。
 
-### Step 5: commit
+## 3. commit する
 
-**The default is a single-line title.** The title carries **only what changed** — why / background / impact scope / ticket context go in neither the title nor the body (they're traceable via the PR description / ticket / git history).
+**default は title 1 行のみ。title に書くのは変更内容だけ** — why / 背景 / 影響範囲 / ticket 文脈は書かない (PR description と ticket で追える)。
 
 ```bash
-git commit -m "<type>(<scope>): <what changed>"
+git commit -m "<type>(<scope>): <変更内容>"
 ```
 
-- Good: `docs(api): rename SearchMeta to RequestMeta and split it into common.proto`
-- Bad: `chore: remove the slog.Info "phase" argument introduced in the last commit to avoid rot` (contains why)
+- 良い例: `docs(api): SearchMeta を RequestMeta にリネームし common.proto へ切り出す`
+- 悪い例: `chore: 前 commit で導入した slog.Info の "phase" 引数を削除して rot を回避` ← why が入っている
 
-**There are only 3 exceptions that warrant a body**: a breaking change (include a `BREAKING CHANGE: <impact>` line) / a genuinely non-obvious why that can't live in the PR description (rare) / past style consistently uses bodies. When using a HEREDOC, suppress expansion with `<<'EOF'` (single quotes). Follow past commits' convention for `Co-Authored-By:` and ticket IDs (don't add or drop them unilaterally).
+body を書く例外は 3 つだけ: breaking change (`BREAKING CHANGE: <impact>` 行を含める) / PR に残せない非自明な why (稀) / 過去スタイルが body 必須。HEREDOC は `<<'EOF'` で展開を抑止する。
 
-**GPG signing hang**: in environments with `commit.gpgsign=true`, the commit can hang waiting on pinentry. Run `git commit` with the Bash tool timeout set to 30 seconds; on a hang, confirm via `git status` that the staged state survived (don't rush to reset) → guide the user to commit manually (running `echo test | gpg --clearsign > /dev/null` in another terminal warms the cache). **Don't work around it with `--no-gpg-sign` / `commit.gpgsign=false`** (same spirit as iron rule 2).
+**GPG hang**: `commit.gpgsign=true` の環境では pinentry 待ちで hang しうる。`git commit` は Bash tool の timeout を 30 秒にして実行し、hang したら `git status` で staged が維持されていることを確認して (慌てて reset しない) user に手動 commit を案内する。**`--no-gpg-sign` / `commit.gpgsign=false` で勝手に回避しない**。
 
-### Step 6: push and completion report
+## 4. push して報告する
 
-`git push -u origin <branch-name>`. Report Branch / Commit (short sha + title) / Files (n files, +additions/-deletions) / the PR creation URL (extracted from the push output). PR creation is a separate task.
+```bash
+git push -u origin <branch-name>
+```
 
-## loop-mode (only when invoked by dev-cycle)
+報告に **Branch / Commit (short-sha + title) / Files (n files, +追加/-削除) / PR 作成 URL** (push 出力から抽出) を出す。**PR 作成は行わない** — user の別途指示を待つ。
 
-Applies **only when loop-mode is explicitly stated at invocation** (basis: CLAUDE.md "loop-mode").
+## 鉄則
 
-- The branch name / commit message are decided automatically from the conventions and past style, with no user confirmation
-- **The base ref is the PR's base branch, not the default branch**: in a stacked PR, base = the parent branch. Don't hardcode `origin/<default-branch>` in either the squash or `gh pr create` (it breaks the stack)
-- **Deciding whether to squash the WIP commits**: when the branch carries `wip(<stage>):` commits, always run `git ls-remote --heads origin <branch>` first, and **only if the output is empty (not yet pushed)** run `git reset --soft $(git merge-base HEAD <base>)` to return everything to staged and build one conventional commit (never `--hard`). In that case, read Step 4's explicit add as "confirm the staged content contains no secrets / out-of-scope files". Before squashing, confirm `git log --oneline <base>..HEAD` shows only your own WIP commits (if the parent branch's commits are mixed in, the base is wrong — fix the base instead of squashing)
-- **Don't squash an already-pushed branch** (it would require a force push, which conflicts with the prohibition). Stack the final commit on top of the wip commits and push fast-forward. The wip commits remain in the PR's commit list, but under squash-merge conventions the default branch stays clean
-- After push, **create a draft PR**: `gh pr create --draft`. **If base is not the default branch, pass `--base <base>` explicitly**
-- Never promote the draft or merge
+1. **新 commit を作る** — `--amend` を使わない
+2. **`--no-verify` 禁止** — pre-commit hook が落ちたら原因を直す
+3. **main / master に直 push しない**
+4. **`git add -A` / `-a` を使わない**
+5. **過去スタイルに揃える** — type / 言語 / ticket 表記 / `Co-Authored-By` を独断で付けない・外さない
+6. **PR は user 指示後**
 
-### Constructing the PR body
+## 親が squash merge された stacked branch
 
-Material passed from dev-cycle = the implementation plan / DoD check results / spec deviations (SD#) / impact scope / review and security review results / ticket URL.
-
-1. **Search for a PR template**: `.github/pull_request_template.md` → `.github/PULL_REQUEST_TEMPLATE.md` → `.github/PULL_REQUEST_TEMPLATE/*.md` → `PULL_REQUEST_TEMPLATE.md` → `docs/pull_request_template.md`, taking the first one found
-2. **If a template exists, its section structure is the SoT.** HTML comments (`<!-- ... -->`) are **read as filling instructions and then removed**. Section names vary by repo, so map by meaning:
-
-| template section (example) | Material to fill in |
-|---|---|
-| Summary | Summary of the implementation plan / what changed |
-| Spec compliance | Each DoD item ↔ the implementation / tests |
-| Spec deviations | SD# (or "none") |
-| Impact scope | The changed symbol → referencing sites mapping and impact classification |
-| Review guide | Reading order of the diff (specify file → symbol, not line numbers — they rot on push) / areas needing focus |
-| Compat & rollback | Whether breaking / migration, env, config changes and their order / rollback procedure |
-| Verification | test / lint results + review and security review results |
-| References | ticket URL / related docs |
-| Checklist | Check only mechanically determinable items |
-
-   Material with no corresponding section gets its own section appended at the end of the body (never silently dropped)
-3. **If there is no template**, generate the 6 sections `## Summary` / `## Spec compliance` / `## Spec deviations` / `## Impact scope` / `## Verification` / `## References`
-4. **Branch on repo visibility for ticket references** (determine mechanically via `gh repo view --json visibility`): private repos put the ticket URL in References. **Public repos must not carry internal URLs / ticket bodies**
-5. **Don't delete sections you can't fill**: write "none" when not applicable
-
-**Style**: nominal-ending phrasing / bullet-driven (no prose paragraphs) / don't enumerate every review nit and follow-up — compress to "count + state file path" plus "the 2-3 a reviewer needs before merge" / aim for 45-70 lines.
-
-## Iron rules
-
-1. **Create a new commit**: don't use `--amend`
-2. **`--no-verify` forbidden**: respect pre-commit hooks; if one fails, fix the cause
-3. **Never push directly to main / master**
-4. **Don't use `git add -A` / `-a`**: explicit enumeration prevents secrets slipping in
-5. **Match past style**: type / language / ticket notation / Co-Authored-By convention
-6. **PRs come after user instruction** (the only exception is draft PR creation in loop-mode)
-7. **Default is a one-line title with only what changed**
-
-## Rebasing a stacked PR (after the parent was squash-merged)
-
-Once the parent is squash-merged, none of its commits match by patch-id, so `git rebase --onto` conflicts trying to re-apply the parent's equivalent. Don't attempt a commit-wise rebase — fix the target tree and collapse to one commit:
-
-1. Confirm `git diff <parent tip> origin/<default>` is **empty** (if not, this procedure doesn't apply)
-2. Create a recovery point with `git branch backup/<name> <child tip>`
-3. `NEW=$(git commit-tree <child tip>^{tree} -p origin/<default> -F <msg file>)`
-4. `git checkout -B <branch> $NEW` (don't use `reset --hard`)
-5. Mechanically verify that `git diff <child tip> HEAD` is empty (the tree is byte-identical to the reviewed head) and that `git diff origin/<default> HEAD --stat` matches the PR's expected diff
-
-Pushing requires force, so **wait for the user's explicit instruction** (offer `--force-with-lease` + the backup ref).
+この状況になった時のみ [references/stacked-pr-rebase.md](references/stacked-pr-rebase.md) を読む。通常の push では読まない。
