@@ -1,7 +1,9 @@
 # claude/ja — 日本語原文 (source of truth)
 
-`claude/skills/` / `claude/agents/` の **日本語原文** を同じ階層構造で保持する。
-実際に model が読む live ファイル (`claude/skills/`, `claude/agents/`) は英語版。
+`claude/skills/` / `claude/agents/` / `claude/cowork-skills/` の **日本語原文** を同じ階層構造で保持する。
+実際に model が読む live ファイル (`claude/skills/`, `claude/agents/`, `claude/cowork-skills/`) は英語版。
+
+`claude/cowork-skills/` は Claude Code に load されず、claude.ai account へ ZIP upload して cowork session で使う (配布手順は `claude/cowork-skills/README.md`)。
 
 ## 更新手順 (必ずこの順番)
 
