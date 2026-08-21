@@ -8,7 +8,7 @@
 |---|---|
 | code の機構 (型 / NULL 可否 / 呼び出し順 / 排他 / 冪等性 / 誰が不変条件を担保するか) | 該当 file を Read し、主張と file:line を突き合わせる。読んでいない経路の機構は書かない |
 | 量化子 (唯一 / 常に / 必ず / のみ / 無条件 / 〜に限られる) | その量化子が成立する経路を全て列挙してから書く。列挙できないなら量化子を落とし、確認済み経路の事実だけを書く |
-| 定量 (行数 / 件数 / 割合 / N 倍 / いつ誰が作ったか) | 測定コマンド (`git diff --numstat` / `grep -c` / `wc` 等) を実行し、主張に測定コマンドを併記する |
+| 定量 (行数 / 件数 / 割合 / N 倍 / いつ誰が作ったか) | 測定コマンド (`git diff --numstat` / `grep -c` / `wc` 等) を実行し、主張に測定コマンドを併記する。**CI / gate が同一指標を測っている場合はその出力を正とし、local 計測で代替しない** (除外設定 / build tag の差で値と原因説明の両方が変わる) |
 | git の ahead / behind | `git fetch` 後に `git rev-list --count A..B` を両方向 (または `git merge-base --is-ancestor`) で数値確定する。`git status` の "Recent commits" / `git log` の見た目から推測しない |
 | 参照 (section 番号 / 手順名 / file path) | 参照先の実在を grep で確認する |
 
