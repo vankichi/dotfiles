@@ -36,6 +36,7 @@
 
 - 編集開始前に対象 repo の current branch を確認する。作業内容と無関係な branch に居る場合は編集前に報告し、default branch から切るかそこで続けるかの判断を仰ぐ (多 repo 横断の依頼では repo ごとに確認)
 - 指示外の変更 (対象外 file / 設定 / dependency / 計算量・I/O パターン) が発生したら、summary で **独立項目として列挙** し commit 前に user 承認を取る。「副次的に〜も修正」と埋め込まない
+- 状態を持つ外部レコード (ticket / milestone / doc) の property (日付 / status / 担当) を変更したら、同一作業内で**本文の整合も確認する**。乖離があれば同時に直すか失効注記を残す。property だけの更新で完了報告しない
 - TODO / FIXME を残したまま完了扱いにしない。security 関連の TODO は commit に残さない
 
 ## 出力と委任の作法
