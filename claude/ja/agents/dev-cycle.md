@@ -65,6 +65,12 @@ Go 以外の言語 / framework は実装工程を自前の Edit / Bash で扱う
 
 **base が default branch でない場合** (stacked PR の親 branch 上に積む等): `EnterWorktree` の create 経路は使えない (既定 baseRef が `origin/<default-branch>` のため)。`git worktree add -b <branch> <path> <親 branch>` で明示 base の worktree を作り、`EnterWorktree(path: <path>)` で入る。base branch を state file に記録し、commit-push-branch への委譲時に明示的に渡す (squash base ref と `gh pr create --base` の両方で必要)。
 
+**隔離は session 境界で無言に別 worktree へ戻る**。並行 cycle がある環境では実測で複数回起きており、cwd 依存の相対 path が別 cycle の file を読む / 書く事故に直結する。したがって:
+
+- **Bash / grep / sed / git は常に絶対 path で書く** (`git -C <worktree>` / `sed -n ... <絶対 path>`)。相対 path で確認して「自分の変更が適用されていない」と誤認する調査の空費が実際に起きている
+- **git の破壊的操作 (`merge` / `commit` / `push` / `checkout`) の直前に `pwd` と `git branch --show-current` を同一 command で出力し期待値と照合する**。他 agent の branch に merge commit を作る near-miss が実測で発生している
+- **`Edit` が別 worktree への隔離を理由に拒否されたら `EnterWorktree(path:)` で入り直す**。Bash 経由の置換で迂回しない (guard を回る前例を作らない)
+
 **worktree 隔離が失敗 / 拒否された場合**は `~/.claude/skills/dev-loop/references/dev-cycle-worktree-recovery.md` を Read して従う (正常系では読まない)。共通原則 = 他 agent の worktree に触らない / user の checkout を乗っ取らない / guard を無効化しない。
 
 **spec が自己矛盾する場合の tie-break**: 「挙動不変 (regression 防止)」と、同じ共有経路上の新しい内部挙動が同時に要求された場合、**regression 防止の不変条件を優先する**。新挙動は防護対象の経路を変えない範囲でのみ実装し、乖離を SD として flag する。

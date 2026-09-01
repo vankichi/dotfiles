@@ -68,6 +68,7 @@ Only when no engine is available, also cover input validation (0 / negative / ni
 - **Transient information leaking in** — `ticket`, `in a later`, `future ticket`, `see (commit|PR) #`, ticket ID formats. Get the literal patterns from the project's `MEMORY.md` (hardcoding them in the skill is forbidden)
 - **Cross-reference existence** — does the quoted wording of a section reference match the original
 - **Speculative mapping** — comments filling in correspondences not written in the original
+- **Self-contradiction within a doc (claim-vs-claim)** — grep the facts the diff's added lines assert against **other sections of the same doc / other files in the same PR**. Agreeing with the code is not enough: contradicting another section makes it wrong. Where the diff **restates** a fact an existing section already states, flag it toward replacing the restatement with a pointer (as long as the restatement exists, every edit regenerates the contradiction). The SoT for the verification procedure is `~/.claude/rules/verify-before-assert.md`
 
 ### spec-alignment — skip: no corresponding spec / work item
 

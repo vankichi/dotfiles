@@ -120,8 +120,8 @@ dev-cycle から渡される材料 = 実装計画 / DoD チェック結果 / spe
 
 1. `git diff <親 tip> origin/<default>` が**空**であることを確認する (空でなければこの手順は使えない)
 2. `git branch backup/<name> <子 tip>` で復旧点を作る
-3. `NEW=$(git commit-tree <子 tip>^{tree} -p origin/<default> -F <msg file>)`
+3. `NEW=$(git commit-tree -S <子 tip>^{tree} -p origin/<default> -F <msg file>)` — **`-S` を必ず付ける**。`commit-tree` は plumbing なので `commit.gpgsign=true` を無視し、collapse の工程だけで署名が落ちる (元 commit は porcelain の `git commit` 産で署名済みでも)。署名必須 repo (`required_signatures: enabled`) では未署名 commit が `mergeState=BLOCKED` になる
 4. `git checkout -B <branch> $NEW` (`reset --hard` は使わない)
-5. `git diff <子 tip> HEAD` が空 (review 済み head と tree が byte 一致) と `git diff origin/<default> HEAD --stat` が想定差分と一致することを機械的に検証する
+5. `git diff <子 tip> HEAD` が空 (review 済み head と tree が byte 一致) と `git diff origin/<default> HEAD --stat` が想定差分と一致すること、**`git log --format='%G?' -1` が `G` (署名検証 OK) を返すこと**を機械的に検証する。`-S` を忘れて未署名になった場合は `git commit --amend --no-edit` で porcelain 再署名する (tree は変わらない)
 
 push は force が必要なので **user の明示指示を待つ** (`--force-with-lease` + backup ref を提示する)。

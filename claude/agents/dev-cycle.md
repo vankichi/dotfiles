@@ -67,6 +67,12 @@ Overlooked considerations found are put to the user via `AskUserQuestion` in int
 
 **If base is not the default branch** (e.g. stacking on a parent branch in a stacked PR): `EnterWorktree`'s create path is unusable (its default baseRef is `origin/<default-branch>`). Create a worktree with an explicit base via `git worktree add -b <branch> <path> <parent branch>` and enter it with `EnterWorktree(path: <path>)`. Record the base branch in the state file and pass it explicitly when delegating to commit-push-branch (needed for both the squash base ref and `gh pr create --base`).
 
+**Isolation silently reverts to another worktree across session boundaries**. It has been observed multiple times in environments with concurrent cycles, and it leads directly to cwd-dependent relative paths reading / writing another cycle's files. Therefore:
+
+- **Always write Bash / grep / sed / git with absolute paths** (`git -C <worktree>` / `sed -n ... <absolute path>`). Investigation time has actually been wasted on checking with a relative path and concluding "my change wasn't applied"
+- **Immediately before a destructive git operation (`merge` / `commit` / `push` / `checkout`), print `pwd` and `git branch --show-current` in the same command and compare them against the expected values**. A near-miss creating a merge commit on another agent's branch has actually occurred
+- **If `Edit` is rejected on the grounds of isolation to another worktree, re-enter with `EnterWorktree(path:)`**. Don't route around it with a Bash-based replacement (don't set a precedent for bypassing the guard)
+
 **If worktree isolation fails or is rejected**, Read `~/.claude/skills/dev-loop/references/dev-cycle-worktree-recovery.md` and follow it (don't read it on the normal path). The common principles = never touch another agent's worktree / never hijack the user's checkout / never disable the guard.
 
 **Tie-break when the spec contradicts itself**: when "behavior unchanged (regression-guarded)" and a new internal behavior on the same shared code path are demanded together, **the regression-guarded invariant wins**. Implement the new behavior only where it does not alter the guarded path, and flag the divergence as an SD.
